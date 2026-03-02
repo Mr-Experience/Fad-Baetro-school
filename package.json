@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "vite.config.js",
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -13,8 +13,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
+    "iconsax-react": "^0.0.8",
+    "lucide-react": "^0.563.0",
+    "node-fetch": "^3.3.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.0"

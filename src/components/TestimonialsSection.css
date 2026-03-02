@@ -1,0 +1,198 @@
+.testimonials-section {
+    position: relative;
+    padding: 100px 0;
+    background-color: #1a365d;
+    /* Brand deep blue */
+    background-image: linear-gradient(135deg, #1a365d 0%, #2563eb 100%);
+    color: white;
+    overflow: hidden;
+}
+
+.testimonials-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg width='100%' height='100%' viewBox='0 0 1000 1000' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 500 Q 250 200 500 500 T 1000 500' fill='none' stroke='white' stroke-opacity='0.05' stroke-width='2'/%3E%3Cpath d='M0 600 Q 250 300 500 600 T 1000 600' fill='none' stroke='white' stroke-opacity='0.03' stroke-width='2'/%3E%3C/svg%3E");
+    background-size: cover;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.testimonials-container {
+    position: relative;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 90%;
+    text-align: center;
+    z-index: 2;
+}
+
+.testimonials-subtitle {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+}
+
+.testimonials-title {
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 60px;
+}
+
+.testimonials-title .highlight-text {
+    color: #facc15;
+    /* Yellow highlight like the reference */
+}
+
+.testimonials-slider-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 50px;
+    margin-bottom: 50px;
+}
+
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    width: 100%;
+}
+
+.testimonial-card {
+    background: white;
+    color: #334155;
+    padding: 40px 30px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    min-height: 400px;
+}
+
+.quote-icon-wrapper {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.quote-icon {
+    color: var(--primary-100);
+}
+
+.testimonial-text {
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: auto;
+    color: #475569;
+}
+
+.testimonial-footer {
+    margin-top: 30px;
+}
+
+.testimonial-divider {
+    width: 40px;
+    height: 2px;
+    background-color: var(--primary-500);
+    margin: 0 auto 15px;
+}
+
+.testimonial-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a365d;
+    margin-bottom: 5px;
+}
+
+.testimonial-role {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.testimonials-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: 1px solid white;
+    color: white;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.testimonials-nav-btn:hover {
+    background: white;
+    color: #1a365d;
+}
+
+.testimonials-nav-btn.prev {
+    left: 0;
+}
+
+.testimonials-nav-btn.next {
+    right: 0;
+}
+
+.testimonials-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.testimonials-view-more {
+    display: inline-block;
+    background-color: var(--primary-600);
+    color: white;
+    padding: 14px 36px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+.testimonials-view-more:hover {
+    background-color: var(--primary-700);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 1024px) {
+    .testimonials-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .testimonials-nav-btn {
+        display: none;
+    }
+
+    .testimonials-slider-container {
+        padding: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .testimonials-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .testimonials-title {
+        font-size: 32px;
+    }
+
+    .testimonials-section {
+        padding: 60px 0;
+    }
+}

@@ -1,0 +1,750 @@
+/* ===================================
+   TWO-LAYER HEADER STRUCTURE
+   =================================== */
+
+/* Reset and Base Styles */
+.site-header {
+    width: 100%;
+    position: sticky;
+    /* Floating header */
+    top: 0;
+    z-index: 1000;
+    font-family: 'Manrope', sans-serif;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* ===================================
+   HEADER 1 - TOP HEADER
+   =================================== */
+
+.header-top {
+    width: 100%;
+    background-color: var(--primary-600);
+    color: white;
+}
+
+.header-top-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 80px;
+    height: 35px;
+    max-width: 100%;
+}
+
+/* Left Section - School Info */
+.header-top-left {
+    display: flex;
+    align-items: center;
+}
+
+.school-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-item .icon {
+    font-size: 16px;
+}
+
+.info-divider {
+    opacity: 0.3;
+    margin: 0 8px;
+}
+
+/* Right Section - Portal Login Button */
+.header-top-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+    /* Ensure full height for the button */
+}
+
+.portal-dropdown-wrapper {
+    position: relative;
+    height: 100%;
+}
+
+.btn-portal-login {
+    background-color: var(--primary-800);
+    color: white;
+    padding: 0 32px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 650;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-portal-login:hover {
+    background-color: var(--primary-900);
+}
+
+.portal-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    min-width: 180px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    border-radius: 0 0 8px 8px;
+    padding: 8px 0;
+    list-style: none;
+    z-index: 1001;
+    animation: slideDownFade 0.3s ease;
+    border: 1px solid var(--gray-200);
+}
+
+.portal-dropdown-menu li a {
+    display: block;
+    padding: 12px 20px;
+    color: var(--gray-800);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.portal-dropdown-menu li a:hover {
+    background-color: var(--primary-50);
+    color: var(--primary-600);
+}
+
+.btn-portal-login .dropdown-icon {
+    transition: transform 0.3s ease;
+}
+
+.btn-portal-login .dropdown-icon.rotate {
+    transform: rotate(180deg);
+}
+
+/* ===================================
+   ADAPTIVE NAVIGATION OVERLAY
+   =================================== */
+
+.nav-overlay-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+/* --- Mode 1: Desktop Quick Links Grid --- */
+.desktop-quick-links {
+    background: white;
+    width: 380px;
+    /* More compact */
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 85px;
+    /* Aligned better with bottom of header */
+    margin-right: 40px;
+    /* Tailored to the right side action group */
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    animation: slideInBottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: block;
+    position: relative;
+    border: 1px solid var(--gray-100);
+}
+
+.quick-links-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gray-50);
+}
+
+.quick-links-header h2 {
+    color: var(--primary-600);
+    font-size: 18px;
+    font-weight: 800;
+    margin: 0;
+}
+
+.desktop-close-btn {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border-radius: 50%;
+}
+
+.desktop-close-btn:hover {
+    background-color: var(--gray-50);
+    color: var(--primary-600);
+    transform: rotate(90deg);
+}
+
+.quick-links-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+}
+
+.grid-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    transition: transform 0.3s ease;
+}
+
+.grid-item:hover {
+    transform: translateY(-5px);
+}
+
+.grid-icon-box {
+    width: 70px;
+    height: 70px;
+    background-color: var(--gray-50);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-600);
+    transition: all 0.3s ease;
+}
+
+.grid-item:hover .grid-icon-box {
+    background-color: var(--primary-50);
+    color: var(--primary-700);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.05);
+}
+
+.grid-item span {
+    color: var(--gray-800);
+    font-size: 11px;
+    /* Slightly smaller for better fit */
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- Mode 2: Mobile Navigation Drawer --- */
+.mobile-nav-drawer {
+    display: none;
+    /* Hidden on desktop */
+    background: white;
+    width: 85%;
+    max-width: 320px;
+    height: 100%;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+    flex-direction: column;
+    animation: slideInRightDrawer 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-nav-header {
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.mobile-nav-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--primary-600);
+}
+
+.mobile-nav-close {
+    background: none;
+    border: none;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.mobile-nav-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 0;
+}
+
+.mobile-menu-list {
+    list-style: none;
+    padding: 0;
+}
+
+.mobile-menu-item {
+    border-bottom: 1px solid var(--gray-50);
+}
+
+.mobile-menu-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    color: var(--gray-800);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mobile-menu-link .link-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mobile-menu-link.active {
+    color: var(--primary-600);
+    background-color: var(--primary-50);
+}
+
+.submenu-icon {
+    transition: transform 0.3s ease;
+    color: var(--gray-400);
+}
+
+.submenu-icon.rotate {
+    transform: rotate(180deg);
+}
+
+.mobile-submenu {
+    list-style: none;
+    padding: 0;
+    background-color: var(--gray-50);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-submenu.open {
+    max-height: 250px;
+}
+
+.mobile-submenu li a {
+    display: block;
+    padding: 12px 24px 12px 56px;
+    color: var(--gray-600);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.mobile-nav-footer {
+    padding: 24px;
+    border-top: 1px solid var(--gray-100);
+    text-align: center;
+}
+
+/* Animations */
+@keyframes slideInRightDrawer {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInBottom {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Visibility Control */
+@media (max-width: 768px) {
+    .desktop-quick-links {
+        display: none;
+    }
+
+    .mobile-nav-drawer {
+        display: flex;
+    }
+
+    .nav-overlay-wrapper {
+        justify-content: flex-end;
+        align-items: stretch;
+    }
+}
+
+
+
+/* ===================================
+   HEADER 2 - MAIN NAVIGATION
+   =================================== */
+
+.header-main {
+    width: 100%;
+    background-color: white;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.header-main-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 80px;
+    height: 80px;
+    max-width: 100%;
+}
+
+/* Left Section - Logo */
+.header-main-left {
+    flex: 1;
+    /* Restore growing flex */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.school-logo-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    /* 4px away from logo */
+    text-decoration: none;
+}
+
+.school-branding {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.school-name {
+    color: var(--primary-600);
+    font-size: 11.5px;
+    /* Reduced from 13.5px */
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0;
+}
+
+.school-motto {
+    color: var(--secondary-600);
+    /* Secondary color */
+    font-size: 9.5px;
+    /* Smaller text */
+    font-weight: 500;
+    margin: 0;
+}
+
+.logo-img {
+    height: 48px;
+    /* Reduced from 60px */
+    width: auto;
+    object-fit: contain;
+    display: block;
+    /* Ensure no baseline gap */
+}
+
+.logo-placeholder {
+    width: 50px;
+    height: 50px;
+    background-color: var(--primary-600);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-text {
+    color: white;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+/* Center Section - Navigation Menu */
+.header-main-center {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 60px;
+    /* Explicit margin allowing enough room for padding */
+}
+
+.main-nav {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+/* New Dropdown Family Styles */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    min-width: 200px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    padding: 12px 0;
+    list-style: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    border: 1px solid var(--gray-100);
+}
+
+.nav-item:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-menu li a {
+    display: block;
+    padding: 10px 20px;
+    color: var(--gray-700);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-transform: uppercase;
+    /* Capitalized sub-links */
+    letter-spacing: 0.5px;
+}
+
+.dropdown-menu li a:hover {
+    background-color: var(--primary-50);
+    color: var(--primary-600);
+    padding-left: 24px;
+}
+
+.nav-menu {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Remove stretch as that often causes full-height backgrounds */
+    gap: 44px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    height: 80px;
+}
+
+.nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.nav-link {
+    color: var(--gray-600);
+    /* Slightly lighter grey than 800 */
+    font-size: 13px;
+    font-weight: 800;
+    /* Bolder font */
+    text-decoration: none;
+    transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 0;
+    /* Changed from 8px 12px to stop padding adding to the total space */
+    border-radius: 6px;
+    white-space: nowrap;
+    text-transform: uppercase;
+    /* Capitalized */
+    letter-spacing: 0.5px;
+    background-color: transparent !important;
+    /* Explicitly ensure no bg initially */
+}
+
+.nav-link:hover {
+    color: var(--primary-500);
+    background-color: transparent !important;
+    /* Remove any background-color assignments */
+}
+
+.nav-link.active {
+    color: var(--primary-600);
+    font-weight: 700;
+}
+
+/* Dropdown Indicator */
+.dropdown-icon {
+    font-size: 12px;
+    margin-left: 2px;
+    transition: transform 0.3s ease;
+    color: var(--gray-400);
+    /* Lighten icon */
+}
+
+.has-dropdown .nav-link:hover .dropdown-icon {
+    transform: rotate(180deg);
+}
+
+/* Right Section - Quick Actions */
+.header-main-right {
+    flex: 1;
+    /* Restore growing flex */
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.action-icon {
+    color: var(--gray-700);
+    font-size: 18px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+}
+
+.action-icon:hover {
+    color: var(--primary-500);
+    background-color: var(--primary-50);
+}
+
+.menu-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* ===================================
+   RESPONSIVE ADJUSTMENTS
+   =================================== */
+
+@media (max-width: 1024px) {
+
+    .header-top-container,
+    .header-main-container {
+        padding-left: 64px;
+        padding-right: 64px;
+    }
+
+    .quick-links-container {
+        margin-right: 64px;
+    }
+
+    .nav-menu {
+        gap: 36px;
+    }
+}
+
+@media (max-width: 768px) {
+
+    .header-top-container,
+    .header-main-container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .school-info {
+        font-size: 12px;
+    }
+
+    /* Hide middle dividers and secondary info on very small screens */
+    .info-divider,
+    .info-item:not(:first-child) {
+        display: none;
+    }
+
+    .header-main-center {
+        display: none;
+        /* Hide main nav menu on mobile, use quick links instead */
+    }
+
+    .menu-toggle {
+        display: flex;
+        /* Show toggle when nav menu is hidden */
+    }
+
+    .school-name {
+        font-size: 13px;
+    }
+
+    .school-motto {
+        font-size: 10px;
+    }
+
+    .logo-img {
+        height: 50px;
+    }
+
+    .header-main-right {
+        flex: 0 0 auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-portal-login {
+        padding: 0 16px;
+        font-size: 12px;
+    }
+}

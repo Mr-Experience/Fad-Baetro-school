@@ -1,0 +1,38 @@
+/* HomePage Layout */
+.home-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    color: var(--gray-900);
+    font-family: 'Manrope', sans-serif;
+}
+
+/* Main Content Area */
+.home-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Hero section is now a component */
+
+.hero-content {
+    max-width: 800px;
+}
+
+.hero-content h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-content p {
+    font-size: 1.25rem;
+    color: #94a3b8;
+    margin-bottom: 2.5rem;
+}

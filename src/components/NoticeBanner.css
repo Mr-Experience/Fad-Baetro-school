@@ -1,0 +1,94 @@
+.notice-banner {
+    width: 100%;
+    background-color: var(--secondary-50);
+    /* Light secondary color (green) */
+    padding: 15px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.notice-container {
+    background-color: #a61d37;
+    /* Deep red notification bar */
+    color: white;
+    padding: 8px 20px;
+    width: 90%;
+    max-width: 1000px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    border-left: 4px solid #38bdf8;
+    /* Blue accent line on the left as seen in image */
+}
+
+.notice-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notice-icon {
+    font-size: 14px;
+}
+
+.notice-text {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.notice-text strong {
+    font-weight: 700;
+}
+
+.notice-close {
+    background: none;
+    border: none;
+    color: #38bdf8;
+    /* Light blue close icon as seen in image */
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    margin-left: 20px;
+    transition: transform 0.2s ease;
+}
+
+.notice-close:hover {
+    transform: scale(1.2);
+}
+
+@media (max-width: 768px) {
+    .notice-text {
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .notice-container {
+        padding: 10px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .notice-container {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+        padding: 12px;
+    }
+
+    .notice-content {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .notice-close {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        margin: 0;
+    }
+}

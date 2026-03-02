@@ -1,24 +1,125 @@
 :root {
-  font-family: 'Manrope', sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+    /* Primary Color Scale (Pink) - From Reference Image 1 */
+    --primary-50: #FCF3F9;
+    --primary-100: #FAE9F5;
+    --primary-200: #F8D2ED;
+    --primary-300: #F3AEDB;
+    --primary-400: #EA7CC4;
+    --primary-500: #DF55AA;
+    --primary-600: #CD358C;
+    --primary-700: #B12570;
+    --primary-800: #86225F;
+    --primary-900: #7B2050;
+    --primary-950: #4A0D2C;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+    /* Secondary Color Scale (Green) - From Reference Image 2 */
+    --secondary-50: #F6FDE8;
+    --secondary-100: #ECF9CE;
+    --secondary-200: #D8F4A2;
+    --secondary-300: #BEEA6C;
+    --secondary-400: #A3DB40;
+    --secondary-500: #85C221;
+    --secondary-600: #659A16;
+    --secondary-700: #4E7518;
+    --secondary-800: #3F5D17;
+    --secondary-900: #374F18;
+    --secondary-950: #1B2C07;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    /* Success Color Scale (Green) */
+    --success-50: #f0fdf4;
+    --success-100: #dcfce7;
+    --success-200: #bbf7d0;
+    --success-300: #86efac;
+    --success-400: #4ade80;
+    --success-500: #22c55e;
+    --success-600: #16a34a;
+    --success-700: #15803d;
+    --success-800: #166534;
+    --success-900: #14532d;
+
+    /* Error Color Scale (Red) */
+    --error-50: #fef2f2;
+    --error-100: #fee2e2;
+    --error-200: #fecaca;
+    --error-300: #fca5a5;
+    --error-400: #f87171;
+    --error-500: #ef4444;
+    --error-600: #dc2626;
+    --error-700: #b91c1c;
+    --error-800: #991b1b;
+    --error-900: #7f1d1d;
+
+    /* Warning Color Scale (Amber) */
+    --warning-50: #fffbeb;
+    --warning-100: #fef3c7;
+    --warning-200: #fde68a;
+    --warning-300: #fcd34d;
+    --warning-400: #fbbf24;
+    --warning-500: #f59e0b;
+    --warning-600: #d97706;
+    --warning-700: #b45309;
+    --warning-800: #92400e;
+    --warning-900: #78350f;
+
+    /* Gray Color Scale */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+
+    /* Legacy compatibility and defaults */
+    --primary-color: var(--primary-600);
+    --secondary-color: var(--secondary-600);
+    --bg-dark: #000000;
+    --text-light: #f8fafc;
+    
+    font-family: 'Manrope', sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background-color: #ffffff;
+    color: var(--gray-900);
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-/* Add more global variables here later */
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+ul {
+    list-style: none;
+}
+/* Watermark Removal Utility */
+.watermark-crop {
+    position: relative;
+    overflow: hidden;
+    display: block;
+    width: 100%;
+}
+
+.watermark-crop img {
+    width: 105% !important;
+    max-width: none !important;
+    transform: translate(-5px, -5px);
+    display: block;
+}

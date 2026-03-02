@@ -1,0 +1,313 @@
+.contact-page {
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    font-family: 'Manrope', sans-serif;
+    background-color: #f8fafc;
+    /* Background that continues after the map */
+}
+
+/* Map Background */
+.contact-map-container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    z-index: 1;
+    background-color: #e5e7eb;
+    /* Placeholder color while map loads */
+}
+
+.contact-map-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    filter: grayscale(10%) contrast(1.1);
+    /* Slight theme shift */
+}
+
+/* Map Location Box (Simplified Route only) */
+.map-location-box {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+    background: white;
+    padding: 16px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    width: auto;
+    max-width: 400px;
+}
+
+.location-box-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+}
+
+.location-box-header i {
+    font-size: 24px;
+    color: var(--primary-600);
+}
+
+.location-box-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #1a365d;
+    font-weight: 700;
+}
+
+.location-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.location-detail-item {
+    display: flex;
+    gap: 12px;
+}
+
+.location-detail-item .label {
+    font-weight: 700;
+    color: #1a365d;
+    font-size: 14px;
+    min-width: 70px;
+}
+
+.location-detail-item .value {
+    color: #4a5568;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Main Contact Card (First Image Style) */
+.contact-overlay-card {
+    position: relative;
+    margin: -24px auto 80px;
+    /* Overlaps map by exactly 24px and centered */
+    width: 90%;
+    max-width: 1100px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    z-index: 5;
+    overflow: hidden;
+}
+
+/* Left Section: Info (Second Image Style) */
+.contact-card-info {
+    flex: 1;
+    padding: 48px;
+    background-color: white;
+}
+
+.contact-card-info h2 {
+    font-size: 36px;
+    color: #1a365d;
+    font-weight: 800;
+    margin-bottom: 16px;
+}
+
+.contact-intro-text {
+    color: #4a5568;
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+}
+
+.contact-methods-list {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.contact-method-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.contact-method-item:last-child {
+    border-bottom: none;
+}
+
+.method-icon-circle {
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--primary-500);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--primary-600);
+    font-size: 18px;
+}
+
+.method-details h4 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    color: #1a365d;
+    font-weight: 700;
+}
+
+.method-details p {
+    margin: 0;
+    font-size: 14px;
+    color: #4a5568;
+    line-height: 1.5;
+}
+
+/* Right Section: Form (First Image Style) */
+.contact-card-form-section {
+    flex: 1;
+    padding: 48px;
+    background-color: #f8fafc;
+}
+
+.contact-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group.full-width {
+    grid-column: span 2;
+}
+
+.contact-form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.contact-form-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.contact-form-input:focus {
+    outline: none;
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+textarea.contact-form-input {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.contact-form-submit-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--primary-600);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    margin-top: 10px;
+}
+
+.contact-form-submit-btn:hover {
+    background-color: var(--primary-700);
+    transform: translateY(-1px);
+}
+
+.contact-form-submit-btn:active {
+    transform: translateY(0);
+}
+
+/* Animations */
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -30%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -40%);
+    }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .contact-overlay-card {
+        flex-direction: column;
+        top: 120px;
+        left: 5%;
+        right: 5%;
+        transform: none;
+        width: 90%;
+        margin-bottom: 50px;
+        position: relative;
+    }
+
+    .contact-page {
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 60px;
+        min-height: 100vh;
+    }
+
+    .contact-map-container {
+        position: fixed;
+    }
+
+    .map-location-box {
+        display: none;
+        /* Hide on mobile to save space, or reposition */
+    }
+}
+
+@media (max-width: 768px) {
+
+    .contact-card-info,
+    .contact-card-form-section {
+        padding: 32px 24px;
+    }
+
+    .contact-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-group {
+        grid-column: span 1;
+    }
+
+    .contact-card-info h2 {
+        font-size: 28px;
+    }
+}

@@ -1,0 +1,203 @@
+.admission-process-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8fafc;
+}
+
+/* Hero Section */
+.admission-hero {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+    color: white;
+    padding: 80px 0;
+    text-align: center;
+}
+
+.admission-hero .hero-subtitle {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 15px;
+    opacity: 0.9;
+}
+
+.admission-hero h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 20px;
+}
+
+.admission-hero .highlight {
+    color: #facc15;
+}
+
+.admission-hero p {
+    font-size: 1.2rem;
+    max-width: 600px;
+    margin: 0 auto;
+    opacity: 0.9;
+}
+
+/* Process Grid */
+.admission-content {
+    flex: 1;
+    padding: 80px 0;
+}
+
+.admission-content .container {
+    padding: 0 80px;
+}
+
+.process-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.process-card {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid var(--gray-100);
+}
+
+.process-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.step-number {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 4rem;
+    font-weight: 900;
+    color: var(--gray-50);
+    line-height: 1;
+    z-index: 1;
+}
+
+.icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background: var(--primary-50);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 25px;
+    position: relative;
+    z-index: 2;
+}
+
+.step-icon {
+    color: var(--primary-600);
+    width: 32px;
+    height: 32px;
+}
+
+.process-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 15px;
+    position: relative;
+    z-index: 2;
+}
+
+.process-card p {
+    color: var(--gray-600);
+    line-height: 1.6;
+    font-size: 0.95rem;
+    position: relative;
+    z-index: 2;
+}
+
+/* Notice Section */
+.admission-notice {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.notice-card {
+    background: #fff beb 0;
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    border-left: 5px solid var(--primary-600);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.notice-card h4 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary-600);
+    margin-bottom: 20px;
+}
+
+.notice-card ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 30px;
+}
+
+.notice-card li {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 12px;
+    color: var(--gray-700);
+    line-height: 1.6;
+}
+
+.notice-card li::before {
+    content: "•";
+    color: var(--primary-600);
+    font-weight: bold;
+    font-size: 1.5rem;
+    position: absolute;
+    left: 0;
+    top: -5px;
+}
+
+.btn-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+.btn-apply-now {
+    background-color: var(--primary-600);
+    color: white;
+    padding: 16px 40px;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-apply-now:hover {
+    background-color: var(--primary-700);
+    transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+    .admission-hero h1 {
+        font-size: 2.2rem;
+    }
+
+    .admission-content {
+        padding: 40px 0;
+    }
+
+    .process-card {
+        padding: 30px;
+    }
+}
