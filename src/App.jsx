@@ -10,6 +10,11 @@ import AdmissionProcessPage from './pages/school/AdmissionProcessPage';
 import FAQPage from './pages/school/FAQPage';
 import NewsPage from './pages/media/NewsPage';
 import CandidateLogin from './pages/auth/CandidateLogin';
+import StudentLogin from './pages/student/StudentLogin';
+import NoExamSchedule from './pages/student/NoExamSchedule';
+import ActiveExam from './pages/student/ActiveExam';
+import ExamScreen from './pages/student/ExamScreen';
+import ExamSubmitted from './pages/student/ExamSubmitted';
 
 
 
@@ -31,6 +36,12 @@ function App() {
                 <Route path="/news" element={<NewsPage />} />
                 {/* Previews & Candidates */}
                 <Route path="/portal/candidate" element={<CandidateLogin />} />
+                {/* Student Pages */}
+                <Route path="/portal/student" element={<StudentLogin />} />
+                <Route path="/portal/student/no-exam" element={<NoExamSchedule />} />
+                <Route path="/portal/student/active-exam" element={<ActiveExam />} />
+                <Route path="/portal/student/exam" element={<ExamScreen />} />
+                <Route path="/portal/student/submitted" element={<ExamSubmitted />} />
 
 
                 <Route path="*" element={<Navigate to="/" replace />} />
