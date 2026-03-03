@@ -9,7 +9,12 @@ import VisionPage from './pages/school/VisionPage';
 import AdmissionProcessPage from './pages/school/AdmissionProcessPage';
 import FAQPage from './pages/school/FAQPage';
 import NewsPage from './pages/media/NewsPage';
-import CandidateLogin from './pages/auth/CandidateLogin';
+import CandidateLogin from './pages/candidate/CandidateLogin';
+import CandidateNoExam from './pages/candidate/NoExamSchedule';
+import CandidateActiveExam from './pages/candidate/ActiveExam';
+import CandidateExamScreen from './pages/candidate/ExamScreen';
+import CandidateSubmitted from './pages/candidate/ExamSubmitted';
+
 import StudentLogin from './pages/student/StudentLogin';
 import NoExamSchedule from './pages/student/NoExamSchedule';
 import ActiveExam from './pages/student/ActiveExam';
@@ -35,7 +40,13 @@ function App() {
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/news" element={<NewsPage />} />
                 {/* Previews & Candidates */}
+                {/* Candidate Pages */}
                 <Route path="/portal/candidate" element={<CandidateLogin />} />
+                <Route path="/portal/candidate/no-exam" element={<CandidateNoExam />} />
+                <Route path="/portal/candidate/active-exam" element={<CandidateActiveExam />} />
+                <Route path="/portal/candidate/exam" element={<CandidateExamScreen />} />
+                <Route path="/portal/candidate/submitted" element={<CandidateSubmitted />} />
+
                 {/* Student Pages */}
                 <Route path="/portal/student" element={<StudentLogin />} />
                 <Route path="/portal/student/no-exam" element={<NoExamSchedule />} />
