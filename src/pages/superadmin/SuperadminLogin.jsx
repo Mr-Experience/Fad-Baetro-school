@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../auth/PortalLogin.css';
-import './CandidateLogin.css';
+import '../student/NoExamSchedule.css'; // Reusing header styles
+import './SuperadminLogin.css';
 import logo from '../../assets/logo.jpg';
 import { supabase } from '../../supabaseClient';
 
-const CandidateLogin = () => {
+const SuperadminLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -29,53 +29,55 @@ const CandidateLogin = () => {
         }
 
         if (data.user) {
-            navigate('/portal/candidate/no-exam');
+            navigate('/portal/superadmin/config');
         }
     };
 
     return (
-        <div className="portal-login-container">
-            <header className="portal-header-bar">
-                <img src={logo} alt="Logo" className="portal-logo-img" />
-                <h1 className="portal-school-name">Fad Mastro Academy</h1>
+        <div className="sal-container">
+            {/* Simple Header */}
+            <header className="portal-header-bar sal-header">
+                <div className="sal-header-left">
+                    <img src={logo} alt="Logo" className="portal-logo-img" />
+                    <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                </div>
             </header>
 
-            <main className="portal-content">
-                <div className="login-card">
-                    <h2 className="login-title">Login to candidate portal</h2>
+            {/* Main Login Card */}
+            <main className="sal-main">
+                <div className="sal-card">
+                    <h2 className="sal-title">Login to staff portal</h2>
 
                     {error && <div style={{ color: 'red', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>{error}</div>}
 
-                    <form className="login-form" onSubmit={handleLogin} autoComplete="off">
-                        <div className="form-group">
-                            <label className="form-label">Email*</label>
+                    <form className="sal-form" onSubmit={handleLogin}>
+                        <div className="sal-form-group">
+                            <label className="sal-label">Email*</label>
                             <input
                                 type="email"
-                                name="email"
+                                className="sal-input"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                autoComplete="off"
-                                className="form-input"
                                 required
                             />
                         </div>
 
-                        <div className="form-group">
-                            <label className="form-label">Password*</label>
+                        <div className="sal-form-group">
+                            <label className="sal-label">Password*</label>
                             <input
                                 type="password"
-                                name="password"
+                                className="sal-input"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                autoComplete="new-password"
-                                className="form-input"
                                 required
                             />
                         </div>
 
-                        <a href="#reset" className="forgot-password-link">Reset Password</a>
+                        <div className="sal-reset-row">
+                            <a href="#reset" className="sal-reset-link">Reset Password</a>
+                        </div>
 
-                        <button type="submit" className="login-btn" disabled={loading}>
+                        <button type="submit" className="sal-login-btn" disabled={loading}>
                             {loading ? 'Logging in...' : 'Login to portal'}
                         </button>
                     </form>
@@ -85,5 +87,4 @@ const CandidateLogin = () => {
     );
 };
 
-export default CandidateLogin;
-
+export default SuperadminLogin;

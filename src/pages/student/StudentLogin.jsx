@@ -1,10 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../auth/PortalLogin.css';
 import logo from '../../assets/logo.jpg';
+import { supabase } from '../../supabaseClient';
 
 const StudentLogin = () => {
-    const [email, setEmail] = React.useState('');
-    const [password, setPassword] = React.useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) {
+            setError(error.message);
+            setLoading(false);
+            return;
+        }
+
+        if (data.user) {
+            // Redirect to student dashboard (or no-exam page as placeholder)
+            navigate('/portal/student/no-exam');
+        }
+    };
 
     return (
         <div className="portal-login-container">
@@ -17,7 +44,9 @@ const StudentLogin = () => {
                 <div className="login-card">
                     <h2 className="login-title">Login to student portal</h2>
 
-                    <form className="login-form" onSubmit={(e) => e.preventDefault()} autoComplete="off">
+                    {error && <div style={{ color: 'red', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>{error}</div>}
+
+                    <form className="login-form" onSubmit={handleLogin} autoComplete="off">
                         <div className="form-group">
                             <label className="form-label">Email*</label>
                             <input
@@ -46,8 +75,8 @@ const StudentLogin = () => {
 
                         <a href="#reset" className="forgot-password-link">Reset Password</a>
 
-                        <button type="submit" className="login-btn">
-                            Login to portal
+                        <button type="submit" className="login-btn" disabled={loading}>
+                            {loading ? 'Logging in...' : 'Login to portal'}
                         </button>
                     </form>
                 </div>

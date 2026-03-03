@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
     "iconsax-react": "^0.0.8",
     "lucide-react": "^0.563.0",
     "node-fetch": "^3.3.2",

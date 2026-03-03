@@ -120,15 +120,34 @@
 .login-btn {
     background-color: var(--primary-maroon);
     color: var(--white);
-    height: 36px;
-    padding: 0 12px;
+    height: 38px;
+    padding: 0 16px;
     border: none;
     border-radius: 8px;
-    /* Slightly more rounded */
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s;
+    width: 100%;
+}
+
+.login-alert-container {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.login-error-msg {
+    color: #DC2626;
+    background-color: #FEF2F2;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+    border: 1px solid #FEE2E2;
+    width: 100%;
 }
 
 .login-btn:hover {

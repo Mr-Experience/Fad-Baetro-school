@@ -9,11 +9,18 @@ import VisionPage from './pages/school/VisionPage';
 import AdmissionProcessPage from './pages/school/AdmissionProcessPage';
 import FAQPage from './pages/school/FAQPage';
 import NewsPage from './pages/media/NewsPage';
+import SuperadminLogin from './pages/superadmin/SuperadminLogin';
+import SchoolConfig from './pages/superadmin/SchoolConfig';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminInfo from './pages/admin/AdminInfo';
+import AdminProfile from './pages/admin/AdminProfile';
+import AdminLogin from './pages/admin/AdminLogin';
 import CandidateLogin from './pages/candidate/CandidateLogin';
 import CandidateNoExam from './pages/candidate/NoExamSchedule';
 import CandidateActiveExam from './pages/candidate/ActiveExam';
 import CandidateExamScreen from './pages/candidate/ExamScreen';
 import CandidateSubmitted from './pages/candidate/ExamSubmitted';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import StudentLogin from './pages/student/StudentLogin';
 import NoExamSchedule from './pages/student/NoExamSchedule';
@@ -39,7 +46,20 @@ function App() {
                 <Route path="/gallery" element={<GalleryPage />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/news" element={<NewsPage />} />
-                {/* Previews & Candidates */}
+                {/* Superadmin Pages */}
+                <Route path="/portal/superadmin" element={<SuperadminLogin />} />
+                <Route path="/portal/superadmin/config" element={<SchoolConfig />} />
+
+                {/* Admin Pages */}
+                <Route path="/portal/admin/login" element={<AdminLogin />} />
+
+                {/* Protected Admin Routes */}
+                <Route element={<ProtectedRoute />}>
+                    <Route path="/portal/admin" element={<AdminDashboard />} />
+                    <Route path="/portal/admin/info" element={<AdminInfo />} />
+                    <Route path="/portal/admin/profile" element={<AdminProfile />} />
+                </Route>
+
                 {/* Candidate Pages */}
                 <Route path="/portal/candidate" element={<CandidateLogin />} />
                 <Route path="/portal/candidate/no-exam" element={<CandidateNoExam />} />
