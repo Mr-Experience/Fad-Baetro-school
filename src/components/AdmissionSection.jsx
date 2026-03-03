@@ -8,8 +8,8 @@ const AdmissionSection = () => {
     const [isPortalDropdownOpen, setIsPortalDropdownOpen] = useState(false);
 
     return (
-        <section className="admission-section">
-            <div className="admission-grid">
+        <section className="admission-section section-padding">
+            <div className="admission-grid container-std">
                 <div className="admission-left">
                     <div className="admission-card">
                         <h2 className="admission-title">FIRST ENTRANCE <br /> EXAMINATION 2026/2027 <br /> SESSION</h2>
@@ -19,10 +19,10 @@ const AdmissionSection = () => {
                             Interested candidates should begin to apply immediately.
                         </p>
                         <div className="admission-actions">
-                            <Link to="/admission" className="admission-btn">
+                            <Link to="/admission" className="btn btn-accent">
                                 VIEW ADMISSION PROCESS
                             </Link>
-                            <Link to="/portal/candidate" className="admission-btn apply-now">
+                            <Link to="/portal/candidate" className="btn btn-accent">
                                 APPLY ONLINE NOW
                             </Link>
                         </div>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { supabase } from '../../supabaseClient';
 import './GalleryPage.css';
 
 const ImageWithZoom = ({ src, alt }) => {
@@ -28,96 +29,49 @@ const ImageWithZoom = ({ src, alt }) => {
 
 const GalleryPage = () => {
     const [selectedImage, setSelectedImage] = useState(null);
+    const [galleryItems, setGalleryItems] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Placeholder data - User will replace these later
-    const galleryItems = [
-        {
-            id: 1,
-            type: 'captioned',
-            src: '/src/assets/images/lagos_assembly_corrected.jpg',
-            title: 'Lagos State House of Assembly',
-            description: 'During a visit to Lagos State House of Assembly.'
-        },
-        {
-            id: 2,
-            type: 'captioned',
-            src: '/src/assets/images/neco_certification_corrected.jpg',
-            title: 'NECO Certification',
-            description: 'Receiving our NECO certification.'
-        },
-        {
-            id: 3,
-            type: 'captioned',
-            src: '/src/assets/images/obasanjo_library.png',
-            title: 'Olusegun Obasanjo Presidential Library',
-            description: 'A visit to Olusegun Obasanjo Presidential Library.'
-        },
-        // Additional standalone images - Organized Alternating Pattern
-        // Row 1: Left Wide (2 cols) + Right Normal (1 col)
-        {
-            id: 4,
-            type: 'image',
-            size: 'wide',
-            src: '/src/assets/images/gallery_photo_1.jpg',
-        },
-        {
-            id: 5,
-            type: 'image',
-            size: 'normal',
-            src: '/src/assets/images/gallery_photo_2.jpg',
-        },
-        // Row 2: Left Normal (1 col) + Right Wide (2 cols)
-        {
-            id: 6,
-            type: 'image',
-            size: 'normal',
-            src: '/src/assets/images/gallery_photo_3.jpg',
-        },
-        {
-            id: 7,
-            type: 'image',
-            size: 'wide',
-            src: '/src/assets/images/gallery_photo_4.jpg',
-        },
-        // Row 3: Left Wide (2 cols) + Right Normal (1 col)
-        {
-            id: 8,
-            type: 'image',
-            size: 'wide',
-            src: '/src/assets/images/gallery_photo_5.jpg',
-        },
-        {
-            id: 9,
-            type: 'image',
-            size: 'normal',
-            src: '/src/assets/images/gallery_photo_6.jpg',
-        },
-        // Row 4: Left Normal (1 col) + Right Wide (2 cols)
-        {
-            id: 10,
-            type: 'image',
-            size: 'normal',
-            src: '/src/assets/images/gallery_photo_7.jpg',
-        },
-        {
-            id: 11,
-            type: 'image',
-            size: 'wide',
-            src: '/src/assets/images/gallery_photo_8.jpg',
-        },
-        // Row 5: Left Wide (2 cols) + Right Normal (1 col)
-        {
-            id: 12,
-            type: 'image',
-            size: 'wide',
-            src: '/src/assets/images/gallery_photo_9.jpg',
-        },
-        {
-            id: 13,
-            type: 'image',
-            size: 'normal',
-            src: '/src/assets/images/gallery_photo_10.jpg',
-        }];
+    useEffect(() => {
+        const fetchMediaItems = async () => {
+            const { data, error } = await supabase
+                .from('media_items')
+                .select('*')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
+
+            if (!error && data) {
+                // Determine layout sizing sequentially like the hardcopied version
+                // Pattern: [wide, normal], [normal, wide], [wide, normal]...
+                const formattedData = data.map((item, index) => {
+                    const row = Math.floor(index / 2);
+                    const positionInRow = index % 2;
+
+                    let size = 'normal';
+                    if (row % 2 === 0) {
+                        // Even rows: Wide | Normal
+                        size = positionInRow === 0 ? 'wide' : 'normal';
+                    } else {
+                        // Odd rows: Normal | Wide
+                        size = positionInRow === 0 ? 'normal' : 'wide';
+                    }
+
+                    return {
+                        id: item.id,
+                        type: item.description || item.title ? 'captioned' : 'image',
+                        size: size,
+                        src: item.image_url,
+                        title: item.title,
+                        description: item.description
+                    };
+                });
+                setGalleryItems(formattedData);
+            }
+            setLoading(false);
+        };
+
+        fetchMediaItems();
+    }, []);
 
     const openLightbox = (item) => {
         setSelectedImage(item);
@@ -141,28 +95,40 @@ const GalleryPage = () => {
 
                 <section className="gallery-grid-section">
                     <div className="gallery-container">
-                        <div className="gallery-grid">
-                            {galleryItems.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className={`gallery-item ${item.type} ${item.size || ''}`}
-                                    onClick={() => openLightbox(item)}
-                                >
-                                    <div className="image-wrapper">
-                                        <img src={item.src} alt={item.title || 'Gallery Image'} loading="lazy" />
+                        {loading ? (
+                            <div style={{ textAlign: 'center', padding: '60px 0', color: '#6B7280' }}>
+                                <div className="spinner" style={{ width: '40px', height: '40px', border: '3px solid rgba(0,0,0,0.1)', borderTopColor: '#3B82F6', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }}></div>
+                                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                                <p>Loading gallery...</p>
+                            </div>
+                        ) : galleryItems.length > 0 ? (
+                            <div className="gallery-grid">
+                                {galleryItems.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className={`gallery-item ${item.type} ${item.size || ''}`}
+                                        onClick={() => openLightbox(item)}
+                                    >
+                                        <div className="image-wrapper">
+                                            <img src={item.src} alt={item.title || 'Gallery Image'} loading="lazy" />
 
-                                        {item.type === 'captioned' && (
-                                            <div className="caption-overlay">
-                                                <div className="caption-content">
-                                                    {/* Title removed as per "single text is enough" request */}
-                                                    <p>{item.description}</p>
+                                            {item.type === 'captioned' && (
+                                                <div className="caption-overlay">
+                                                    <div className="caption-content">
+                                                        {item.title && <h3>{item.title}</h3>}
+                                                        {item.description && <p>{item.description}</p>}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '60px 0', color: '#6B7280' }}>
+                                <p>No media items found. Check back later!</p>
+                            </div>
+                        )}
                     </div>
                 </section>
             </main>

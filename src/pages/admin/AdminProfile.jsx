@@ -14,6 +14,7 @@ const AdminProfile = () => {
     const [userInitial, setUserInitial] = useState('A');
     const [userRole, setUserRole] = useState('Admin');
     const [avatarUrl, setAvatarUrl] = useState(null);
+    const [profileLoading, setProfileLoading] = useState(true);
 
     // Name form
     const [fullName, setFullName] = useState('');
@@ -55,6 +56,7 @@ const AdminProfile = () => {
                     setUserInitial(fallback.charAt(0).toUpperCase());
                 }
             }
+            setProfileLoading(false);
         };
         fetchUser();
     }, []);
@@ -225,12 +227,17 @@ const AdminProfile = () => {
                         <span className="ad-school-name">FAD MASTRO ACADEMY</span>
                     </div>
                     <div className="ad-header-right">
-                        {userName && <span className="ad-user-name" style={{ fontSize: '14px', fontWeight: '500', color: '#1E293B' }}>{userName}</span>}
-                        <div className="ad-user-avatar">
-                            {avatarUrl
-                                ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                                : <span>{userInitial}</span>
-                            }
+                        {profileLoading ? (
+                            <div className="skeleton-pulse profile-name-skeleton" style={{ marginRight: '10px' }}></div>
+                        ) : (
+                            userName && <span className="ad-user-name" style={{ fontSize: '14px', fontWeight: '500', color: '#1E293B' }}>{userName}</span>
+                        )}
+                        <div className={`ad-user-avatar ${profileLoading ? 'skeleton-pulse avatar-skeleton' : ''}`}>
+                            {!profileLoading && (
+                                avatarUrl
+                                    ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                                    : <span>{userInitial}</span>
+                            )}
                         </div>
                     </div>
                 </header>

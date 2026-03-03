@@ -61,6 +61,38 @@ The site identity and navigation layout have been polished:
   2. The students in Red Blazers on the school stairs.
 - **Perfect Alignment**: Adjusted the CSS to ensure both images are **centralized** while keeping the watermark-hiding scale active.
 - **System Stability**: Fixed all internal page links to use the new photography assets.
+## Website Standardization & Stability
+
+I have implemented a comprehensive design system to correct load instability and standardize the visual experience across the entire site.
+
+### 1. Global design tokens (`index.css`)
+- **Unified Containers**: Created `.container-std` (max-width: 1100px) used by every section.
+- **Consistent Spacing**: Standardized vertical rhythm with `.section-padding` (80px gap between sections).
+- **Consolidated Buttons**: Created a global `.btn` system with `primary`, `secondary`, and `accent` variants. No more mismatched button styles.
+- **Typography Utility**: Centralized `.h2-large` and `.subtitle-caps` for consistent heading styles.
+
+### 2. Layout Stability Improvements
+- **Hero Flicker Fix**: The Hero slider now pre-loads fallback images in its initial state, preventing the "white flash" while fetching dynamic data from Supabase.
+- **Cumulative Layout Shift (CLS) Reduction**: By standardizing section heights and using consistent grid gaps, elements no longer jump as they load.
+
+### 3. Component Refactoring
+- **Refactored Components**: `Hero`, `WelcomeSection`, `AcademicsSection`, and `AdmissionSection` were all converted to use the new global design system.
+- **Brand Color Alignment**: Hardcoded colors were replaced with the official CSS variables (e.g., `--primary-600`, `--gray-900`) to ensure 100% theme accuracy.
+
+---
+
+## Verification Steps
+1. **Visual Audit**: Scroll the landing page and notice the identical vertical gaps between all sections.
+2. **Button Check**: Hover over the "About Us" and "Admission" buttons—they now share the exact same hover animations and styling.
+3. **Load Test**: Refresh the page; the Hero should remain stable without flickering or moving elements during the initial fetch.
+
+## Admin Portal Stability (No Flicker)
+
+I have implemented advanced stability measures for the Admin Dashboard and related pages to ensure the profile elements (Name and Avatar) do not flicker or jump during load.
+
+- **Skeleton Loaders**: Added `.skeleton-pulse` and fixed-size placeholders to the Admin header across `AdminDashboard`, `AdminInfo`, and `AdminProfile`.
+- **Reserved Space**: The user name and avatar area now reserve their exact dimensions immediately, preventing layout shifts when data arrives from Supabase.
+- **Unified Experience**: Standardized the profile header across all three admin pages for a smooth, high-end professional feel.
 ### 4. New Question Bank System
 A much simpler and more direct system for managing questions has been implemented:
 
@@ -73,3 +105,14 @@ A much simpler and more direct system for managing questions has been implemente
 - **Backend**: New `manage_questions.php` API provides robust CRUD operations.
 
 (Verified via database schema, API connectivity, and UI navigation).
+
+---
+
+## Hero Image Cleanup (Supabase Reliance)
+
+The Hero section has been stripped of all hardcoded asset dependencies. It now relies 100% on the live Supabase database.
+
+- **Removed Fallbacks**: Deleted all internal references to "hero\_1.jpg" and "hero\_2.jpg".
+- **Database Logic**: The slider only renders if active images are found in the `hero_images` table.
+- **Visual Stability**: Added a soft gray background (`#f1f5f9`) to the `.hero-section` container to act as a stable placeholder while the app communicates with the database.
+

@@ -78,7 +78,7 @@
     --secondary-color: var(--secondary-600);
     --bg-dark: #000000;
     --text-light: #f8fafc;
-    
+
     font-family: 'Manrope', sans-serif;
     line-height: 1.5;
     font-weight: 400;
@@ -109,6 +109,7 @@ a {
 ul {
     list-style: none;
 }
+
 /* Watermark Removal Utility */
 .watermark-crop {
     position: relative;
@@ -122,4 +123,136 @@ ul {
     max-width: none !important;
     transform: translate(-5px, -5px);
     display: block;
+}
+
+/* ==========================================
+   GLOBAL UTILITY CLASSES
+   ========================================== */
+
+.container-std {
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 90%;
+}
+
+.section-padding {
+    padding: 80px 0;
+}
+
+.subtitle-caps {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-800);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.subtitle-line {
+    width: 30px;
+    height: 2px;
+    background-color: var(--primary-500);
+}
+
+.h2-large {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--primary-900);
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+/* ==========================================
+   STANDARDIZED BUTTON SYSTEM
+   ========================================== */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 28px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border: none;
+    outline: none;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background-color: var(--primary-600);
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-700);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(205, 53, 140, 0.2);
+}
+
+.btn-secondary {
+    background-color: var(--primary-500);
+    color: #ffffff;
+}
+
+.btn-secondary:hover {
+    background-color: var(--primary-600);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(223, 85, 170, 0.2);
+}
+
+.btn-accent {
+    background-color: #fccb00;
+    /* Original Gold-Yellow */
+    color: #1a365d;
+}
+
+.btn-accent:hover {
+    background-color: #eab308;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(252, 203, 0, 0.2);
+}
+
+/* ==========================================
+   LOADING STABILITY UTILITIES
+   ========================================== */
+
+.skeleton-pulse {
+    background: linear-gradient(-90deg, #f0f0f0 0%, #e8e8e8 50%, #f0f0f0 100%);
+    background-size: 400% 400%;
+    animation: skeleton-pulse-animation 1.5s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+@keyframes skeleton-pulse-animation {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: -135% 0%;
+    }
+}
+
+.profile-name-skeleton {
+    width: 120px;
+    height: 18px;
+    display: inline-block;
+}
+
+.avatar-skeleton {
+    width: 32px;
+    height: 32px;
+    border-radius: 50% !important;
 }

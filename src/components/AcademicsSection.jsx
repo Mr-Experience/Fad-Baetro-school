@@ -22,13 +22,15 @@ const AcademicsSection = () => {
     ];
 
     return (
-        <section className="academics-section">
-            <div className="academics-container">
+        <section className="academics-section section-padding">
+            <div className="academics-container container-std">
                 <div className="academics-left">
-                    <span className="academics-subtitle">OUR ACADEMICS</span>
-                    <h2 className="academics-title">Making Your Child's World Better</h2>
+                    <span className="subtitle-caps">
+                        <span className="subtitle-line"></span>
+                        OUR ACADEMICS
+                    </span>
+                    <h2 className="academics-title h2-large">Making Your Child's World Better</h2>
                     <p className="academics-tagline">Excellence is our priority!</p>
-                    <div className="academics-line"></div>
                 </div>
 
                 <div className="academics-right">

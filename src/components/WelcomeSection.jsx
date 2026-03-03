@@ -6,15 +6,15 @@ import welcomeImg from '../assets/images/school_group_yellow.jpg';
 
 const WelcomeSection = () => {
     return (
-        <section className="welcome-section">
-            <div className="welcome-container">
+        <section className="welcome-section section-padding">
+            <div className="welcome-container container-std">
                 <div className="welcome-content">
-                    <div className="welcome-subtitle-wrapper">
-                        <span className="welcome-line"></span>
-                        <span className="welcome-subtitle">WELCOME TO</span>
+                    <div className="welcome-subtitle-wrapper subtitle-caps">
+                        <span className="subtitle-line"></span>
+                        WELCOME TO
                     </div>
 
-                    <h2 className="welcome-title">
+                    <h2 className="welcome-title h2-large">
                         FAD MAESTRO <br />
                         NURSERY & PRIMARY SCHOOL
                     </h2>
@@ -35,10 +35,10 @@ const WelcomeSection = () => {
                     </div>
 
                     <div className="welcome-actions">
-                        <Link to="/about" className="welcome-btn welcome-btn-primary">
+                        <Link to="/about" className="btn btn-primary">
                             About Us <MoveRight size={18} />
                         </Link>
-                        <Link to="/contact" className="welcome-btn welcome-btn-secondary">
+                        <Link to="/contact" className="btn btn-secondary">
                             Management Messages <MoveRight size={18} />
                         </Link>
                     </div>

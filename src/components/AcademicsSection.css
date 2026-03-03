@@ -1,12 +1,8 @@
 .academics-section {
-    padding: 60px 0 100px 0;
     background-color: #ffffff;
 }
 
 .academics-container {
-    max-width: 1100px;
-    margin: 0 auto;
-    width: 90%;
     display: grid;
     grid-template-columns: 1fr 2fr;
     gap: 40px;
@@ -18,33 +14,15 @@
     flex-direction: column;
 }
 
-.academics-subtitle {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--primary-500);
-    letter-spacing: 1.5px;
-    margin-bottom: 12px;
-}
-
 .academics-title {
-    font-size: 40px;
-    font-weight: 800;
-    color: #1a365d;
-    line-height: 1.1;
-    margin-bottom: 20px;
+    margin: 12px 0 20px 0;
 }
 
 .academics-tagline {
     font-size: 14px;
-    color: #64748b;
-    margin-bottom: 30px;
+    color: var(--gray-500);
+    margin-bottom: 0;
     font-style: italic;
-}
-
-.academics-line {
-    width: 50px;
-    height: 3px;
-    background-color: var(--primary-600);
 }
 
 .academics-grid {
@@ -60,7 +38,6 @@
     text-align: center;
     border: 1px solid var(--primary-100);
     box-shadow: 0 10px 25px rgba(223, 85, 170, 0.05);
-    /* Subtle pinkish glow */
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
@@ -75,7 +52,7 @@
 
 .academics-icon-wrapper {
     margin-bottom: 24px;
-    color: #1a365d;
+    color: var(--primary-900);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -84,16 +61,17 @@
 .academics-card-title {
     font-size: 18px;
     font-weight: 700;
-    color: #1a365d;
+    color: var(--primary-900);
     margin-bottom: 16px;
 }
 
 .academics-card-text {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1.6;
-    color: #64748b;
+    color: var(--gray-600);
     margin: 0;
 }
+
 
 @media (max-width: 1024px) {
     .academics-container {

@@ -12,6 +12,7 @@ const AdminInfo = () => {
     const [userInitial, setUserInitial] = useState('A');
     const [avatarUrl, setAvatarUrl] = useState(null);
     const [userId, setUserId] = useState(null);
+    const [profileLoading, setProfileLoading] = useState(true);
 
     // Content
     const [heroImages, setHeroImages] = useState([]);
@@ -31,22 +32,36 @@ const AdminInfo = () => {
     useEffect(() => {
         const fetchInitialData = async () => {
             const { data: { user } } = await supabase.auth.getUser();
+            console.log("Current Supabase User:", user);
+
             if (user) {
                 setUserId(user.id);
-                const { data: profile } = await supabase
+                const { data: profile, error: profileError } = await supabase
                     .from('profiles')
-                    .select('full_name, avatar_url')
+                    .select('full_name, avatar_url, role') // Added 'role' to select
                     .eq('id', user.id)
                     .single();
 
-                if (profile) {
+                if (!profileError && profile) {
                     setUserName(profile.full_name || user.email?.split('@')[0]);
+                    setUserRole(profile.role); // Set user role
+                    if (profile.role !== 'admin' && profile.role !== 'super_admin') {
+                        console.warn("User logged in but does not have admin/super_admin role:", profile.role);
+                    }
                     setUserInitial((profile.full_name || 'A').charAt(0).toUpperCase());
                     setAvatarUrl(profile.avatar_url);
+                } else if (profileError) {
+                    console.error("Error fetching profile:", profileError.message);
+                    if (profileError.code === '42501') { // RLS error code
+                        alert("Access denied: You do not have permission to view this profile. Please ensure your RLS policies are correctly configured for 'profiles' table.");
+                    } else {
+                        alert("Failed to load user profile: " + profileError.message);
+                    }
                 }
                 fetchHeroImages();
                 fetchMediaItems();
             }
+            setProfileLoading(false);
         };
         fetchInitialData();
     }, []);
@@ -85,17 +100,32 @@ const AdminInfo = () => {
             const ext = file.name.split('.').pop();
             const path = `hero/hero_${Date.now()}.${ext}`;
             const { error: upErr } = await supabase.storage.from('portal-assets').upload(path, file);
-            if (upErr) throw upErr;
+
+            if (upErr) {
+                if (upErr.message.includes('Bucket not found')) {
+                    throw new Error("Storage bucket 'portal-assets' does not exist in your Supabase project. Please create a public storage bucket named 'portal-assets' first.");
+                }
+                throw upErr;
+            }
             const { data: { publicUrl } } = supabase.storage.from('portal-assets').getPublicUrl(path);
-            const { error: dbErr } = await supabase.from('hero_images').insert([{
+
+            const { data: { user } } = await supabase.auth.getUser();
+            const { error: dbErr } = await supabase.from('hero_images').insert({
                 image_url: publicUrl,
                 display_order: heroImages.length,
                 is_active: true,
-                created_by: userId
-            }]);
+                created_by: user.id
+            });
             if (dbErr) throw dbErr;
             fetchHeroImages();
-        } catch (err) { alert("Upload failed: " + err.message); }
+        } catch (err) {
+            console.error("Hero upload error:", err);
+            if (err.message.includes('row-level security')) {
+                alert("Upload failed: Database permission error (RLS). Please ensure you have run the required SQL setup in Supabase to allow admin uploads.");
+            } else {
+                alert("Upload failed: " + err.message);
+            }
+        }
         finally { setUploading(false); }
     };
 
@@ -114,22 +144,38 @@ const AdminInfo = () => {
             const ext = pendingMediaFile.name.split('.').pop();
             const path = `media/media_${Date.now()}.${ext}`;
             const { error: upErr } = await supabase.storage.from('portal-assets').upload(path, pendingMediaFile);
-            if (upErr) throw upErr;
+
+            if (upErr) {
+                if (upErr.message.includes('Bucket not found')) {
+                    throw new Error("Storage bucket 'portal-assets' does not exist in your Supabase project. Please create a public storage bucket named 'portal-assets' first.");
+                }
+                throw upErr;
+            }
+
             const { data: { publicUrl } } = supabase.storage.from('portal-assets').getPublicUrl(path);
-            const { error: dbErr } = await supabase.from('media_items').insert([{
+
+            const { data: { user } } = await supabase.auth.getUser();
+            const { error: dbErr } = await supabase.from('media_items').insert({
                 image_url: publicUrl,
                 title: newMediaTitle,
                 description: newMediaDesc,
                 is_active: true,
-                created_by: userId
-            }]);
+                created_by: user.id
+            });
             if (dbErr) throw dbErr;
             setShowMediaModal(false);
             setPendingMediaFile(null);
             setNewMediaTitle('');
             setNewMediaDesc('');
             fetchMediaItems();
-        } catch (err) { alert("Upload failed: " + err.message); }
+        } catch (err) {
+            console.error("Media upload error:", err);
+            if (err.message.includes('row-level security')) {
+                alert("Upload failed: Database permission error (RLS). Please ensure you have run the required SQL setup in Supabase to allow admin uploads.");
+            } else {
+                alert("Upload failed: " + err.message);
+            }
+        }
         finally { setUploading(false); }
     };
 
@@ -182,9 +228,15 @@ const AdminInfo = () => {
                         <span className="ad-school-name">FAD MASTRO ACADEMY</span>
                     </div>
                     <div className="ad-header-right">
-                        {userName && <span style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>{userName}</span>}
-                        <div className="ad-user-avatar">
-                            {avatarUrl ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : <span>{userInitial}</span>}
+                        {profileLoading ? (
+                            <div className="skeleton-pulse profile-name-skeleton" style={{ marginRight: '10px' }}></div>
+                        ) : (
+                            userName && <span style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>{userName}</span>
+                        )}
+                        <div className={`ad-user-avatar ${profileLoading ? 'skeleton-pulse avatar-skeleton' : ''}`}>
+                            {!profileLoading && (
+                                avatarUrl ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : <span>{userInitial}</span>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -204,8 +256,18 @@ const AdminInfo = () => {
                             </h2>
                             <label className="ai-upload-btn">
                                 <input type="file" accept="image/*" onChange={handleUploadHero} disabled={uploading} />
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                                {uploading ? 'Uploading…' : 'Add Image'}
+                                {uploading ? (
+                                    <>
+                                        <div className="spinner" style={{ width: '12px', height: '12px', border: '2px solid rgba(0,0,0,0.1)', borderTopColor: '#374151', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                        Add Image
+                                    </>
+                                )}
                             </label>
                         </div>
 
@@ -314,7 +376,14 @@ const AdminInfo = () => {
                         <textarea className="ai-textarea" placeholder="Short description..." value={newMediaDesc} onChange={e => setNewMediaDesc(e.target.value)} />
                         <div className="ai-modal-actions">
                             <button className="ai-btn-cancel" onClick={() => { setShowMediaModal(false); setPendingMediaFile(null); }}>Cancel</button>
-                            <button className="ai-btn-save" onClick={handleUploadMedia} disabled={uploading}>{uploading ? 'Uploading…' : 'Upload'}</button>
+                            <button className="ai-btn-save" onClick={handleUploadMedia} disabled={uploading} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {uploading ? (
+                                    <>
+                                        <div className="spinner" style={{ width: '12px', height: '12px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                        Saving...
+                                    </>
+                                ) : 'Upload'}
+                            </button>
                         </div>
                     </div>
                 </div>

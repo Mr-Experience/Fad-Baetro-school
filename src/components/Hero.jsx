@@ -1,17 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 import './Hero.css';
 
-import hero1 from '../assets/images/hero_slides/hero_1.jpg';
-import hero2 from '../assets/images/hero_slides/hero_2.jpg';
-
 const Hero = () => {
-    const images = [
-        hero1,
-        hero2
-    ];
-
+    // Initialize empty - images will be fetched from Supabase
+    const [images, setImages] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
+
+    useEffect(() => {
+        const fetchHeroImages = async () => {
+            const { data, error } = await supabase
+                .from('hero_images')
+                .select('image_url')
+                .eq('is_active', true)
+                .order('display_order', { ascending: true });
+
+            if (!error && data && data.length > 0) {
+                setImages(data.map(img => img.image_url));
+            }
+        };
+
+        fetchHeroImages();
+    }, []);
 
     const nextSlide = () => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
@@ -22,11 +33,13 @@ const Hero = () => {
     };
 
     useEffect(() => {
+        if (images.length <= 1) return; // Don't auto-slide if only 1 image
+
         const interval = setInterval(() => {
             nextSlide();
         }, 5000); // 5 seconds auto-change
         return () => clearInterval(interval);
-    }, []);
+    }, [images.length]);
 
     return (
         <section className="hero-section">

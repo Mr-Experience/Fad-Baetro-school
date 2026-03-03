@@ -4,6 +4,8 @@
     position: relative;
     overflow: hidden;
     margin-bottom: 20px;
+    background-color: #f1f5f9;
+    /* Stable light gray placeholder */
 }
 
 .hero-slider {
