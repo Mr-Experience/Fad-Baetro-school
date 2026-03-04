@@ -2,12 +2,21 @@
 
 .ai-content {
     flex: 1;
-    margin: 20px;
-    padding: 28px 32px;
-    background-color: #fff;
-    border: 1px solid #E5E7EB;
-    border-radius: 10px;
+    padding: 32px;
+    background: #F8FAFC;
+    min-height: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    position: relative;
+    color: #333;
     overflow-y: auto;
+}
+
+.ai-inner-wrap {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding: 28px 32px;
 }
 
 .ai-page-header {
@@ -81,8 +90,9 @@
 }
 
 .ai-upload-btn:hover {
-    background-color: #F9FAFB;
-    border-color: #9CA3AF;
+    background-color: var(--primary-50);
+    border-color: var(--primary-600);
+    color: var(--primary-600);
 }
 
 .ai-upload-btn input {
@@ -162,11 +172,11 @@
     background: rgba(239, 68, 68, 0.3);
 }
 
-/* Media Grid - small square cards */
+/* Media Grid - 3 columns */
 .ai-media-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
 }
 
 .ai-media-card {
@@ -184,7 +194,7 @@
 
 .ai-media-img-wrapper {
     width: 100%;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 4 / 3;
     position: relative;
     background-color: #F3F4F6;
     overflow: hidden;
@@ -201,21 +211,6 @@
     transform: scale(1.04);
 }
 
-.ai-media-info {
-    padding: 8px;
-    border-top: 1px solid #F3F4F6;
-}
-
-.ai-media-title {
-    font-size: 11px;
-    font-weight: 600;
-    color: #374151;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
-}
-
 .ai-media-caption {
     font-size: 11px;
     color: #9CA3AF;
@@ -224,6 +219,7 @@
     line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    margin-bottom: 2px;
 }
 
 .ai-media-footer {
@@ -251,6 +247,21 @@
 
 .ai-remove-inline-btn:hover {
     color: #EF4444;
+}
+
+.ai-media-info {
+    padding: 8px 10px;
+    border-top: 1px solid #F3F4F6;
+}
+
+.ai-media-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0;
 }
 
 /* Empty State */
@@ -448,14 +459,18 @@
 
 .ai-btn-save {
     padding: 7px 14px;
-    background: #374151;
-    border: 1px solid #374151;
+    background: var(--primary-600);
+    border: 1px solid var(--primary-600);
     border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
     color: white;
     cursor: pointer;
     transition: background 0.15s;
+}
+
+.ai-btn-save:hover {
+    background: var(--primary-700);
 }
 
 .ai-btn-save:hover {

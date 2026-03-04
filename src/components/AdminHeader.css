@@ -1,0 +1,75 @@
+/* AdminHeader.css */
+
+.ad-header {
+    height: 80px;
+    min-height: 80px;
+    flex-shrink: 0;
+    background-color: #fff;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #E2E8F0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ad-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ad-header-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.ad-school-name {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #1E293B;
+}
+
+.ad-header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.ad-user-avatar {
+    width: 36px;
+    height: 36px;
+    background-color: #F1F5F9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    color: #475569;
+    border: 1px solid #E2E8F0;
+    overflow: hidden;
+}
+
+.ad-user-name {
+    white-space: nowrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .ad-header {
+        padding: 0 16px;
+    }
+
+    .ad-school-name {
+        font-size: 13px;
+    }
+
+    .ad-user-name {
+        display: none;
+        /* Hide name on mobile to save space */
+    }
+}

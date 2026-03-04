@@ -13,13 +13,10 @@
 /* Gallery Hero Section */
 .gallery-hero {
     background-color: var(--primary-600);
-    padding: 80px 20px 100px;
-    /* Reduced padding */
+    padding: 80px 20px 80px;
     text-align: center;
     color: white;
     margin-bottom: 40px;
-    border-radius: 0 0 50% 50% / 0 0 40px 40px;
-    /* Softer, shallower U shape */
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
@@ -39,7 +36,7 @@
 
 /* Gallery Grid */
 .gallery-grid-section {
-    padding: 0 20px 80px;
+    padding: 0 20px 60px;
 }
 
 .gallery-container {
@@ -50,23 +47,19 @@
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    /* Slightly tighter gap for mosaic feel */
-    grid-auto-flow: dense;
-    /* Helps pack items efficiently */
+    gap: 14px;
 }
 
 /* Gallery Item Card */
 .gallery-item {
     position: relative;
-    border-radius: 12px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    background-color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    background-color: #f3f4f6;
     cursor: pointer;
-    /* Removed fixed aspect-ratio to allow varied sizes */
-    min-height: 250px;
+    height: 400px;
 }
 
 /* Cleanup: Mosaic sizes are defined above */
@@ -94,44 +87,39 @@
     transform: scale(1.05);
 }
 
-/* Captioned Item Styles */
-/* Captioned Item Styles */
+/* Caption overlay — sits at bottom of image */
 .caption-overlay {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(0, 0, 0, 0.85);
-    padding: 20px 16px;
-    /* Increased height as requested */
+    background: rgba(0, 0, 0, 0.62);
+    padding: 10px 12px;
     color: white;
-    transform: translateY(0);
-    opacity: 1;
     z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 60px;
-    /* Ensure a decent minimum height */
 }
 
 .caption-content {
     width: 100%;
-    text-align: center;
 }
 
 .caption-content h3 {
-    display: none;
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .caption-content p {
-    font-size: 0.95rem;
-    /* Slightly larger text */
+    font-size: 0.74rem;
     line-height: 1.3;
-    color: white;
+    color: rgba(255, 255, 255, 0.85);
     margin: 0;
-    white-space: normal;
-    /* Allow wrap if needed */
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -234,7 +222,8 @@
 
 @media (max-width: 768px) {
     .gallery-grid {
-        gap: 12px;
+        gap: 10px;
+        grid-template-columns: repeat(2, 1fr);
     }
 
     .lightbox-overlay {
@@ -252,18 +241,8 @@
         grid-template-columns: 1fr;
     }
 
-    /* On mobile, reset all spans to 1 column vertical stack */
-    .gallery-item.wide,
-    .gallery-item.tall,
-    .gallery-item.big {
-        grid-column: span 1;
-        grid-row: span 1;
-        aspect-ratio: 4/3;
-        /* Consistent ratio on mobile */
-    }
-
     .gallery-hero {
-        padding: 60px 20px 80px;
+        padding: 50px 20px 50px;
     }
 
     .gallery-hero h1 {

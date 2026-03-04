@@ -2,36 +2,50 @@
 
 .ap-content {
     flex: 1;
-    padding: 32px 48px;
+    padding: 32px;
+    background: #F8FAFC;
+    min-height: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    position: relative;
+    color: #333;
     overflow-y: auto;
 }
 
+.ap-inner-wrap {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding: 28px 32px;
+}
+
 .ap-page-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: #1E293B;
-    margin-bottom: 28px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 24px;
+    border-bottom: 1px solid #F1F5F9;
+    padding-bottom: 16px;
 }
 
 /* Profile Layout */
 .ap-layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 24px;
+    grid-template-columns: 220px 1fr;
+    gap: 40px;
     align-items: start;
+    margin-top: 24px;
 }
 
-/* Avatar Card */
+/* Avatar Column */
 .ap-avatar-card {
-    background-color: #fff;
-    border-radius: 12px;
-    padding: 32px 24px;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     text-align: center;
+    padding-right: 32px;
+    border-right: 1px solid #F1F5F9;
 }
 
 .ap-avatar-wrapper {
@@ -52,7 +66,7 @@
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3B82F6, #1E293B);
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-800));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -68,7 +82,7 @@
     right: 2px;
     width: 28px;
     height: 28px;
-    background: #3B82F6;
+    background: var(--primary-600);
     border: 2px solid #fff;
     border-radius: 50%;
     display: flex;
@@ -80,7 +94,7 @@
 }
 
 .ap-avatar-upload-btn:hover {
-    background: #2563EB;
+    background: var(--primary-700);
 }
 
 .ap-avatar-upload-btn input[type="file"] {
@@ -88,9 +102,10 @@
 }
 
 .ap-avatar-name {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
-    color: #1E293B;
+    color: #1a1a1a;
+    margin-top: 4px;
 }
 
 .ap-avatar-role {
@@ -110,71 +125,76 @@
 
 /* Form Cards */
 .ap-form-column {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    gap: 0 28px;
+    align-items: start;
+}
+
+/* Vertical divider between columns */
+.ap-col-divider {
+    background: #eee;
+    align-self: stretch;
+    width: 1px;
 }
 
 .ap-card {
-    background-color: #fff;
-    border-radius: 12px;
-    padding: 28px 32px;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    padding: 0;
 }
 
 .ap-card-title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
-    color: #1E293B;
-    margin-bottom: 6px;
+    color: #1a1a1a;
+    margin-bottom: 4px;
 }
 
 .ap-card-subtitle {
     font-size: 13px;
-    color: #64748B;
-    margin-bottom: 24px;
+    color: #666;
+    margin-bottom: 10px;
 }
 
 .ap-divider {
     height: 1px;
-    background-color: #F1F5F9;
-    margin-bottom: 24px;
+    background-color: #eee;
+    margin-bottom: 14px;
 }
 
 /* Form Group */
 .ap-form-group {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
-.ap-form-group:last-of-type {
+.ap-form-group:last-child {
     margin-bottom: 0;
 }
 
 .ap-label {
     display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+    color: #444;
     margin-bottom: 6px;
 }
 
 .ap-input {
     width: 100%;
-    padding: 10px 14px;
-    font-size: 14px;
-    color: #1E293B;
-    background-color: #F8FAFC;
-    border: 1px solid #E2E8F0;
-    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: #1a1a1a;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: all 0.2s ease;
     box-sizing: border-box;
-    font-family: 'Inter', sans-serif;
+    font-family: inherit;
 }
 
 .ap-input:focus {
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    border-color: var(--primary-600);
+    box-shadow: 0 0 0 3px rgba(205, 53, 140, 0.12);
     background-color: #fff;
 }
 
@@ -182,27 +202,19 @@
     color: #94A3B8;
 }
 
-/* Footer Buttons */
-.ap-card-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid #F1F5F9;
-}
+
 
 .ap-btn-secondary {
-    padding: 9px 18px;
-    font-size: 13px;
+    padding: 8px 16px;
+    font-size: 12px;
     font-weight: 500;
-    color: #64748B;
-    background-color: #F1F5F9;
-    border: 1px solid #E2E8F0;
-    border-radius: 8px;
+    color: #444;
+    background-color: #f4f4f4;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     cursor: pointer;
     transition: background 0.2s;
-    font-family: 'Inter', sans-serif;
+    font-family: inherit;
 }
 
 .ap-btn-secondary:hover {
@@ -210,33 +222,30 @@
 }
 
 .ap-btn-primary {
-    padding: 9px 20px;
-    font-size: 13px;
+    padding: 8px 16px;
+    font-size: 12px;
     font-weight: 600;
     color: #fff;
-    background-color: #3B82F6;
+    background-color: var(--primary-600);
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
     transition: background 0.2s;
-    font-family: 'Inter', sans-serif;
+    font-family: inherit;
 }
 
 .ap-btn-primary:hover {
-    background-color: #2563EB;
+    background-color: var(--primary-700);
 }
 
 .ap-btn-primary:disabled {
-    background-color: #93C5FD;
+    background-color: var(--primary-300);
     cursor: not-allowed;
 }
 
 /* Alert Messages */
 .ap-alert-container {
-    min-height: 40px;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
+    margin-bottom: 12px;
 }
 
 .ap-alert {
@@ -266,4 +275,32 @@
     color: #94A3B8;
     margin-top: 8px;
     line-height: 1.6;
+}
+
+@media (max-width: 992px) {
+    .ap-layout {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .ap-avatar-card {
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 1px solid #F1F5F9;
+        padding-bottom: 32px;
+    }
+}
+
+.ap-card-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.ap-card {
+    display: flex;
+    flex-direction: column;
 }

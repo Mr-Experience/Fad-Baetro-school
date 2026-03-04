@@ -31,7 +31,7 @@ const ProtectedRoute = () => {
             try {
                 // Set a timeout to prevent infinite loading if DB hangs
                 const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("Timeout checking Admin role")), 5000)
+                    setTimeout(() => reject(new Error("Timeout checking Admin role")), 10000)
                 );
 
                 const fetchProfilePromise = supabase

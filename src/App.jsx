@@ -21,6 +21,7 @@ import CandidateActiveExam from './pages/candidate/ActiveExam';
 import CandidateExamScreen from './pages/candidate/ExamScreen';
 import CandidateSubmitted from './pages/candidate/ExamSubmitted';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminLayout from './components/AdminLayout';
 
 import StudentLogin from './pages/student/StudentLogin';
 import NoExamSchedule from './pages/student/NoExamSchedule';
@@ -55,9 +56,11 @@ function App() {
 
                 {/* Protected Admin Routes */}
                 <Route element={<ProtectedRoute />}>
-                    <Route path="/portal/admin" element={<AdminDashboard />} />
-                    <Route path="/portal/admin/info" element={<AdminInfo />} />
-                    <Route path="/portal/admin/profile" element={<AdminProfile />} />
+                    <Route element={<AdminLayout />}>
+                        <Route path="/portal/admin" element={<AdminDashboard />} />
+                        <Route path="/portal/admin/info" element={<AdminInfo />} />
+                        <Route path="/portal/admin/profile" element={<AdminProfile />} />
+                    </Route>
                 </Route>
 
                 {/* Candidate Pages */}
