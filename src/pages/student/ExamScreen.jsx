@@ -190,8 +190,11 @@ const ExamScreen = () => {
 
     // 2. Timer Hook
     useEffect(() => {
-        if (timeLeft === null || timeLeft <= 0 || isSubmitting) {
-            if (timeLeft === 0 && !isSubmitting) handleSubmit();
+        if (timeLeft === null || isSubmitting) return;
+
+        if (timeLeft <= 0) {
+            console.log("Time's up! Auto-submitting...");
+            handleSubmit(true);
             return;
         }
 
@@ -251,15 +254,16 @@ const ExamScreen = () => {
         }
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (skipConfirm = false) => {
         if (isSubmitting) return;
-        if (timeLeft > 0 && !window.confirm("Are you sure you want to submit your exam now?")) return;
+        if (!skipConfirm && timeLeft > 0 && !window.confirm("Are you sure you want to submit your exam now?")) return;
 
         setIsSubmitting(true);
 
         try {
             // Calculate Score
             let correctCount = 0;
+            const totalQ = questions.length || 1;
             questions.forEach(q => {
                 const studentAns = answers[q.id];
                 if (studentAns && studentAns.toUpperCase() === q.correct_answer?.toUpperCase()) {
@@ -267,22 +271,23 @@ const ExamScreen = () => {
                 }
             });
 
-            const scorePercent = ((correctCount / questions.length) * 100).toFixed(1);
+            const scorePercent = ((correctCount / totalQ) * 100).toFixed(1);
 
-            // Fetch class and subject names
-            const { data: classData } = await supabase
-                .from('classes')
-                .select('name')
-                .eq('id', student.class_id)
-                .single();
+            // Fetch class and subject names (Optimistic/Silently)
+            let className = '';
+            let subjectName = '';
+            try {
+                const [{ data: cData }, { data: sData }] = await Promise.all([
+                    supabase.from('classes').select('class_name').eq('id', student.class_id).maybeSingle(),
+                    supabase.from('subjects').select('subject_name').eq('id', activeConfig.subject_id).maybeSingle()
+                ]);
+                className = cData?.class_name || '';
+                subjectName = sData?.subject_name || '';
+            } catch (metaErr) {
+                console.warn("Meta fetch failed:", metaErr);
+            }
 
-            const { data: subjectData } = await supabase
-                .from('subjects')
-                .select('name')
-                .eq('id', activeConfig.subject_id)
-                .single();
-
-            // Save to Results with full metadata
+            // Save to Results
             const { error: insertError } = await supabase
                 .from('exam_results')
                 .insert({
@@ -297,32 +302,30 @@ const ExamScreen = () => {
                     completed_at: new Date().toISOString(),
                     session_id: sessionInfo.session,
                     term_id: sessionInfo.term,
-                    class_name: classData?.name || '',
-                    subject_name: subjectData?.name || ''
+                    class_name: className,
+                    subject_name: subjectName
                 });
 
             if (insertError) {
-                console.error("Save Error:", insertError);
-                // Check if it's a duplicate submission
                 if (insertError.code === '23505') {
-                    alert("This exam has already been submitted for this term.");
-                    localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);
-                    navigate('/portal/student/no-exam');
-                    return;
+                    console.log("Duplicate result detected, probably already submitted.");
+                } else {
+                    throw insertError;
                 }
-                throw insertError;
             }
 
-            // Clear progress immediately before navigation
+            // Clear progress
             localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);
+
+            // Redirect
             navigate('/portal/student/submitted', {
                 state: { score: scorePercent, name: student.full_name },
                 replace: true
             });
 
         } catch (err) {
-            console.error("Submission fatal crash:", err);
-            alert("An error occurred during submission: " + (err.message || "Unknown error"));
+            console.error("Submission Error:", err);
+            alert("Error during submission. Your progress is saved locally. Try submitting again.");
         } finally {
             setIsSubmitting(false);
         }

@@ -162,10 +162,14 @@ const ExamScreen = () => {
 
     // Timer Hook
     useEffect(() => {
-        if (timeLeft === null || timeLeft <= 0 || isSubmitting) {
-            if (timeLeft === 0 && !isSubmitting) handleSubmit();
+        if (timeLeft === null || isSubmitting) return;
+
+        if (timeLeft <= 0) {
+            console.log("Time's up! Auto-submitting...");
+            handleSubmit(true);
             return;
         }
+
         const interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         return () => clearInterval(interval);
     }, [timeLeft, isSubmitting]);
@@ -192,13 +196,14 @@ const ExamScreen = () => {
         }
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (skipConfirm = false) => {
         if (isSubmitting) return;
-        if (timeLeft > 0 && !window.confirm("Submit your exam now?")) return;
+        if (!skipConfirm && timeLeft > 0 && !window.confirm("Submit your exam now?")) return;
 
         setIsSubmitting(true);
         try {
             let correctCount = 0;
+            const totalQ = questions.length || 1;
             questions.forEach(q => {
                 const studentAns = answers[q.id];
                 if (studentAns && studentAns.toUpperCase() === q.correct_answer?.toUpperCase()) {
@@ -206,20 +211,21 @@ const ExamScreen = () => {
                 }
             });
 
-            const scorePercent = ((correctCount / questions.length) * 100).toFixed(1);
+            const scorePercent = ((correctCount / totalQ) * 100).toFixed(1);
 
-            // Fetch class and subject names
-            const { data: classData } = await supabase
-                .from('classes')
-                .select('name')
-                .eq('id', activeConfig.class_id)
-                .single();
-
-            const { data: subjectData } = await supabase
-                .from('subjects')
-                .select('name')
-                .eq('id', activeConfig.subject_id)
-                .single();
+            // Fetch metadata
+            let className = '';
+            let subjectName = '';
+            try {
+                const [{ data: cData }, { data: sData }] = await Promise.all([
+                    supabase.from('classes').select('class_name').eq('id', activeConfig.class_id).maybeSingle(),
+                    supabase.from('subjects').select('subject_name').eq('id', activeConfig.subject_id).maybeSingle()
+                ]);
+                className = cData?.class_name || '';
+                subjectName = sData?.subject_name || '';
+            } catch (metaErr) {
+                console.warn("Meta fetch error:", metaErr);
+            }
 
             // Save with full metadata
             const { error: insertError } = await supabase
@@ -236,30 +242,29 @@ const ExamScreen = () => {
                     completed_at: new Date().toISOString(),
                     session_id: sessionInfo.session,
                     term_id: sessionInfo.term,
-                    class_name: classData?.name || '',
-                    subject_name: subjectData?.name || ''
+                    class_name: className,
+                    subject_name: subjectName
                 });
 
             if (insertError) {
-                console.error("Save Error:", insertError);
                 if (insertError.code === '23505') {
-                    alert("This entrance exam has already been submitted.");
-                    localStorage.removeItem(`exam_prog_cand_${candidate.id}_${activeConfig.id}`);
-                    navigate('/portal/candidate/no-exam');
-                    return;
+                    console.log("Duplicate result detected.");
+                } else {
+                    throw insertError;
                 }
-                throw insertError;
             }
 
             // Clear progress
             localStorage.removeItem(`exam_prog_cand_${candidate.id}_${activeConfig.id}`);
+
+            // Redirect
             navigate('/portal/candidate/submitted', {
                 state: { score: scorePercent, name: candidate.full_name },
                 replace: true
             });
         } catch (err) {
-            console.error("Submission fatal crash:", err);
-            alert("An error occurred during submission: " + (err.message || "Unknown error"));
+            console.error("Submission Error:", err);
+            alert("Error during submission. Progress saved locally.");
         } finally {
             setIsSubmitting(false);
         }
