@@ -12,62 +12,71 @@ const NoExamSchedule = () => {
 
     useEffect(() => {
         const getStudent = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError || !user) {
+                console.error("Auth error or no user:", authError);
                 navigate('/portal/student');
                 return;
             }
 
-            // Try fetching from students table
-            let { data: student, error: fetchError } = await supabase
-                .from('students')
-                .select('full_name, profile_image, class_id')
-                .eq('email', user.email.toLowerCase())
-                .maybeSingle();
-
-            // If fetching with profile_image fails (likely column doesn't exist yet), try just full_name
-            if (fetchError && fetchError.code === 'PGRST204') {
-                const { data: retryData, error: retryError } = await supabase
+            try {
+                // Fetch student profile from database - try multiple column names for compatibility
+                const { data: student, error: fetchError } = await supabase
                     .from('students')
-                    .select('full_name, class_id')
+                    .select('*')
                     .eq('email', user.email.toLowerCase())
                     .maybeSingle();
-                student = retryData;
-                fetchError = retryError;
-            }
 
-            if (fetchError) {
-                console.error("Identity Fetch Error Details:", fetchError);
-            }
+                if (fetchError) {
+                    console.warn("Error fetching student profile:", fetchError.message);
+                } else if (student) {
+                    // Set name from database - check multiple possible column names
+                    const displayName = student.full_name || student.name || user.user_metadata?.full_name || user.email;
+                    setStudentName(displayName);
 
-            if (student) {
-                setStudentName(student.full_name);
-                setProfileImage(student.profile_image || null);
-            } else {
-                setStudentName(user.user_metadata?.full_name || user.email);
-            }
-
-            // --- AUTO REDIRECT Logic ---
-            // If an exam is active for this class, kick them to ActiveExam portal immediately
-            if (student?.class_id) {
-                const checkStatus = async () => {
-                    const { data: active } = await supabase
-                        .from('exam_configs')
-                        .select('id')
-                        .eq('class_id', student.class_id)
-                        .eq('is_active', true)
-                        .limit(1);
-
-                    if (active && active.length > 0) {
-                        navigate('/portal/student/active-exam');
+                    // Set profile image from database - check multiple possible column names
+                    if (student.profile_image) {
+                        setProfileImage(student.profile_image);
+                    } else if (student.profile_picture) {
+                        setProfileImage(student.profile_picture);
+                    } else if (student.avatar_url) {
+                        setProfileImage(student.avatar_url);
                     }
-                };
 
-                checkStatus(); // Initial check
-                const interval = setInterval(checkStatus, 5000); // Check every 5s
-                return () => clearInterval(interval);
+                    console.log("✅ Student profile synced from database:", { name: displayName, hasImage: !!(student.profile_image || student.profile_picture || student.avatar_url) });
+                } else {
+                    // Fallback to auth metadata if no student record found
+                    const fallbackName = user.user_metadata?.full_name || user.email;
+                    setStudentName(fallbackName);
+                    console.log("⚠️ No student record found in database, using auth metadata:", fallbackName);
+                }
+
+                // --- AUTO REDIRECT Logic ---
+                // If an exam is active for this class, kick them to ActiveExam portal immediately
+                if (student?.class_id) {
+                    const checkExamStatus = async () => {
+                        const { data: active, error: examError } = await supabase
+                            .from('exam_configs')
+                            .select('id')
+                            .eq('class_id', student.class_id)
+                            .eq('is_active', true)
+                            .limit(1);
+
+                        if (!examError && active && active.length > 0) {
+                            navigate('/portal/student/active-exam');
+                        }
+                    };
+
+                    checkExamStatus(); // Initial check
+                    const examInterval = setInterval(checkExamStatus, 5000); // Check every 5s
+                    return () => clearInterval(examInterval);
+                }
+            } catch (error) {
+                console.error("Error in getStudent:", error);
+                setStudentName(user.email);
             }
         };
+
         getStudent();
     }, [navigate]);
 

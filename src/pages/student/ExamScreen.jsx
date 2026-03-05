@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import '../auth/PortalLogin.css';
 import './NoExamSchedule.css';
@@ -18,11 +18,15 @@ const sampleQuestions = [
 
 const ExamScreen = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const passedExamConfig = location.state?.examConfig;
 
     // Identity & Config
     const [student, setStudent] = useState(null);
     const [activeConfig, setActiveConfig] = useState(null);
     const [questions, setQuestions] = useState([]);
+    const [profileImage, setProfileImage] = useState(null);
+    const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
 
     // Exam State
     const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
@@ -35,59 +39,118 @@ const ExamScreen = () => {
     useEffect(() => {
         const initExam = async () => {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) { navigate('/portal/student'); return; }
+            try {
+                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                if (authError || !user) { 
+                    console.error("Auth error:", authError);
+                    navigate('/portal/student'); 
+                    return; 
+                }
 
-            // Fetch Student
-            const { data: std } = await supabase
-                .from('students')
-                .select('*')
-                .eq('email', user.email.toLowerCase())
-                .maybeSingle();
+                // Fetch Student
+                const { data: std, error: stdError } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('email', user.email.toLowerCase())
+                    .maybeSingle();
 
-            if (!std) { navigate('/portal/student'); return; }
-            setStudent(std);
+                if (stdError || !std) { 
+                    console.error("Student fetch error:", stdError);
+                    navigate('/portal/student'); 
+                    return; 
+                }
+                setStudent(std);
 
-            // Fetch Active Config
-            const { data: cfg } = await supabase
-                .from('exam_configs')
-                .select('*, subjects(subject_name)')
-                .eq('class_id', std.class_id)
-                .eq('is_active', true)
-                .maybeSingle();
+                // Extract profile image from database
+                if (std.profile_image) {
+                    setProfileImage(std.profile_image);
+                } else if (std.profile_picture) {
+                    setProfileImage(std.profile_picture);
+                } else if (std.avatar_url) {
+                    setProfileImage(std.avatar_url);
+                }
 
-            if (!cfg) { navigate('/portal/student/no-exam'); return; }
-            setActiveConfig(cfg);
+                // Use passed exam config or fetch it
+                let cfg = passedExamConfig;
+                if (!cfg) {
+                    console.log("No exam config passed from ActiveExam, fetching from database...");
+                    const { data: fetchedCfg, error: cfgError } = await supabase
+                        .from('exam_configs')
+                        .select('*, subjects(subject_name)')
+                        .eq('class_id', std.class_id)
+                        .eq('is_active', true)
+                        .maybeSingle();
 
-            // Fetch Questions
-            const { data: qData } = await supabase
-                .from('questions')
-                .select('*')
-                .eq('class_id', std.class_id)
-                .eq('subject_id', cfg.subject_id)
-                .eq('question_type', cfg.question_type);
+                    if (cfgError || !fetchedCfg) { 
+                        console.error("Exam config fetch error:", cfgError);
+                        navigate('/portal/student/no-exam'); 
+                        return; 
+                    }
+                    cfg = fetchedCfg;
+                } else {
+                    console.log("✅ Using exam config passed from ActiveExam screen");
+                }
+                setActiveConfig(cfg);
 
-            if (!qData || qData.length === 0) {
-                alert("No questions found for this exam. Contact admin.");
+                // Fetch Questions
+                console.log("📝 Fetching questions:", { 
+                    class_id: std.class_id, 
+                    subject_id: cfg.subject_id, 
+                    question_type: cfg.question_type 
+                });
+                
+                const { data: qData, error: qError } = await supabase
+                    .from('questions')
+                    .select('*')
+                    .eq('class_id', std.class_id)
+                    .eq('subject_id', cfg.subject_id)
+                    .eq('question_type', cfg.question_type);
+
+                if (qError) {
+                    console.error("Questions fetch error:", qError);
+                }
+
+                if (!qData || qData.length === 0) {
+                    alert("No questions found for this exam. Contact admin.");
+                    navigate('/portal/student/no-exam');
+                    return;
+                }
+
+                console.log(`✅ Loaded ${qData.length} questions`);
+
+                // Fetch Session Info
+                const { data: sessionData } = await supabase
+                    .from('system_settings')
+                    .select('current_session, current_term')
+                    .single();
+
+                if (sessionData) {
+                    setSessionInfo({
+                        session: sessionData.current_session || '',
+                        term: sessionData.current_term || ''
+                    });
+                }
+
+                // Shuffle and Limit
+                let processed = [...qData];
+                if (cfg.selection_type === 'random') {
+                    processed = processed.sort(() => Math.random() - 0.5);
+                }
+                const count = cfg.question_count || processed.length;
+                setQuestions(processed.slice(0, count));
+
+                // Set Timer (from duration_minutes)
+                setTimeLeft((cfg.duration_minutes || 60) * 60);
+                setLoading(false);
+            } catch (error) {
+                console.error("Error in initExam:", error);
+                alert("Error loading exam. Please try again.");
                 navigate('/portal/student/no-exam');
-                return;
             }
-
-            // Shuffle and Limit
-            let processed = [...qData];
-            if (cfg.selection_type === 'random') {
-                processed = processed.sort(() => Math.random() - 0.5);
-            }
-            const count = cfg.question_count || processed.length;
-            setQuestions(processed.slice(0, count));
-
-            // Set Timer (from duration_minutes)
-            setTimeLeft((cfg.duration_minutes || 60) * 60);
-            setLoading(false);
         };
 
         initExam();
-    }, [navigate]);
+    }, [navigate, passedExamConfig]);
 
     // 2. Timer Hook
     useEffect(() => {
@@ -148,7 +211,20 @@ const ExamScreen = () => {
 
             const scorePercent = ((correctCount / questions.length) * 100).toFixed(1);
 
-            // Save to Results
+            // Fetch class and subject names
+            const { data: classData } = await supabase
+                .from('classes')
+                .select('name')
+                .eq('id', student.class_id)
+                .single();
+
+            const { data: subjectData } = await supabase
+                .from('subjects')
+                .select('name')
+                .eq('id', activeConfig.subject_id)
+                .single();
+
+            // Save to Results with full metadata
             const { error } = await supabase
                 .from('exam_results')
                 .insert({
@@ -160,7 +236,11 @@ const ExamScreen = () => {
                     correct_answers: correctCount,
                     score_percent: scorePercent,
                     answers_json: answers,
-                    completed_at: new Date().toISOString()
+                    completed_at: new Date().toISOString(),
+                    session_id: sessionInfo.session,
+                    term_id: sessionInfo.term,
+                    class_name: classData?.name || '',
+                    subject_name: subjectData?.name || ''
                 });
 
             if (error) {
@@ -204,6 +284,17 @@ const ExamScreen = () => {
                         <span style={{ fontSize: '18px', fontWeight: '800', color: timeLeft < 60 ? '#ef4444' : '#1f2937' }}>{formatTime(timeLeft)}</span>
                     </div>
                     <span className="nes-user-name" style={{ marginRight: '10px' }}>{student?.full_name}</span>
+                    <div className="nes-avatar" style={{ marginRight: '10px' }}>
+                        {profileImage ? (
+                            <img src={profileImage} alt="Profile" className="nes-profile-img" />
+                        ) : (
+                            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+                                <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
+                                <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
+                                <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
+                            </svg>
+                        )}
+                    </div>
                     <button className="es-submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting ? 'Submitting...' : 'Submit Exam'}
                     </button>

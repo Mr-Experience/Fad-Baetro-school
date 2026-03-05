@@ -13,6 +13,7 @@ const ExamScreen = () => {
     const [candidate, setCandidate] = useState(null);
     const [activeConfig, setActiveConfig] = useState(null);
     const [questions, setQuestions] = useState([]);
+    const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
 
     // Exam State
     const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
@@ -66,6 +67,19 @@ const ExamScreen = () => {
                 return;
             }
 
+            // Fetch Session Info
+            const { data: sessionData } = await supabase
+                .from('system_settings')
+                .select('current_session, current_term')
+                .single();
+
+            if (sessionData) {
+                setSessionInfo({
+                    session: sessionData.current_session || '',
+                    term: sessionData.current_term || ''
+                });
+            }
+
             // Shuffle and Limit
             let processed = [...qData];
             if (cfg.selection_type === 'random') {
@@ -113,6 +127,20 @@ const ExamScreen = () => {
 
             const scorePercent = ((correctCount / questions.length) * 100).toFixed(1);
 
+            // Fetch class and subject names
+            const { data: classData } = await supabase
+                .from('classes')
+                .select('name')
+                .eq('id', activeConfig.class_id)
+                .single();
+
+            const { data: subjectData } = await supabase
+                .from('subjects')
+                .select('name')
+                .eq('id', activeConfig.subject_id)
+                .single();
+
+            // Save with full metadata
             await supabase
                 .from('exam_results')
                 .insert({
@@ -124,7 +152,11 @@ const ExamScreen = () => {
                     correct_answers: correctCount,
                     score_percent: scorePercent,
                     answers_json: answers,
-                    completed_at: new Date().toISOString()
+                    completed_at: new Date().toISOString(),
+                    session_id: sessionInfo.session,
+                    term_id: sessionInfo.term,
+                    class_name: classData?.name || '',
+                    subject_name: subjectData?.name || ''
                 });
 
             navigate('/portal/candidate/submitted', { state: { score: scorePercent, name: candidate.full_name } });

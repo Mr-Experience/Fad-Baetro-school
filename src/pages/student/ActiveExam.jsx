@@ -14,56 +14,71 @@ const ActiveExam = () => {
 
     useEffect(() => {
         const getData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError || !user) {
+                console.error("Auth error or no user:", authError);
                 navigate('/portal/student');
                 return;
             }
 
-            // 1. Fetch Student Identity & Class
-            let { data: student, error: fetchError } = await supabase
-                .from('students')
-                .select('full_name, profile_image, class_id')
-                .eq('email', user.email.toLowerCase())
-                .maybeSingle();
-
-            if (fetchError && fetchError.code === 'PGRST204') {
-                const { data: retryData, error: retryError } = await supabase
+            try {
+                // 1. Fetch Student Identity & Class
+                const { data: student, error: fetchError } = await supabase
                     .from('students')
-                    .select('full_name, class_id')
+                    .select('*')
                     .eq('email', user.email.toLowerCase())
                     .maybeSingle();
-                student = retryData;
-                fetchError = retryError;
-            }
 
-            if (student) {
-                setStudentName(student.full_name);
-                setProfileImage(student.profile_image || null);
+                if (fetchError) {
+                    console.warn("Error fetching student profile:", fetchError.message);
+                } else if (student) {
+                    // Set name from database - check multiple possible column names
+                    const displayName = student.full_name || student.name || user.user_metadata?.full_name || user.email;
+                    setStudentName(displayName);
 
-                // 2. Initial Fetch for Active Exam for this class
-                const fetchActive = async () => {
-                    const { data, error } = await supabase
-                        .from('exam_configs')
-                        .select('*, subjects(subject_name)')
-                        .eq('class_id', student.class_id)
-                        .eq('is_active', true)
-                        .limit(1)
-                        .maybeSingle();
-
-                    if (!error && data) {
-                        setActiveExam(data);
-                    } else if (!data) {
-                        // If no exam found, redirect out
-                        navigate('/portal/student/no-exam');
+                    // Set profile image from database - check multiple possible column names
+                    if (student.profile_image) {
+                        setProfileImage(student.profile_image);
+                    } else if (student.profile_picture) {
+                        setProfileImage(student.profile_picture);
+                    } else if (student.avatar_url) {
+                        setProfileImage(student.avatar_url);
                     }
-                };
 
-                fetchActive();
+                    console.log("✅ Student profile synced from database:", { name: displayName, hasImage: !!(student.profile_image || student.profile_picture || student.avatar_url) });
 
-                // 3. Set up polling to catch deactivation (Reduced to 5s for faster response)
-                const interval = setInterval(fetchActive, 5000);
-                return () => clearInterval(interval);
+                    // 2. Initial Fetch for Active Exam for this class
+                    const fetchActive = async () => {
+                        const { data, error } = await supabase
+                            .from('exam_configs')
+                            .select('*, subjects(subject_name)')
+                            .eq('class_id', student.class_id)
+                            .eq('is_active', true)
+                            .limit(1)
+                            .maybeSingle();
+
+                        if (!error && data) {
+                            setActiveExam(data);
+                        } else if (!data) {
+                            // If no exam found, redirect out
+                            navigate('/portal/student/no-exam');
+                        }
+                    };
+
+                    fetchActive();
+
+                    // 3. Set up polling to catch deactivation (Reduced to 5s for faster response)
+                    const interval = setInterval(fetchActive, 5000);
+                    return () => clearInterval(interval);
+                } else {
+                    // Fallback to auth metadata if no student record found
+                    const fallbackName = user.user_metadata?.full_name || user.email;
+                    setStudentName(fallbackName);
+                    console.log("⚠️ No student record found in database, using auth metadata:", fallbackName);
+                }
+            } catch (error) {
+                console.error("Error in getData:", error);
+                setStudentName(user.email);
             }
         };
         getData();
@@ -125,7 +140,7 @@ const ActiveExam = () => {
                     {/* Start button */}
                     <button
                         className="login-btn ae-start-btn"
-                        onClick={() => navigate('/portal/student/exam')}
+                        onClick={() => navigate('/portal/student/exam', { state: { examConfig: activeExam } })}
                         disabled={!activeExam}
                     >
                         Start now

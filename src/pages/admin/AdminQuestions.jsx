@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import ClaudeDesignRefiner from '../../components/ClaudeDesignRefiner';
 import './AdminQuestions.css';
 
 const AdminQuestions = () => {
@@ -163,6 +164,76 @@ const AdminQuestions = () => {
         window.open(url, '_blank');
     };
 
+    const handleConfigureExam = async (questionType, currentStatus) => {
+        if (!selectedClass || !selectedSubject) {
+            alert('Please select a class and subject first.');
+            return;
+        }
+
+        const confirmMessage = currentStatus
+            ? `Are you sure you want to deactivate the ${questionType} exam for this class? Students will no longer be able to access it.`
+            : `Are you sure you want to activate the ${questionType} exam for this class? This will make it available to all students in the selected class.`;
+
+        if (!confirm(confirmMessage)) return;
+
+        try {
+            // Find or create exam config for this class/subject/type combination
+            let config = allConfigs.find(c =>
+                c.class_id === selectedClass &&
+                c.subject_id === selectedSubject &&
+                c.question_type === questionType
+            );
+
+            if (!config) {
+                // Create new config if it doesn't exist
+                const { data: newConfig, error: insertError } = await supabase
+                    .from('exam_configs')
+                    .insert({
+                        class_id: selectedClass,
+                        subject_id: selectedSubject,
+                        question_type: questionType,
+                        is_active: true
+                    })
+                    .select()
+                    .single();
+
+                if (insertError) throw insertError;
+                config = newConfig;
+                setAllConfigs(prev => [...prev, config]);
+            } else {
+                // Update existing config
+                const newStatus = !currentStatus;
+                const { error: updateError } = await supabase
+                    .from('exam_configs')
+                    .update({ is_active: newStatus })
+                    .eq('id', config.id);
+
+                if (updateError) throw updateError;
+
+                // Update local state
+                setAllConfigs(prev => prev.map(c =>
+                    c.id === config.id ? { ...c, is_active: newStatus } : c
+                ));
+            }
+
+            // Update activeStatus for immediate UI feedback
+            setActiveStatus(prev => ({ ...prev, [questionType]: !currentStatus }));
+
+            alert(currentStatus
+                ? `${questionType.charAt(0).toUpperCase() + questionType.slice(1)} exam deactivated successfully.`
+                : `${questionType.charAt(0).toUpperCase() + questionType.slice(1)} exam activated successfully. Students can now access it.`
+            );
+
+        } catch (err) {
+            console.error("Failed to configure exam:", err);
+            if (err.message.includes('row-level security policy')) {
+                alert("Permission denied. Please ensure you are logged in as an administrator with proper permissions.");
+            } else {
+                alert("Failed to configure exam. Please try again.");
+            }
+        }
+    };
+
     return (
         <div className="aq-container">
             <div className="aq-card">
@@ -220,35 +291,43 @@ const AdminQuestions = () => {
                                         <div className={`aq-breakdown-item ${activeStatus.test ? 'active' : ''}`}>
                                             <span className="aq-break-dot test" />
                                             <span>Test: <strong>{counts.test}</strong></span>
-                                            {activeStatus.test && <span className="aq-live-badge">LIVE</span>}
+                                            {activeStatus.test && <span className="aq-live-badge">🔴 LIVE</span>}
                                         </div>
                                         <div className={`aq-breakdown-item ${activeStatus.exam ? 'active' : ''}`}>
                                             <span className="aq-break-dot exam" />
                                             <span>Exam: <strong>{counts.exam}</strong></span>
-                                            {activeStatus.exam && <span className="aq-live-badge">LIVE</span>}
+                                            {activeStatus.exam && <span className="aq-live-badge">🔴 LIVE</span>}
                                         </div>
                                         <div className={`aq-breakdown-item ${activeStatus.candidate ? 'active' : ''}`}>
                                             <span className="aq-break-dot candidate" />
                                             <span>Candidate: <strong>{counts.candidate}</strong></span>
-                                            {activeStatus.candidate && <span className="aq-live-badge">LIVE</span>}
+                                            {activeStatus.candidate && <span className="aq-live-badge">🔴 LIVE</span>}
                                         </div>
                                     </div>
                                     <span className="aq-panel-meta">
-                                        {selectedClassName}
+                                        📚 {selectedClassName}
                                     </span>
                                 </div>
                             </div>
 
                             <div className="aq-panel-right">
                                 <div className="aq-count-badge">
-                                    <div className="aq-count-number">{loading ? '…' : counts.total}</div>
+                                    <div className="aq-count-number">
+                                        {loading ? (
+                                            <div className="aq-loading-spinner">
+                                                <div className="aq-spinner"></div>
+                                            </div>
+                                        ) : (
+                                            counts.total
+                                        )}
+                                    </div>
                                     <div className="aq-count-label">Total Questions</div>
                                 </div>
                             </div>
                         </div>
 
                         <div className="aq-portals-grid">
-                            <div className="aq-portal-tile" onClick={() => window.location.href = `/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=test`}>
+                            <div className="aq-portal-tile" onClick={() => navigate(`/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=test`)}>
                                 <div className="aq-tile-top">
                                     <div className="aq-tile-icon test">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
@@ -265,11 +344,24 @@ const AdminQuestions = () => {
                                     <span className="aq-tile-qcount"><strong>{counts.test}</strong> Questions</span>
                                     <div className="aq-tile-actions">
                                         <button
+                                            className={`aq-configure-exam ${activeStatus.test ? 'active' : ''}`}
+                                            title={activeStatus.test ? 'Exam is live for students' : 'Configure exam for students'}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleConfigureExam('test', activeStatus.test);
+                                            }}
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                <path d="M22 2L11 13" />
+                                                <path d="M22 2L15 22 11 13 2 9 22 2z" />
+                                            </svg>
+                                        </button>
+                                        <button
                                             className="aq-mini-action"
                                             title="Quick Settings"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                window.location.href = `/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=test&openSettings=true`;
+                                                navigate(`/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=test&openSettings=true`);
                                             }}
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
@@ -281,7 +373,7 @@ const AdminQuestions = () => {
                                 </div>
                             </div>
 
-                            <div className="aq-portal-tile" onClick={() => window.location.href = `/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=exam`}>
+                            <div className="aq-portal-tile" onClick={() => navigate(`/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=exam`)}>
                                 <div className="aq-tile-top">
                                     <div className="aq-tile-icon exam">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
@@ -298,11 +390,24 @@ const AdminQuestions = () => {
                                     <span className="aq-tile-qcount"><strong>{counts.exam}</strong> Questions</span>
                                     <div className="aq-tile-actions">
                                         <button
+                                            className={`aq-configure-exam ${activeStatus.exam ? 'active' : ''}`}
+                                            title={activeStatus.exam ? 'Exam is live for students' : 'Configure exam for students'}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleConfigureExam('exam', activeStatus.exam);
+                                            }}
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                <path d="M22 2L11 13" />
+                                                <path d="M22 2L15 22 11 13 2 9 22 2z" />
+                                            </svg>
+                                        </button>
+                                        <button
                                             className="aq-mini-action"
                                             title="Quick Settings"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                window.location.href = `/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=exam&openSettings=true`;
+                                                navigate(`/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=exam&openSettings=true`);
                                             }}
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
@@ -314,7 +419,7 @@ const AdminQuestions = () => {
                                 </div>
                             </div>
 
-                            <div className="aq-portal-tile" onClick={() => window.location.href = `/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=candidate`}>
+                            <div className="aq-portal-tile" onClick={() => navigate(`/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=candidate`)}>
                                 <div className="aq-tile-top">
                                     <div className="aq-tile-icon candidate">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></svg>
@@ -335,7 +440,7 @@ const AdminQuestions = () => {
                                             title="Quick Settings"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                window.location.href = `/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=candidate&openSettings=true`;
+                                                navigate(`/portal/admin/questions/editor?classId=${selectedClass}&subjectId=${selectedSubject}&className=${encodeURIComponent(selectedClassName)}&subjectName=${encodeURIComponent(selectedSubjectName)}&type=candidate&openSettings=true`);
                                             }}
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
@@ -376,7 +481,10 @@ const AdminQuestions = () => {
                                                 onClick={(e) => toggleLiveStatus(e, cfg)}
                                             >
                                                 {cfg.is_active ? (
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                                    <>
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                                        <div className="aq-live-pulse"></div>
+                                                    </>
                                                 ) : (
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
                                                 )}
@@ -387,7 +495,15 @@ const AdminQuestions = () => {
                                             <span className="aq-config-class">{cfg.classes?.class_name || 'General'}</span>
                                         </div>
                                         <div className="aq-config-footer">
-                                            <span className="aq-config-qcount"><strong>{cfg.question_count}</strong> Questions Set</span>
+                                            <div className="aq-config-progress">
+                                                <div className="aq-progress-bar">
+                                                    <div
+                                                        className="aq-progress-fill"
+                                                        style={{ width: `${Math.min((cfg.question_count / 50) * 100, 100)}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className="aq-config-qcount"><strong>{cfg.question_count}</strong>/50 Questions</span>
+                                            </div>
                                             <div className="aq-config-arrow">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 18 15 12 9 6" /></svg>
                                             </div>
@@ -399,6 +515,39 @@ const AdminQuestions = () => {
                     </div>
                 )}
             </div>
+
+            <ClaudeDesignRefiner
+                currentCSS={`/* AdminQuestions.css - Modern admin interface */
+.aq-container {
+    padding: 32px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    min-height: calc(100vh - 80px);
+    font-family: 'Inter', sans-serif;
+}
+
+.aq-card {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    padding: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.aq-header {
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 28px;
+}`}
+                onDesignUpdate={(newCSS, fileName) => {
+                    console.log('Claude refined CSS for', fileName, ':', newCSS);
+                    // Here you could implement file saving or further processing
+                    alert(`CSS refined for ${fileName}! Check console for details.`);
+                }}
+                componentName="AdminQuestions"
+            />
         </div>
     );
 };

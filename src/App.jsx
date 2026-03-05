@@ -63,11 +63,11 @@ function App() {
 
                 {/* Protected Admin Routes */}
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
-                    <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
                     <Route element={<AdminLayout />}>
                         <Route path="/portal/admin" element={<AdminDashboard />} />
                         <Route path="/portal/admin/students" element={<AdminStudents />} />
                         <Route path="/portal/admin/questions" element={<AdminQuestions />} />
+                        <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
                         <Route path="/portal/admin/info" element={<AdminInfo />} />
                         <Route path="/portal/admin/profile" element={<AdminProfile />} />
                     </Route>
