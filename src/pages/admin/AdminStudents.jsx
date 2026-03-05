@@ -67,44 +67,81 @@ const AdminStudents = () => {
 
         try {
             if (!formData.class_id) throw new Error("Please select a class.");
+            if (formData.password?.length < 6) throw new Error("Password must be at least 6 characters.");
 
+            // 1. Upload Profile Image
             let profileImageUrl = null;
             if (formData.profile_image) {
                 const file = formData.profile_image;
                 const fileExt = file.name.split('.').pop();
-                const fileName = `${Math.random()}.${fileExt}`;
-                const filePath = `students/${fileName}`;
+                const fileName = `student_${Date.now()}.${fileExt}`;
+                const filePath = `avatars/${fileName}`;
 
                 const { error: uploadError } = await supabase.storage
-                    .from('avatars')
+                    .from('portal-assets')
                     .upload(filePath, file);
 
-                if (uploadError) throw uploadError;
+                if (uploadError) {
+                    if (uploadError.message.includes('Bucket not found')) {
+                        throw new Error("Storage bucket 'portal-assets' not found. Please create it in Supabase.");
+                    }
+                    throw uploadError;
+                }
 
                 const { data: { publicUrl } } = supabase.storage
-                    .from('avatars')
+                    .from('portal-assets')
                     .getPublicUrl(filePath);
 
                 profileImageUrl = publicUrl;
             }
 
-            const { data: inserted, error } = await supabase.from('students').insert({
+            // 2. Create Auth User
+            // Note: If email confirmation is OFF in Supabase, this might sign the admin out.
+            // However, this is the standard way to create users from the client side.
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: formData.email.trim().toLowerCase(),
+                password: formData.password,
+                options: {
+                    data: {
+                        full_name: formData.full_name.trim(),
+                        role: 'student'
+                    }
+                }
+            });
+
+            if (authError) throw authError;
+            const newUserId = authData.user?.id;
+
+            if (!newUserId) throw new Error("Could not create user account.");
+
+            // 3. Create Profile (Public Profile)
+            const { error: profileError } = await supabase.from('profiles').upsert({
+                id: newUserId,
+                full_name: formData.full_name.trim(),
+                email: formData.email.trim().toLowerCase(),
+                role: 'student',
+                avatar_url: profileImageUrl
+            });
+
+            if (profileError) throw profileError;
+
+            // 4. Create Student Record (Application Data)
+            const { data: inserted, error: studentError } = await supabase.from('students').insert({
+                id: newUserId, // Link to Auth User ID
                 full_name: formData.full_name.trim(),
                 email: formData.email.trim().toLowerCase(),
                 phone_number: formData.phone_number.trim(),
                 class_id: formData.class_id,
-                password_hash: formData.password,
                 profile_image: profileImageUrl,
                 role: 'student'
             }).select().single();
 
-            if (error) throw error;
+            if (studentError) throw studentError;
 
             // Optimistic update
             const selectedClass = classes.find(c => c.id === formData.class_id);
             const newStudent = {
                 ...(inserted || {}),
-                id: inserted?.id || Date.now().toString(),
                 full_name: formData.full_name.trim(),
                 email: formData.email.trim().toLowerCase(),
                 phone_number: formData.phone_number.trim(),
@@ -125,6 +162,7 @@ const AdminStudents = () => {
 
             fetchStudents().catch(err => console.error('Background refresh error:', err));
         } catch (err) {
+            console.error("Add student error:", err);
             alert('Error adding student: ' + err.message);
         } finally {
             setSaving(false);

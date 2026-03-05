@@ -93,10 +93,10 @@ const AdminProfile = () => {
         }
 
         setAvatarLoading(true);
-        const filePath = `public/${userId}.png`;
+        const filePath = `avatars/${userId}_${Date.now()}.png`;
 
         const { error: uploadError } = await supabase.storage
-            .from('avatars')
+            .from('portal-assets')
             .upload(filePath, file, { upsert: true });
 
         if (uploadError) {
@@ -106,7 +106,7 @@ const AdminProfile = () => {
         }
 
         const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
+            .from('portal-assets')
             .getPublicUrl(filePath);
 
         await supabase
