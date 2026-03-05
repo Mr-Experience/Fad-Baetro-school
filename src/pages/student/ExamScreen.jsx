@@ -74,23 +74,36 @@ const ExamScreen = () => {
                     setProfileImage(std.avatar_url);
                 }
 
-                // Use passed exam config or fetch it
                 let cfg = passedExamConfig;
                 if (!cfg) {
                     console.log("No exam config passed from ActiveExam, fetching from database...");
-                    const { data: fetchedCfg, error: cfgError } = await supabase
+                    const { data: activeConfigs, error: cfgError } = await supabase
                         .from('exam_configs')
                         .select('*, subjects(subject_name)')
                         .eq('class_id', std.class_id)
-                        .eq('is_active', true)
-                        .maybeSingle();
+                        .eq('is_active', true);
 
-                    if (cfgError || !fetchedCfg) {
+                    if (cfgError || !activeConfigs || activeConfigs.length === 0) {
                         console.error("Exam config fetch error:", cfgError);
+                        setLoading(false);
                         navigate('/portal/student/no-exam');
                         return;
                     }
-                    cfg = fetchedCfg;
+
+                    // Find available Exam
+                    const { data: results } = await supabase
+                        .from('exam_results')
+                        .select('subject_id')
+                        .eq('student_id', std.id);
+
+                    const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
+                    cfg = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+
+                    if (!cfg) {
+                        setLoading(false);
+                        navigate('/portal/student/no-exam');
+                        return;
+                    }
                 }
                 setActiveConfig(cfg);
 
@@ -110,6 +123,7 @@ const ExamScreen = () => {
                     if (qError) console.error("Questions fetch error:", qError);
                     if (!qData || qData.length === 0) {
                         alert("No questions found for this exam. Contact admin.");
+                        setLoading(false);
                         navigate('/portal/student/no-exam');
                         return;
                     }
@@ -125,12 +139,12 @@ const ExamScreen = () => {
                 if (passedSessionInfo) {
                     setSessionInfo(passedSessionInfo);
                 } else {
-                    const { data: sessionData } = await supabase
+                    const { data: sessionData, error: sessionErr } = await supabase
                         .from('system_settings')
                         .select('current_session, current_term')
-                        .single();
+                        .maybeSingle();
 
-                    if (sessionData) {
+                    if (!sessionErr && sessionData) {
                         setSessionInfo({ session: sessionData.current_session || '', term: sessionData.current_term || '' });
                     }
                 }
@@ -166,6 +180,7 @@ const ExamScreen = () => {
                 setLoading(false);
             } catch (error) {
                 console.error("Error in initExam:", error);
+                setLoading(false);
                 alert("Error loading exam. Please try again.");
                 navigate('/portal/student/no-exam');
             }

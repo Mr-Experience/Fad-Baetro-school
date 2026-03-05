@@ -29,111 +29,133 @@ const ExamScreen = () => {
 
     useEffect(() => {
         const initExam = async () => {
-            setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) { navigate('/portal/candidate'); return; }
+            try {
+                setLoading(true);
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) { navigate('/portal/candidate'); return; }
 
-            // Fetch Candidate Identity
-            const { data: std } = await supabase
-                .from('students')
-                .select('*')
-                .eq('email', user.email.toLowerCase())
-                .maybeSingle();
-
-            if (!std) {
-                setCandidate({ full_name: user.email, id: user.id });
-            } else {
-                setCandidate(std);
-                setProfileImage(std.image_url || std.profile_image || std.profile_picture || std.avatar_url || null);
-            }
-
-            // Fetch Active Candidate Config
-            let cfg = passedExamConfig;
-            if (!cfg) {
-                const { data: fetchedCfg } = await supabase
-                    .from('exam_configs')
-                    .select('*, subjects(subject_name)')
-                    .eq('class_id', std?.class_id || '')
-                    .eq('question_type', 'candidate')
-                    .eq('is_active', true)
-                    .maybeSingle();
-                cfg = fetchedCfg;
-            }
-
-            if (!cfg) { navigate('/portal/candidate/no-exam'); return; }
-            setActiveConfig(cfg);
-
-            if (preloadedQuestions) {
-                setQuestions(preloadedQuestions);
-            } else {
-                // Fetch Questions
-                const { data: qData } = await supabase
-                    .from('questions')
+                // Fetch Candidate Identity
+                const { data: std } = await supabase
+                    .from('students')
                     .select('*')
-                    .eq('class_id', cfg.class_id)
-                    .eq('subject_id', cfg.subject_id)
-                    .eq('question_type', 'candidate');
+                    .eq('email', user.email.toLowerCase())
+                    .maybeSingle();
 
-                if (!qData || qData.length === 0) {
-                    alert("No questions found for this exam. Contact admin.");
-                    navigate('/portal/candidate/no-exam');
-                    return;
+                if (!std) {
+                    setCandidate({ full_name: user.email, id: user.id });
+                } else {
+                    setCandidate(std);
+                    setProfileImage(std.image_url || std.profile_image || std.profile_picture || std.avatar_url || null);
                 }
 
-                let processed = [...qData];
-                if (cfg.selection_type === 'random') {
-                    processed = processed.sort(() => Math.random() - 0.5);
-                }
-                const count = cfg.question_count || processed.length;
-                setQuestions(processed.slice(0, count));
-            }
+                let cfg = passedExamConfig;
+                if (!cfg) {
+                    const { data: activeConfigs, error: cfgError } = await supabase
+                        .from('exam_configs')
+                        .select('*, subjects(subject_name)')
+                        .eq('class_id', std?.class_id || '')
+                        .eq('question_type', 'candidate')
+                        .eq('is_active', true);
 
-            // Fetch Session Info
-            if (passedSessionInfo) {
-                setSessionInfo(passedSessionInfo);
-            } else {
-                const { data: sessionData } = await supabase
-                    .from('system_settings')
-                    .select('current_session, current_term')
-                    .single();
-
-                if (sessionData) {
-                    setSessionInfo({
-                        session: sessionData.current_session || '',
-                        term: sessionData.current_term || ''
-                    });
-                }
-            }
-
-            // Restore Progress or Set Initial Timer
-            const storageKey = `exam_prog_cand_${user.id}_${cfg.id}`;
-            const savedStr = localStorage.getItem(storageKey);
-            let loadedAnswers = {};
-            let loadedIdx = 0;
-            let remainingTime = (cfg.duration_minutes || 60) * 60;
-
-            if (savedStr) {
-                try {
-                    const saved = JSON.parse(savedStr);
-                    if (saved.answers) loadedAnswers = saved.answers;
-                    if (saved.currentQuestionIdx) loadedIdx = saved.currentQuestionIdx;
-                    if (saved.endTime) {
-                        const diff = Math.floor((saved.endTime - Date.now()) / 1000);
-                        remainingTime = diff > 0 ? diff : 0;
+                    if (cfgError || !activeConfigs || activeConfigs.length === 0) {
+                        setLoading(false);
+                        navigate('/portal/candidate/no-exam');
+                        return;
                     }
-                } catch (e) {
-                    console.error("Error parsing saved progress", e);
-                }
-            } else {
-                // First time starting, set end time
-                const endTime = Date.now() + (remainingTime * 1000);
-                localStorage.setItem(storageKey, JSON.stringify({ endTime, answers: {}, currentQuestionIdx: 0 }));
-            }
 
-            setAnswers(loadedAnswers);
-            setCurrentQuestionIdx(loadedIdx);
-            setTimeLeft(remainingTime);
-            setLoading(false);
+                    const { data: results } = await supabase
+                        .from('exam_results')
+                        .select('subject_id')
+                        .eq('student_id', candidateId)
+                        .eq('question_type', 'candidate');
+
+                    const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
+                    cfg = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+
+                    if (!cfg) {
+                        setLoading(false);
+                        navigate('/portal/candidate/no-exam');
+                        return;
+                    }
+                }
+                setActiveConfig(cfg);
+
+                if (preloadedQuestions) {
+                    setQuestions(preloadedQuestions);
+                } else {
+                    // Fetch Questions
+                    const { data: qData } = await supabase
+                        .from('questions')
+                        .select('*')
+                        .eq('class_id', cfg.class_id)
+                        .eq('subject_id', cfg.subject_id)
+                        .eq('question_type', 'candidate');
+
+                    if (!qData || qData.length === 0) {
+                        alert("No questions found for this exam. Contact admin.");
+                        setLoading(false);
+                        navigate('/portal/candidate/no-exam');
+                        return;
+                    }
+
+                    let processed = [...qData];
+                    if (cfg.selection_type === 'random') {
+                        processed = processed.sort(() => Math.random() - 0.5);
+                    }
+                    const count = cfg.question_count || processed.length;
+                    setQuestions(processed.slice(0, count));
+                }
+
+                if (passedSessionInfo) {
+                    setSessionInfo(passedSessionInfo);
+                } else {
+                    const { data: sessionData, error: sessionErr } = await supabase
+                        .from('system_settings')
+                        .select('current_session, current_term')
+                        .maybeSingle();
+
+                    if (!sessionErr && sessionData) {
+                        setSessionInfo({
+                            session: sessionData.current_session || '',
+                            term: sessionData.current_term || ''
+                        });
+                    }
+                }
+
+                // Restore Progress or Set Initial Timer
+                const storageKey = `exam_prog_cand_${user.id}_${cfg.id}`;
+                const savedStr = localStorage.getItem(storageKey);
+                let loadedAnswers = {};
+                let loadedIdx = 0;
+                let remainingTime = (cfg.duration_minutes || 60) * 60;
+
+                if (savedStr) {
+                    try {
+                        const saved = JSON.parse(savedStr);
+                        if (saved.answers) loadedAnswers = saved.answers;
+                        if (saved.currentQuestionIdx) loadedIdx = saved.currentQuestionIdx;
+                        if (saved.endTime) {
+                            const diff = Math.floor((saved.endTime - Date.now()) / 1000);
+                            remainingTime = diff > 0 ? diff : 0;
+                        }
+                    } catch (e) {
+                        console.error("Error parsing saved progress", e);
+                    }
+                } else {
+                    // First time starting, set end time
+                    const endTime = Date.now() + (remainingTime * 1000);
+                    localStorage.setItem(storageKey, JSON.stringify({ endTime, answers: {}, currentQuestionIdx: 0 }));
+                }
+
+                setAnswers(loadedAnswers);
+                setCurrentQuestionIdx(loadedIdx);
+                setTimeLeft(remainingTime);
+                setLoading(false);
+            } catch (e) {
+                console.error("Crash during init:", e);
+                setLoading(false);
+                navigate('/portal/candidate');
+            }
         };
 
         initExam();
