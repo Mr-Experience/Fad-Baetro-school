@@ -205,24 +205,29 @@ const ExamScreen = () => {
 
     // 3. Proactive Admin-Sync Check
     useEffect(() => {
-        if (!student?.class_id || isSubmitting) return;
+        if (!student?.class_id || !activeConfig?.id || isSubmitting) return;
 
         const checkStatus = async () => {
-            const { data: active } = await supabase
-                .from('exam_configs')
-                .select('id')
-                .eq('class_id', student.class_id)
-                .eq('is_active', true)
-                .limit(1);
+            try {
+                const { data, error } = await supabase
+                    .from('exam_configs')
+                    .select('is_active')
+                    .eq('id', activeConfig.id)
+                    .maybeSingle();
 
-            if (!active || active.length === 0) {
-                navigate('/portal/student/no-exam');
+                // ONLY redirect if we successfully queried AND specifically found it is no longer active
+                if (!error && (data === null || data.is_active === false)) {
+                    console.log("Exam deactivated by admin, redirecting...");
+                    navigate('/portal/student/no-exam');
+                }
+            } catch (err) {
+                console.warn("Status check failed (network?), retaining current screen.");
             }
         };
 
         const interval = setInterval(checkStatus, 5000);
         return () => clearInterval(interval);
-    }, [student, isSubmitting, navigate]);
+    }, [student, activeConfig, isSubmitting, navigate]);
 
     // --- ACTIONS ---
     const handleAnswer = (option) => {
