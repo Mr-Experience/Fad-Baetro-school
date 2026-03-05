@@ -20,6 +20,8 @@ const ExamScreen = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const passedExamConfig = location.state?.examConfig;
+    const preloadedQuestions = location.state?.preloadedQuestions;
+    const passedSessionInfo = location.state?.sessionInfo;
 
     // Identity & Config
     const [student, setStudent] = useState(null);
@@ -41,10 +43,10 @@ const ExamScreen = () => {
             setLoading(true);
             try {
                 const { data: { user }, error: authError } = await supabase.auth.getUser();
-                if (authError || !user) { 
+                if (authError || !user) {
                     console.error("Auth error:", authError);
-                    navigate('/portal/student'); 
-                    return; 
+                    navigate('/portal/student');
+                    return;
                 }
 
                 // Fetch Student
@@ -54,15 +56,17 @@ const ExamScreen = () => {
                     .eq('email', user.email.toLowerCase())
                     .maybeSingle();
 
-                if (stdError || !std) { 
+                if (stdError || !std) {
                     console.error("Student fetch error:", stdError);
-                    navigate('/portal/student'); 
-                    return; 
+                    navigate('/portal/student');
+                    return;
                 }
                 setStudent(std);
 
                 // Extract profile image from database
-                if (std.profile_image) {
+                if (std.image_url) {
+                    setProfileImage(std.image_url);
+                } else if (std.profile_image) {
                     setProfileImage(std.profile_image);
                 } else if (std.profile_picture) {
                     setProfileImage(std.profile_picture);
@@ -81,66 +85,84 @@ const ExamScreen = () => {
                         .eq('is_active', true)
                         .maybeSingle();
 
-                    if (cfgError || !fetchedCfg) { 
+                    if (cfgError || !fetchedCfg) {
                         console.error("Exam config fetch error:", cfgError);
-                        navigate('/portal/student/no-exam'); 
-                        return; 
+                        navigate('/portal/student/no-exam');
+                        return;
                     }
                     cfg = fetchedCfg;
-                } else {
-                    console.log("✅ Using exam config passed from ActiveExam screen");
                 }
                 setActiveConfig(cfg);
 
-                // Fetch Questions
-                console.log("📝 Fetching questions:", { 
-                    class_id: std.class_id, 
-                    subject_id: cfg.subject_id, 
-                    question_type: cfg.question_type 
-                });
-                
-                const { data: qData, error: qError } = await supabase
-                    .from('questions')
-                    .select('*')
-                    .eq('class_id', std.class_id)
-                    .eq('subject_id', cfg.subject_id)
-                    .eq('question_type', cfg.question_type);
+                if (preloadedQuestions) {
+                    console.log("✅ Using preloaded questions");
+                    setQuestions(preloadedQuestions);
+                } else {
+                    // Fetch Questions
+                    console.log("📝 Fetching questions:", { class_id: std.class_id, subject_id: cfg.subject_id, question_type: cfg.question_type });
+                    const { data: qData, error: qError } = await supabase
+                        .from('questions')
+                        .select('*')
+                        .eq('class_id', std.class_id)
+                        .eq('subject_id', cfg.subject_id)
+                        .eq('question_type', cfg.question_type);
 
-                if (qError) {
-                    console.error("Questions fetch error:", qError);
+                    if (qError) console.error("Questions fetch error:", qError);
+                    if (!qData || qData.length === 0) {
+                        alert("No questions found for this exam. Contact admin.");
+                        navigate('/portal/student/no-exam');
+                        return;
+                    }
+
+                    let processed = [...qData];
+                    if (cfg.selection_type === 'random') {
+                        processed = processed.sort(() => Math.random() - 0.5);
+                    }
+                    setQuestions(processed.slice(0, cfg.question_count || processed.length));
                 }
-
-                if (!qData || qData.length === 0) {
-                    alert("No questions found for this exam. Contact admin.");
-                    navigate('/portal/student/no-exam');
-                    return;
-                }
-
-                console.log(`✅ Loaded ${qData.length} questions`);
 
                 // Fetch Session Info
-                const { data: sessionData } = await supabase
-                    .from('system_settings')
-                    .select('current_session, current_term')
-                    .single();
+                if (passedSessionInfo) {
+                    setSessionInfo(passedSessionInfo);
+                } else {
+                    const { data: sessionData } = await supabase
+                        .from('system_settings')
+                        .select('current_session, current_term')
+                        .single();
 
-                if (sessionData) {
-                    setSessionInfo({
-                        session: sessionData.current_session || '',
-                        term: sessionData.current_term || ''
-                    });
+                    if (sessionData) {
+                        setSessionInfo({ session: sessionData.current_session || '', term: sessionData.current_term || '' });
+                    }
                 }
 
-                // Shuffle and Limit
-                let processed = [...qData];
-                if (cfg.selection_type === 'random') {
-                    processed = processed.sort(() => Math.random() - 0.5);
-                }
-                const count = cfg.question_count || processed.length;
-                setQuestions(processed.slice(0, count));
+                // Restore Progress or Set Initial Timer
+                const storageKey = `exam_prog_${std.id}_${cfg.id}`;
+                const savedStr = localStorage.getItem(storageKey);
+                let loadedAnswers = {};
+                let loadedIdx = 0;
+                let remainingTime = (cfg.duration_minutes || 60) * 60;
 
-                // Set Timer (from duration_minutes)
-                setTimeLeft((cfg.duration_minutes || 60) * 60);
+                if (savedStr) {
+                    try {
+                        const saved = JSON.parse(savedStr);
+                        if (saved.answers) loadedAnswers = saved.answers;
+                        if (saved.currentQuestionIdx) loadedIdx = saved.currentQuestionIdx;
+                        if (saved.endTime) {
+                            const diff = Math.floor((saved.endTime - Date.now()) / 1000);
+                            remainingTime = diff > 0 ? diff : 0;
+                        }
+                    } catch (e) {
+                        console.error("Error parsing saved progress", e);
+                    }
+                } else {
+                    // First time starting, set end time
+                    const endTime = Date.now() + (remainingTime * 1000);
+                    localStorage.setItem(storageKey, JSON.stringify({ endTime, answers: {}, currentQuestionIdx: 0 }));
+                }
+
+                setAnswers(loadedAnswers);
+                setCurrentQuestionIdx(loadedIdx);
+                setTimeLeft(remainingTime);
                 setLoading(false);
             } catch (error) {
                 console.error("Error in initExam:", error);
@@ -190,7 +212,24 @@ const ExamScreen = () => {
     // --- ACTIONS ---
     const handleAnswer = (option) => {
         const q = questions[currentQuestionIdx];
-        setAnswers(prev => ({ ...prev, [q.id]: option }));
+        const newAnswers = { ...answers, [q.id]: option };
+        setAnswers(newAnswers);
+
+        // Save to LocalStorage
+        if (student && activeConfig) {
+            const storageKey = `exam_prog_${student.id}_${activeConfig.id}`;
+            const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            localStorage.setItem(storageKey, JSON.stringify({ ...existing, answers: newAnswers }));
+        }
+    };
+
+    const navToQuestion = (idx) => {
+        setCurrentQuestionIdx(idx);
+        if (student && activeConfig) {
+            const storageKey = `exam_prog_${student.id}_${activeConfig.id}`;
+            const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            localStorage.setItem(storageKey, JSON.stringify({ ...existing, currentQuestionIdx: idx }));
+        }
     };
 
     const handleSubmit = async () => {
@@ -248,6 +287,8 @@ const ExamScreen = () => {
                 // Even if save fails to results, try to navigate so student doesn't sit in loop
             }
 
+            // Clear progress
+            localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);
             navigate('/portal/student/submitted', { state: { score: scorePercent, name: student.full_name } });
 
         } catch (err) {
@@ -258,7 +299,20 @@ const ExamScreen = () => {
         }
     };
 
-    if (loading) return <div className="portal-login-container" style={{ justifyContent: 'center', color: '#9D245A', fontWeight: 'bold' }}>Preparing your exam...</div>;
+    if (loading) {
+        return (
+            <div className="portal-login-container" style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <img src={logo} alt="School Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', animation: 'pulse-load 1.5s ease-in-out infinite' }} />
+                <style>{`
+                    @keyframes pulse-load {
+                        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0.4); }
+                        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(157, 36, 90, 0); }
+                        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
 
     const currentQ = questions[currentQuestionIdx];
     const formatTime = (seconds) => {
@@ -288,11 +342,9 @@ const ExamScreen = () => {
                         {profileImage ? (
                             <img src={profileImage} alt="Profile" className="nes-profile-img" />
                         ) : (
-                            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-                                <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
-                                <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
-                                <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
-                            </svg>
+                            <span style={{ color: '#4B5563', fontWeight: 'bold', fontSize: '16px' }}>
+                                {student?.full_name ? student.full_name.charAt(0).toUpperCase() : 'S'}
+                            </span>
                         )}
                     </div>
                     <button className="es-submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
@@ -324,11 +376,11 @@ const ExamScreen = () => {
                     </div>
 
                     <div className="es-nav-row">
-                        <button className="es-prev-btn" onClick={() => setCurrentQuestionIdx(i => i - 1)} disabled={currentQuestionIdx === 0}>Previous</button>
+                        <button className="es-prev-btn" onClick={() => navToQuestion(currentQuestionIdx - 1)} disabled={currentQuestionIdx === 0}>Previous</button>
                         {currentQuestionIdx === questions.length - 1 ? (
                             <button className="es-next-btn" onClick={handleSubmit} style={{ background: '#10b981' }}>Finish</button>
                         ) : (
-                            <button className="es-next-btn" onClick={() => setCurrentQuestionIdx(i => i + 1)}>Next</button>
+                            <button className="es-next-btn" onClick={() => navToQuestion(currentQuestionIdx + 1)}>Next</button>
                         )}
                     </div>
                 </div>
@@ -339,7 +391,7 @@ const ExamScreen = () => {
                             <button
                                 key={q.id}
                                 className={`es-num-btn ${i === currentQuestionIdx ? 'es-num-current' : ''} ${answers[q.id] ? 'es-num-answered' : ''}`}
-                                onClick={() => setCurrentQuestionIdx(i)}
+                                onClick={() => navToQuestion(i)}
                             >
                                 {i + 1}
                             </button>

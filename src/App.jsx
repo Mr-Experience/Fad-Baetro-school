@@ -15,6 +15,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminStudents from './pages/admin/AdminStudents';
 import AdminQuestions from './pages/admin/AdminQuestions';
 import AdminQuestionEditor from './pages/admin/AdminQuestionEditor';
+import AdminResults from './pages/admin/AdminResults';
 import AdminInfo from './pages/admin/AdminInfo';
 import AdminProfile from './pages/admin/AdminProfile';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -68,6 +69,7 @@ function App() {
                         <Route path="/portal/admin/students" element={<AdminStudents />} />
                         <Route path="/portal/admin/questions" element={<AdminQuestions />} />
                         <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
+                        <Route path="/portal/admin/results" element={<AdminResults />} />
                         <Route path="/portal/admin/info" element={<AdminInfo />} />
                         <Route path="/portal/admin/profile" element={<AdminProfile />} />
                     </Route>

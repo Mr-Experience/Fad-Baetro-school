@@ -9,8 +9,10 @@ const NoExamSchedule = () => {
     const navigate = useNavigate();
     const [studentName, setStudentName] = useState('...');
     const [profileImage, setProfileImage] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let intervalId;
         const getStudent = async () => {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError || !user) {
@@ -29,61 +31,101 @@ const NoExamSchedule = () => {
 
                 if (fetchError) {
                     console.warn("Error fetching student profile:", fetchError.message);
+                    setLoading(false);
                 } else if (student) {
                     // Set name from database - check multiple possible column names
                     const displayName = student.full_name || student.name || user.user_metadata?.full_name || user.email;
                     setStudentName(displayName);
 
                     // Set profile image from database - check multiple possible column names
-                    if (student.profile_image) {
-                        setProfileImage(student.profile_image);
-                    } else if (student.profile_picture) {
-                        setProfileImage(student.profile_picture);
-                    } else if (student.avatar_url) {
-                        setProfileImage(student.avatar_url);
+                    if (student.image_url) setProfileImage(student.image_url);
+                    else if (student.profile_image) setProfileImage(student.profile_image);
+                    else if (student.profile_picture) setProfileImage(student.profile_picture);
+                    else if (student.avatar_url) setProfileImage(student.avatar_url);
+
+                    console.log("✅ Student profile synced from database:", { name: displayName, hasImage: !!(student.image_url || student.profile_image || student.profile_picture || student.avatar_url) });
+
+                    // --- AUTO REDIRECT Logic ---
+                    // If an exam is active for this class, kick them to ActiveExam portal immediately
+                    if (!student.class_id) {
+                        setLoading(false);
+                        return;
                     }
 
-                    console.log("✅ Student profile synced from database:", { name: displayName, hasImage: !!(student.profile_image || student.profile_picture || student.avatar_url) });
+                    const checkExamStatus = async () => {
+                        try {
+                            const { data: activeConfigs, error: examError } = await supabase
+                                .from('exam_configs')
+                                .select('*')
+                                .eq('class_id', student.class_id)
+                                .eq('is_active', true);
+
+                            if (!examError && activeConfigs && activeConfigs.length > 0) {
+                                // Fetch all submitted exams for this student
+                                const { data: results } = await supabase
+                                    .from('exam_results')
+                                    .select('subject_id')
+                                    .eq('student_id', student.id);
+
+                                const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
+                                const availableExam = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+
+                                if (availableExam) {
+                                    navigate('/portal/student/active-exam');
+                                    return;
+                                }
+                            }
+                            setLoading(false);
+                        } catch (e) {
+                            console.error("Status check fail:", e);
+                            setLoading(false);
+                        }
+                    };
+
+                    checkExamStatus(); // Initial check
+                    intervalId = setInterval(checkExamStatus, 1500); // Check every 1.5s
+
                 } else {
                     // Fallback to auth metadata if no student record found
                     const fallbackName = user.user_metadata?.full_name || user.email;
                     setStudentName(fallbackName);
                     console.log("⚠️ No student record found in database, using auth metadata:", fallbackName);
-                }
-
-                // --- AUTO REDIRECT Logic ---
-                // If an exam is active for this class, kick them to ActiveExam portal immediately
-                if (student?.class_id) {
-                    const checkExamStatus = async () => {
-                        const { data: active, error: examError } = await supabase
-                            .from('exam_configs')
-                            .select('id')
-                            .eq('class_id', student.class_id)
-                            .eq('is_active', true)
-                            .limit(1);
-
-                        if (!examError && active && active.length > 0) {
-                            navigate('/portal/student/active-exam');
-                        }
-                    };
-
-                    checkExamStatus(); // Initial check
-                    const examInterval = setInterval(checkExamStatus, 5000); // Check every 5s
-                    return () => clearInterval(examInterval);
+                    setLoading(false);
                 }
             } catch (error) {
                 console.error("Error in getStudent:", error);
-                setStudentName(user.email);
+                setStudentName(user?.email || '...');
+                setLoading(false);
             }
         };
 
         getStudent();
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
     }, [navigate]);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
         navigate('/portal/student');
     };
+
+    if (loading) {
+        return (
+            <div className="portal-login-container" style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <img src={logo} alt="School Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', animation: 'pulse-load 1.5s ease-in-out infinite' }} />
+                <style>{`
+                    @keyframes pulse-load {
+                        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0.4); }
+                        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(157, 36, 90, 0); }
+                        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
+
     return (
         <div className="portal-login-container">
             {/* Header */}
@@ -98,11 +140,9 @@ const NoExamSchedule = () => {
                         {profileImage ? (
                             <img src={profileImage} alt="Profile" className="nes-profile-img" />
                         ) : (
-                            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-                                <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
-                                <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
-                                <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
-                            </svg>
+                            <span style={{ color: '#4B5563', fontWeight: 'bold', fontSize: '16px' }}>
+                                {studentName ? studentName.charAt(0).toUpperCase() : 'S'}
+                            </span>
                         )}
                     </div>
                 </div>

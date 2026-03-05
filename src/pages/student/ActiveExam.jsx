@@ -11,8 +11,13 @@ const ActiveExam = () => {
     const [studentName, setStudentName] = useState('...');
     const [profileImage, setProfileImage] = useState(null);
     const [activeExam, setActiveExam] = useState(null);
+    const [preloadedQuestions, setPreloadedQuestions] = useState(null);
+    const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let intervalId;
+
         const getData = async () => {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError || !user) {
@@ -31,58 +36,115 @@ const ActiveExam = () => {
 
                 if (fetchError) {
                     console.warn("Error fetching student profile:", fetchError.message);
+                    setLoading(false);
                 } else if (student) {
-                    // Set name from database - check multiple possible column names
+                    // ... Profile image logic ...
                     const displayName = student.full_name || student.name || user.user_metadata?.full_name || user.email;
                     setStudentName(displayName);
 
-                    // Set profile image from database - check multiple possible column names
-                    if (student.profile_image) {
-                        setProfileImage(student.profile_image);
-                    } else if (student.profile_picture) {
-                        setProfileImage(student.profile_picture);
-                    } else if (student.avatar_url) {
-                        setProfileImage(student.avatar_url);
+                    if (student.image_url) setProfileImage(student.image_url);
+                    else if (student.profile_image) setProfileImage(student.profile_image);
+                    else if (student.profile_picture) setProfileImage(student.profile_picture);
+                    else if (student.avatar_url) setProfileImage(student.avatar_url);
+
+                    if (!student.class_id) {
+                        setLoading(false);
+                        navigate('/portal/student/no-exam');
+                        return;
                     }
 
-                    console.log("✅ Student profile synced from database:", { name: displayName, hasImage: !!(student.profile_image || student.profile_picture || student.avatar_url) });
-
-                    // 2. Initial Fetch for Active Exam for this class
+                    // 2. Setup Active Exam Check
                     const fetchActive = async () => {
-                        const { data, error } = await supabase
-                            .from('exam_configs')
-                            .select('*, subjects(subject_name)')
-                            .eq('class_id', student.class_id)
-                            .eq('is_active', true)
-                            .limit(1)
-                            .maybeSingle();
+                        try {
+                            const { data: activeConfigs, error } = await supabase
+                                .from('exam_configs')
+                                .select('*, subjects(subject_name)')
+                                .eq('class_id', student.class_id)
+                                .eq('is_active', true);
 
-                        if (!error && data) {
-                            setActiveExam(data);
-                        } else if (!data) {
-                            // If no exam found, redirect out
+                            if (!error && activeConfigs && activeConfigs.length > 0) {
+                                const { data: results } = await supabase
+                                    .from('exam_results')
+                                    .select('subject_id')
+                                    .eq('student_id', student.id);
+
+                                const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
+                                const availableExam = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+
+                                if (availableExam) {
+                                    setActiveExam(availableExam);
+
+                                    // Silent Preload
+                                    if (!preloadedQuestions) {
+                                        supabase.from('questions')
+                                            .select('*')
+                                            .eq('class_id', availableExam.class_id)
+                                            .eq('subject_id', availableExam.subject_id)
+                                            .eq('question_type', availableExam.question_type)
+                                            .then(({ data: qData }) => {
+                                                if (qData) {
+                                                    let processed = [...qData];
+                                                    if (availableExam.selection_type === 'random') {
+                                                        processed = processed.sort(() => Math.random() - 0.5);
+                                                    }
+                                                    const count = availableExam.question_count || processed.length;
+                                                    setPreloadedQuestions(processed.slice(0, count));
+                                                }
+                                            }).catch(err => console.error(err));
+
+                                        supabase.from('system_settings').select('current_session, current_term').single()
+                                            .then(({ data: sData }) => {
+                                                if (sData) setSessionInfo({ session: sData.current_session || '', term: sData.current_term || '' });
+                                            }).catch(err => console.error(err));
+                                    }
+
+                                    setLoading(false);
+                                    return;
+                                }
+                            }
+
+                            // If no exam or already taken
                             navigate('/portal/student/no-exam');
+                        } catch (err) {
+                            console.error("fetchActive Error:", err);
                         }
                     };
 
                     fetchActive();
+                    intervalId = setInterval(fetchActive, 1500);
 
-                    // 3. Set up polling to catch deactivation (Reduced to 5s for faster response)
-                    const interval = setInterval(fetchActive, 5000);
-                    return () => clearInterval(interval);
                 } else {
-                    // Fallback to auth metadata if no student record found
                     const fallbackName = user.user_metadata?.full_name || user.email;
                     setStudentName(fallbackName);
-                    console.log("⚠️ No student record found in database, using auth metadata:", fallbackName);
+                    setLoading(false);
                 }
             } catch (error) {
                 console.error("Error in getData:", error);
-                setStudentName(user.email);
+                setStudentName(user?.email || '...');
+                setLoading(false);
             }
         };
         getData();
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
     }, [navigate]);
+
+    if (loading) {
+        return (
+            <div className="portal-login-container" style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <img src={logo} alt="School Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', animation: 'pulse-load 1.5s ease-in-out infinite' }} />
+                <style>{`
+                    @keyframes pulse-load {
+                        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0.4); }
+                        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(157, 36, 90, 0); }
+                        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
 
     return (
         <div className="portal-login-container">
@@ -98,11 +160,9 @@ const ActiveExam = () => {
                         {profileImage ? (
                             <img src={profileImage} alt="Profile" className="nes-profile-img" />
                         ) : (
-                            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-                                <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
-                                <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
-                                <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
-                            </svg>
+                            <span style={{ color: '#4B5563', fontWeight: 'bold', fontSize: '16px' }}>
+                                {studentName ? studentName.charAt(0).toUpperCase() : 'S'}
+                            </span>
                         )}
                     </div>
                 </div>
@@ -140,10 +200,10 @@ const ActiveExam = () => {
                     {/* Start button */}
                     <button
                         className="login-btn ae-start-btn"
-                        onClick={() => navigate('/portal/student/exam', { state: { examConfig: activeExam } })}
-                        disabled={!activeExam}
+                        onClick={() => navigate('/portal/student/exam', { state: { examConfig: activeExam, preloadedQuestions, sessionInfo } })}
+                        disabled={!activeExam || !preloadedQuestions}
                     >
-                        Start now
+                        {preloadedQuestions ? 'Start now' : 'Loading exam paper...'}
                     </button>
                 </div>
             </main>

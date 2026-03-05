@@ -15,8 +15,6 @@ const AdminQuestionEditor = () => {
 
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
     const [activeSession, setActiveSession] = useState('');
     const [activeTerm, setActiveTerm] = useState('');
 
@@ -36,10 +34,17 @@ const AdminQuestionEditor = () => {
             setLoading(true);
             try {
                 // Get session/term
-                const { data: sys } = await supabase.from('system_settings').select('current_session, current_term').single();
+                const { data: sys } = await supabase.from('school_settings').select('current_session, current_term').single();
                 if (sys) {
                     setActiveSession(sys.current_session || '');
                     setActiveTerm(sys.current_term || '');
+                } else {
+                    // Fallback to system_settings if school_settings fails
+                    const { data: sys2 } = await supabase.from('system_settings').select('current_session, current_term').single();
+                    if (sys2) {
+                        setActiveSession(sys2.current_session || '');
+                        setActiveTerm(sys2.current_term || '');
+                    }
                 }
 
                 // Fetch questions
@@ -62,37 +67,38 @@ const AdminQuestionEditor = () => {
         init();
     }, [classId, subjectId, questionType]);
 
-    const handleOpenModal = (q = null) => {
-        if (q) {
-            setForm({
-                question_text: q.question_text || '',
-                option_a: q.option_a || '',
-                option_b: q.option_b || '',
-                option_c: q.option_c || '',
-                option_d: q.option_d || '',
-                correct_answer: q.correct_answer || ''
-            });
-            setEditingId(q.id);
-        } else {
-            setForm({
-                question_text: '',
-                option_a: '',
-                option_b: '',
-                option_c: '',
-                option_d: '',
-                correct_answer: ''
-            });
-            setEditingId(null);
-        }
-        setIsModalOpen(true);
+    const handleEdit = (q) => {
+        setForm({
+            question_text: q.question_text || '',
+            option_a: q.option_a || '',
+            option_b: q.option_b || '',
+            option_c: q.option_c || '',
+            option_d: q.option_d || '',
+            correct_answer: q.correct_answer || ''
+        });
+        setEditingId(q.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
+    const handleClear = () => {
+        setForm({
+            question_text: '',
+            option_a: '',
+            option_b: '',
+            option_c: '',
+            option_d: '',
+            correct_answer: ''
+        });
+        setEditingId(null);
     };
 
     const handleSave = async (e) => {
         e.preventDefault();
+        if (!form.correct_answer) {
+            alert("Please select the correct answer.");
+            return;
+        }
+
         setSaving(true);
         try {
             const payload = {
@@ -114,15 +120,16 @@ const AdminQuestionEditor = () => {
             if (editingId) {
                 const { error } = await supabase.from('questions').update(payload).eq('id', editingId);
                 if (error) throw error;
-                // Update local list
                 setQuestions(prev => prev.map(q => q.id === editingId ? { ...q, ...payload } : q));
+                alert("Question updated successfully!");
+                handleClear();
             } else {
                 const { data, error } = await supabase.from('questions').insert(payload).select().single();
                 if (error) throw error;
-                // Add to local list
                 if (data) setQuestions(prev => [...prev, data]);
+                alert("Question saved successfully!");
+                handleClear();
             }
-            handleCloseModal();
         } catch (err) {
             alert("Error saving: " + err.message);
         } finally {
@@ -130,242 +137,186 @@ const AdminQuestionEditor = () => {
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (e, id) => {
+        e.stopPropagation();
         if (!window.confirm("Are you sure you want to delete this question?")) return;
         try {
             const { error } = await supabase.from('questions').delete().eq('id', id);
             if (error) throw error;
             setQuestions(prev => prev.filter(q => q.id !== id));
+            if (editingId === id) handleClear();
         } catch (err) {
             alert("Delete failed: " + err.message);
         }
     };
 
     return (
-        <div className="aq-editor-container">
-            <div className="aq-editor-header">
-                <div className="aq-editor-header-left">
-                    <button className="aq-editor-back-btn" onClick={() => navigate('/portal/admin/questions')}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M19 12H5" />
-                            <path d="M12 19l-7-7 7-7" />
+        <div className="qe-container">
+            {/* Top Bar */}
+            <div className="qe-topbar">
+                <div className="qe-topbar-left">
+                    <button className="qe-back-btn" onClick={() => navigate('/portal/admin/questions')}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
                         </svg>
-                        Back to Questions
                     </button>
-                    <div className="aq-editor-title">
-                        <h1>{className} - {subjectName}</h1>
-                        <span className="aq-editor-type">{questionType.toUpperCase()} Questions</span>
+                    <div className="qe-topbar-title-group">
+                        <span className="qe-topbar-logo">FAD MAESTRO</span>
+                        <span className="qe-topbar-title">Question Bank Editor</span>
+                    </div>
+                    <div className="qe-topbar-tags">
+                        <span className="qe-tag class">{className}</span>
+                        <span className="qe-tag subject">{subjectName}</span>
+                        <span className="qe-tag type">{questionType}</span>
                     </div>
                 </div>
-                <div className="aq-editor-header-right">
-                    <div className="aq-editor-stats">
-                        <span>Total: {questions.length}</span>
+                <div className="qe-topbar-right">
+                    <div className="qe-stats">
+                        <strong>{questions.length}</strong> Questions Total
                     </div>
-                    <button className="aq-editor-add-btn" onClick={() => handleOpenModal()}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M12 5v14" />
-                            <path d="M5 12h14" />
-                        </svg>
-                        Add Question
-                    </button>
                 </div>
             </div>
 
-            {loading ? (
-                <div className="aq-editor-loading">
-                    <div className="aq-editor-spinner"></div>
-                    <p>Loading questions...</p>
-                </div>
-            ) : (
-                <div className="aq-editor-content">
-                    {questions.length === 0 ? (
-                        <div className="aq-editor-empty">
-                            <div className="aq-editor-empty-icon">
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                    <path d="M9 11l3 3L22 4" />
-                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                                </svg>
-                            </div>
-                            <h3>No questions found</h3>
-                            <p>Click the "Add Question" button to create your first question.</p>
+            <main className="qe-body">
+                {/* Left Side: Question List */}
+                <section className="qe-list-section">
+                    <div className="qe-section-header">
+                        <h2 className="qe-section-title">Question Manuscript</h2>
+                        <div className="qe-list-actions">
+                            <span className="qe-helper-text">Click cards to edit</span>
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div className="qe-loading">
+                            <div className="qe-spinner"></div>
+                            <p>Loading your questions...</p>
+                        </div>
+                    ) : questions.length === 0 ? (
+                        <div className="qe-empty-state">
+                            <span className="qe-empty-icon">📝</span>
+                            <h3>No questions yet</h3>
+                            <p>Use the panel on the right to add your first question.</p>
                         </div>
                     ) : (
-                        <div className="aq-editor-questions">
+                        <div className="qe-questions-grid">
                             {questions.map((q, i) => (
-                                <div key={q.id} className="aq-editor-question-card">
-                                    <div className="aq-editor-question-header">
-                                        <span className="aq-editor-question-number">Q{i + 1}</span>
-                                        <div className="aq-editor-question-actions">
-                                            <button
-                                                className="aq-editor-btn aq-editor-btn-edit"
-                                                onClick={() => handleOpenModal(q)}
-                                            >
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                <div
+                                    key={q.id}
+                                    className={`qe-q-card ${editingId === q.id ? 'editing' : ''}`}
+                                    onClick={() => handleEdit(q)}
+                                >
+                                    <div className="qe-q-header">
+                                        <div className="qe-q-num">Q{i + 1}</div>
+                                        <div className="qe-q-actions">
+                                            <button className="qe-q-btn edit" onClick={(e) => { e.stopPropagation(); handleEdit(q); }}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                                 </svg>
-                                                Edit
                                             </button>
-                                            <button
-                                                className="aq-editor-btn aq-editor-btn-delete"
-                                                onClick={() => handleDelete(q.id)}
-                                            >
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M3 6h18" />
-                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                                    <line x1="10" y1="11" x2="10" y2="17" />
-                                                    <line x1="14" y1="11" x2="14" y2="17" />
+                                            <button className="qe-q-btn delete" onClick={(e) => handleDelete(e, q.id)}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                    <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                                                 </svg>
-                                                Delete
                                             </button>
                                         </div>
                                     </div>
-                                    <div className="aq-editor-question-content">
-                                        <p className="aq-editor-question-text">{q.question_text}</p>
-                                        <div className="aq-editor-options">
-                                            <div className={`aq-editor-option ${q.correct_answer === 'A' ? 'correct' : ''}`}>
-                                                <span className="aq-editor-option-label">A.</span>
-                                                <span className="aq-editor-option-text">{q.option_a}</span>
+                                    <p className="qe-q-text">{q.question_text}</p>
+                                    <div className="qe-options-list">
+                                        {['a', 'b', 'c', 'd'].map(opt => (
+                                            <div key={opt} className={`qe-opt-item ${q.correct_answer === opt.toUpperCase() ? 'correct' : ''}`}>
+                                                <div className="qe-opt-indicator"></div>
+                                                <span className="qe-opt-label">{opt.toUpperCase()}.</span>
+                                                <span className="qe-opt-val">{q[`option_${opt}`]}</span>
                                             </div>
-                                            <div className={`aq-editor-option ${q.correct_answer === 'B' ? 'correct' : ''}`}>
-                                                <span className="aq-editor-option-label">B.</span>
-                                                <span className="aq-editor-option-text">{q.option_b}</span>
-                                            </div>
-                                            <div className={`aq-editor-option ${q.correct_answer === 'C' ? 'correct' : ''}`}>
-                                                <span className="aq-editor-option-label">C.</span>
-                                                <span className="aq-editor-option-text">{q.option_c}</span>
-                                            </div>
-                                            <div className={`aq-editor-option ${q.correct_answer === 'D' ? 'correct' : ''}`}>
-                                                <span className="aq-editor-option-label">D.</span>
-                                                <span className="aq-editor-option-text">{q.option_d}</span>
-                                            </div>
-                                        </div>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     )}
-                </div>
-            )}
+                </section>
 
-            {isModalOpen && (
-                <div className="aq-editor-modal-overlay">
-                    <div className="aq-editor-modal">
-                        <div className="aq-editor-modal-header">
-                            <h3>{editingId ? 'Edit Question' : 'Add New Question'}</h3>
-                            <button
-                                type="button"
-                                className="aq-editor-modal-close"
-                                onClick={handleCloseModal}
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <line x1="18" y1="6" x2="6" y2="18" />
-                                    <line x1="6" y1="6" x2="18" y2="18" />
-                                </svg>
-                            </button>
-                        </div>
-                        <form onSubmit={handleSave} className="aq-editor-modal-form">
-                            <div className="aq-editor-form-group">
-                                <label className="aq-editor-form-label">Question Content</label>
+                {/* Right Side: Editor Panel */}
+                <aside className="qe-editor-panel">
+                    <div className="qe-form-card">
+                        <h2 className="qe-form-title">
+                            <span className="qe-title-icon">{editingId ? '✍️' : '➕'}</span>
+                            {editingId ? 'Edit Question' : 'Add New Question'}
+                        </h2>
+                        <form onSubmit={handleSave}>
+                            <div className="qe-form-group">
+                                <label className="qe-label">Question Text</label>
                                 <textarea
-                                    required
+                                    className="qe-textarea"
+                                    placeholder="Type the question content here..."
                                     rows="4"
-                                    className="aq-editor-form-textarea"
+                                    required
                                     value={form.question_text}
                                     onChange={e => setForm({ ...form, question_text: e.target.value })}
-                                    placeholder="Enter your question here..."
                                 />
                             </div>
-                            <div className="aq-editor-form-row">
-                                <div className="aq-editor-form-group">
-                                    <label className="aq-editor-form-label">Option A</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="aq-editor-form-input"
-                                        value={form.option_a}
-                                        onChange={e => setForm({ ...form, option_a: e.target.value })}
-                                        placeholder="Enter option A"
-                                    />
-                                </div>
-                                <div className="aq-editor-form-group">
-                                    <label className="aq-editor-form-label">Option B</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="aq-editor-form-input"
-                                        value={form.option_b}
-                                        onChange={e => setForm({ ...form, option_b: e.target.value })}
-                                        placeholder="Enter option B"
-                                    />
+
+                            <div className="qe-form-group">
+                                <label className="qe-label">Options</label>
+                                <div className="qe-opt-input-grid">
+                                    {['a', 'b', 'c', 'd'].map(opt => (
+                                        <div key={opt} className="qe-opt-input-wrap">
+                                            <span className="qe-opt-prefix">{opt.toUpperCase()}</span>
+                                            <input
+                                                type="text"
+                                                className="qe-input"
+                                                placeholder={`Option ${opt.toUpperCase()}...`}
+                                                required
+                                                value={form[`option_${opt}`]}
+                                                onChange={e => setForm({ ...form, [`option_${opt}`]: e.target.value })}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                            <div className="aq-editor-form-row">
-                                <div className="aq-editor-form-group">
-                                    <label className="aq-editor-form-label">Option C</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="aq-editor-form-input"
-                                        value={form.option_c}
-                                        onChange={e => setForm({ ...form, option_c: e.target.value })}
-                                        placeholder="Enter option C"
-                                    />
-                                </div>
-                                <div className="aq-editor-form-group">
-                                    <label className="aq-editor-form-label">Option D</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="aq-editor-form-input"
-                                        value={form.option_d}
-                                        onChange={e => setForm({ ...form, option_d: e.target.value })}
-                                        placeholder="Enter option D"
-                                    />
+
+                            <div className="qe-form-group">
+                                <label className="qe-label">Correct Answer</label>
+                                <div className="qe-correct-picker">
+                                    {['A', 'B', 'C', 'D'].map(ans => (
+                                        <button
+                                            key={ans}
+                                            type="button"
+                                            className={`qe-correct-btn ${form.correct_answer === ans ? 'selected' : ''}`}
+                                            onClick={() => setForm({ ...form, correct_answer: ans })}
+                                        >
+                                            {ans}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
-                            <div className="aq-editor-form-group">
-                                <label className="aq-editor-form-label">Correct Answer</label>
-                                <select
-                                    required
-                                    className="aq-editor-form-select"
-                                    value={form.correct_answer}
-                                    onChange={e => setForm({ ...form, correct_answer: e.target.value })}
-                                >
-                                    <option value="">--Select Correct Option--</option>
-                                    <option value="A">A - {form.option_a}</option>
-                                    <option value="B">B - {form.option_b}</option>
-                                    <option value="C">C - {form.option_c}</option>
-                                    <option value="D">D - {form.option_d}</option>
-                                </select>
-                            </div>
-                            <div className="aq-editor-modal-actions">
-                                <button
-                                    type="button"
-                                    className="aq-editor-btn aq-editor-btn-cancel"
-                                    onClick={handleCloseModal}
-                                >
-                                    Cancel
+
+                            <button type="submit" className="qe-save-btn" disabled={saving}>
+                                {saving ? (
+                                    <>
+                                        <div className="qe-spinner-small"></div>
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+                                        </svg>
+                                        {editingId ? 'Update Question' : 'Save Question'}
+                                    </>
+                                )}
+                            </button>
+
+                            {editingId && (
+                                <button type="button" className="qe-clear-btn" onClick={handleClear}>
+                                    Cancel & Create New
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="aq-editor-btn aq-editor-btn-save"
-                                >
-                                    {saving ? (
-                                        <>
-                                            <div className="aq-editor-spinner-small"></div>
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        editingId ? 'Update Question' : 'Save Question'
-                                    )}
-                                </button>
-                            </div>
+                            )}
                         </form>
                     </div>
-                </div>
-            )}
+                </aside>
+            </main>
         </div>
     );
 };

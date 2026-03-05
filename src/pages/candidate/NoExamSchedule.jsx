@@ -9,54 +9,102 @@ const NoExamSchedule = () => {
     const navigate = useNavigate();
     const [userName, setUserName] = useState('...');
     const [profileImage, setProfileImage] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                navigate('/portal/candidate');
-                return;
-            }
-
-            // Fetch identity from students table (assuming candidates are also in students or a similar table)
-            const { data: profile } = await supabase
-                .from('students')
-                .select('full_name, profile_image')
-                .eq('email', user.email.toLowerCase())
-                .maybeSingle();
-
-            if (profile) {
-                setUserName(profile.full_name);
-                setProfileImage(profile.profile_image);
-            } else {
-                setUserName(user.user_metadata?.full_name || user.email);
-            }
-
-            // --- AUTO REDIRECT Logic ---
-            const checkStatus = async () => {
-                const { data: active } = await supabase
-                    .from('exam_configs')
-                    .select('id')
-                    .eq('question_type', 'candidate')
-                    .eq('is_active', true)
-                    .limit(1);
-
-                if (active && active.length > 0) {
-                    navigate('/portal/candidate/active-exam');
+        let intervalId;
+        const getCandidate = async () => {
+            try {
+                const { data: { user }, error: authError } = await supabase.auth.getUser();
+                if (authError || !user) {
+                    navigate('/portal/candidate');
+                    return;
                 }
-            };
 
-            checkStatus(); // Initial check
-            const interval = setInterval(checkStatus, 10000); // Check every 10s
-            return () => clearInterval(interval);
+                const { data: profile } = await supabase
+                    .from('students')
+                    .select('id, full_name, profile_image, image_url')
+                    .eq('email', user.email.toLowerCase())
+                    .maybeSingle();
+
+                let candidateId = user.id;
+
+                if (profile) {
+                    setUserName(profile.full_name);
+                    setProfileImage(profile.image_url || profile.profile_image);
+                    candidateId = profile.id;
+                } else {
+                    setUserName(user.user_metadata?.full_name || user.email);
+                }
+
+                // --- AUTO REDIRECT Logic ---
+                const checkStatus = async () => {
+                    try {
+                        const { data: activeConfigs } = await supabase
+                            .from('exam_configs')
+                            .select('*')
+                            .eq('question_type', 'candidate')
+                            .eq('is_active', true);
+
+                        if (activeConfigs && activeConfigs.length > 0) {
+                            const { data: results } = await supabase
+                                .from('exam_results')
+                                .select('subject_id')
+                                .eq('student_id', candidateId)
+                                .eq('question_type', 'candidate');
+
+                            const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
+                            const availableExam = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+
+                            if (availableExam) {
+                                navigate('/portal/candidate/active-exam');
+                                return;
+                            }
+                        }
+
+                        setLoading(false);
+                    } catch (e) {
+                        console.error("Status check fail:", e);
+                        setLoading(false);
+                    }
+                };
+
+                checkStatus();
+                intervalId = setInterval(checkStatus, 1500);
+
+            } catch (error) {
+                console.error("Error in getCandidate:", error);
+                setLoading(false);
+            }
         };
-        getUser();
+
+        getCandidate();
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
     }, [navigate]);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
         navigate('/portal/candidate');
     };
+
+    if (loading) {
+        return (
+            <div className="portal-login-container" style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
+                <img src={logo} alt="School Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', animation: 'pulse-load 1.5s ease-in-out infinite' }} />
+                <style>{`
+                    @keyframes pulse-load {
+                        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0.4); }
+                        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(157, 36, 90, 0); }
+                        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0); }
+                    }
+                `}</style>
+            </div>
+        );
+    }
+
     return (
         <div className="portal-login-container">
             {/* Header */}
@@ -71,11 +119,9 @@ const NoExamSchedule = () => {
                         {profileImage ? (
                             <img src={profileImage} alt="Profile" className="nes-profile-img" />
                         ) : (
-                            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-                                <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
-                                <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
-                                <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
-                            </svg>
+                            <span style={{ color: '#4B5563', fontWeight: 'bold', fontSize: '16px' }}>
+                                {userName ? userName.charAt(0).toUpperCase() : 'C'}
+                            </span>
                         )}
                     </div>
                 </div>
