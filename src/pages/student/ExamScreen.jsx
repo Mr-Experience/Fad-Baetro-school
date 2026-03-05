@@ -74,6 +74,16 @@ const ExamScreen = () => {
                     setProfileImage(std.avatar_url);
                 }
 
+                // Get System Settings early
+                const { data: sData, error: sErr } = await supabase
+                    .from('system_settings')
+                    .select('current_session, current_term')
+                    .maybeSingle();
+
+                const curSession = sData?.current_session || '';
+                const curTerm = sData?.current_term || '';
+                if (!sErr && sData) setSessionInfo({ session: curSession, term: curTerm });
+
                 let cfg = passedExamConfig;
                 if (!cfg) {
                     console.log("No exam config passed from ActiveExam, fetching from database...");
@@ -84,20 +94,21 @@ const ExamScreen = () => {
                         .eq('is_active', true);
 
                     if (cfgError || !activeConfigs || activeConfigs.length === 0) {
-                        console.error("Exam config fetch error:", cfgError);
                         setLoading(false);
                         navigate('/portal/student/no-exam');
                         return;
                     }
 
-                    // Find available Exam
+                    // Find available Exam by checking current term results
                     const { data: results } = await supabase
                         .from('exam_results')
-                        .select('subject_id')
-                        .eq('student_id', std.id);
+                        .select('subject_id, question_type')
+                        .eq('student_id', std.id)
+                        .eq('session_id', curSession)
+                        .eq('term_id', curTerm);
 
-                    const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
-                    cfg = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+                    const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
+                    cfg = activeConfigs.find(c => !takenKeys.has(`${c.subject_id}_${c.question_type}`));
 
                     if (!cfg) {
                         setLoading(false);
@@ -108,11 +119,8 @@ const ExamScreen = () => {
                 setActiveConfig(cfg);
 
                 if (preloadedQuestions) {
-                    console.log("✅ Using preloaded questions");
                     setQuestions(preloadedQuestions);
                 } else {
-                    // Fetch Questions
-                    console.log("📝 Fetching questions:", { class_id: std.class_id, subject_id: cfg.subject_id, question_type: cfg.question_type });
                     const { data: qData, error: qError } = await supabase
                         .from('questions')
                         .select('*')
@@ -135,18 +143,9 @@ const ExamScreen = () => {
                     setQuestions(processed.slice(0, cfg.question_count || processed.length));
                 }
 
-                // Fetch Session Info
-                if (passedSessionInfo) {
-                    setSessionInfo(passedSessionInfo);
-                } else {
-                    const { data: sessionData, error: sessionErr } = await supabase
-                        .from('system_settings')
-                        .select('current_session, current_term')
-                        .maybeSingle();
-
-                    if (!sessionErr && sessionData) {
-                        setSessionInfo({ session: sessionData.current_session || '', term: sessionData.current_term || '' });
-                    }
+                if (passedSessionInfo) setSessionInfo(passedSessionInfo);
+                else {
+                    if (!sErr && sData) setSessionInfo({ session: curSession, term: curTerm });
                 }
 
                 // Restore Progress or Set Initial Timer

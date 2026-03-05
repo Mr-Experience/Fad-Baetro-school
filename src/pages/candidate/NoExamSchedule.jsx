@@ -40,6 +40,14 @@ const NoExamSchedule = () => {
                 // --- AUTO REDIRECT Logic ---
                 const checkStatus = async () => {
                     try {
+                        const { data: sData } = await supabase
+                            .from('system_settings')
+                            .select('current_session, current_term')
+                            .maybeSingle();
+
+                        const curSession = sData?.current_session || '';
+                        const curTerm = sData?.current_term || '';
+
                         const { data: activeConfigs } = await supabase
                             .from('exam_configs')
                             .select('*')
@@ -51,6 +59,8 @@ const NoExamSchedule = () => {
                                 .from('exam_results')
                                 .select('subject_id')
                                 .eq('student_id', candidateId)
+                                .eq('session_id', curSession)
+                                .eq('term_id', curTerm)
                                 .eq('question_type', 'candidate');
 
                             const takenSubjects = new Set(results?.map(r => r.subject_id) || []);

@@ -48,6 +48,16 @@ const ExamScreen = () => {
                     setProfileImage(std.image_url || std.profile_image || std.profile_picture || std.avatar_url || null);
                 }
 
+                // Get System Settings early
+                const { data: sData, error: sErr } = await supabase
+                    .from('system_settings')
+                    .select('current_session, current_term')
+                    .maybeSingle();
+
+                const curSession = sData?.current_session || '';
+                const curTerm = sData?.current_term || '';
+                if (!sErr && sData) setSessionInfo({ session: curSession, term: curTerm });
+
                 let cfg = passedExamConfig;
                 if (!cfg) {
                     const { data: activeConfigs, error: cfgError } = await supabase
@@ -66,7 +76,9 @@ const ExamScreen = () => {
                     const { data: results } = await supabase
                         .from('exam_results')
                         .select('subject_id')
-                        .eq('student_id', candidateId)
+                        .eq('student_id', std?.id || user.id)
+                        .eq('session_id', curSession)
+                        .eq('term_id', curTerm)
                         .eq('question_type', 'candidate');
 
                     const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
@@ -83,7 +95,6 @@ const ExamScreen = () => {
                 if (preloadedQuestions) {
                     setQuestions(preloadedQuestions);
                 } else {
-                    // Fetch Questions
                     const { data: qData } = await supabase
                         .from('questions')
                         .select('*')
@@ -102,24 +113,12 @@ const ExamScreen = () => {
                     if (cfg.selection_type === 'random') {
                         processed = processed.sort(() => Math.random() - 0.5);
                     }
-                    const count = cfg.question_count || processed.length;
-                    setQuestions(processed.slice(0, count));
+                    setQuestions(processed.slice(0, cfg.question_count || processed.length));
                 }
 
-                if (passedSessionInfo) {
-                    setSessionInfo(passedSessionInfo);
-                } else {
-                    const { data: sessionData, error: sessionErr } = await supabase
-                        .from('system_settings')
-                        .select('current_session, current_term')
-                        .maybeSingle();
-
-                    if (!sessionErr && sessionData) {
-                        setSessionInfo({
-                            session: sessionData.current_session || '',
-                            term: sessionData.current_term || ''
-                        });
-                    }
+                if (passedSessionInfo) setSessionInfo(passedSessionInfo);
+                else {
+                    if (!sErr && sData) setSessionInfo({ session: curSession, term: curTerm });
                 }
 
                 // Restore Progress or Set Initial Timer

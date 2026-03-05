@@ -56,6 +56,15 @@ const ActiveExam = () => {
                     // 2. Setup Active Exam Check
                     const fetchActive = async () => {
                         try {
+                            const { data: sData } = await supabase
+                                .from('system_settings')
+                                .select('current_session, current_term')
+                                .maybeSingle();
+
+                            const curSession = sData?.current_session || '';
+                            const curTerm = sData?.current_term || '';
+                            if (sData) setSessionInfo({ session: curSession, term: curTerm });
+
                             const { data: activeConfigs, error } = await supabase
                                 .from('exam_configs')
                                 .select('*, subjects(subject_name)')
@@ -65,16 +74,17 @@ const ActiveExam = () => {
                             if (!error && activeConfigs && activeConfigs.length > 0) {
                                 const { data: results } = await supabase
                                     .from('exam_results')
-                                    .select('subject_id')
-                                    .eq('student_id', student.id);
+                                    .select('subject_id, question_type')
+                                    .eq('student_id', student.id)
+                                    .eq('session_id', curSession)
+                                    .eq('term_id', curTerm);
 
-                                const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
-                                const availableExam = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+                                const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
+                                const availableExam = activeConfigs.find(c => !takenKeys.has(`${c.subject_id}_${c.question_type}`));
 
                                 if (availableExam) {
                                     setActiveExam(availableExam);
 
-                                    // Silent Preload
                                     if (!preloadedQuestions) {
                                         supabase.from('questions')
                                             .select('*')
@@ -91,11 +101,6 @@ const ActiveExam = () => {
                                                     setPreloadedQuestions(processed.slice(0, count));
                                                 }
                                             }).catch(err => console.error(err));
-
-                                        supabase.from('system_settings').select('current_session, current_term').single()
-                                            .then(({ data: sData }) => {
-                                                if (sData) setSessionInfo({ session: sData.current_session || '', term: sData.current_term || '' });
-                                            }).catch(err => console.error(err));
                                     }
 
                                     setLoading(false);
@@ -103,7 +108,6 @@ const ActiveExam = () => {
                                 }
                             }
 
-                            // If no exam or already taken
                             navigate('/portal/student/no-exam');
                         } catch (err) {
                             console.error("fetchActive Error:", err);
