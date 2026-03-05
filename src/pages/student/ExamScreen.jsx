@@ -284,7 +284,7 @@ const ExamScreen = () => {
                 .single();
 
             // Save to Results with full metadata
-            const { error } = await supabase
+            const { error: insertError } = await supabase
                 .from('exam_results')
                 .insert({
                     student_id: student.id,
@@ -302,18 +302,28 @@ const ExamScreen = () => {
                     subject_name: subjectData?.name || ''
                 });
 
-            if (error) {
-                console.error("Save Error:", error);
-                // Even if save fails to results, try to navigate so student doesn't sit in loop
+            if (insertError) {
+                console.error("Save Error:", insertError);
+                // Check if it's a duplicate submission
+                if (insertError.code === '23505') {
+                    alert("This exam has already been submitted for this term.");
+                    localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);
+                    navigate('/portal/student/no-exam');
+                    return;
+                }
+                throw insertError;
             }
 
-            // Clear progress
+            // Clear progress immediately before navigation
             localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);
-            navigate('/portal/student/submitted', { state: { score: scorePercent, name: student.full_name } });
+            navigate('/portal/student/submitted', {
+                state: { score: scorePercent, name: student.full_name },
+                replace: true
+            });
 
         } catch (err) {
-            console.error("Submission crash:", err);
-            alert("An error occurred during submission. Please contact your supervisor.");
+            console.error("Submission fatal crash:", err);
+            alert("An error occurred during submission: " + (err.message || "Unknown error"));
         } finally {
             setIsSubmitting(false);
         }
@@ -396,11 +406,29 @@ const ExamScreen = () => {
                     </div>
 
                     <div className="es-nav-row">
-                        <button className="es-prev-btn" onClick={() => navToQuestion(currentQuestionIdx - 1)} disabled={currentQuestionIdx === 0}>Previous</button>
+                        <button
+                            className="es-prev-btn"
+                            onClick={() => navToQuestion(currentQuestionIdx - 1)}
+                            disabled={currentQuestionIdx === 0 || isSubmitting}
+                        >
+                            Previous
+                        </button>
                         {currentQuestionIdx === questions.length - 1 ? (
-                            <button className="es-next-btn" onClick={handleSubmit} style={{ background: '#10b981' }}>Finish</button>
+                            <button
+                                className="es-next-btn es-finish-stub"
+                                style={{ background: '#9ca3af', cursor: 'default' }}
+                                disabled={true}
+                            >
+                                Last Question
+                            </button>
                         ) : (
-                            <button className="es-next-btn" onClick={() => navToQuestion(currentQuestionIdx + 1)}>Next</button>
+                            <button
+                                className="es-next-btn"
+                                onClick={() => navToQuestion(currentQuestionIdx + 1)}
+                                disabled={isSubmitting}
+                            >
+                                Next
+                            </button>
                         )}
                     </div>
                 </div>
