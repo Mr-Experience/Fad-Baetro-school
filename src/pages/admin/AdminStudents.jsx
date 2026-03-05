@@ -78,18 +78,18 @@ const AdminStudents = () => {
                 const filePath = `avatars/${fileName}`;
 
                 const { error: uploadError } = await supabase.storage
-                    .from('portal-assets')
+                    .from('profile image')
                     .upload(filePath, file);
 
                 if (uploadError) {
                     if (uploadError.message.includes('Bucket not found')) {
-                        throw new Error("Storage bucket 'portal-assets' not found. Please create it in Supabase.");
+                        throw new Error("Storage bucket 'profile image' not found. Please create it in Supabase.");
                     }
                     throw uploadError;
                 }
 
                 const { data: { publicUrl } } = supabase.storage
-                    .from('portal-assets')
+                    .from('profile image')
                     .getPublicUrl(filePath);
 
                 profileImageUrl = publicUrl;

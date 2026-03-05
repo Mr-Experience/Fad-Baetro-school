@@ -96,7 +96,7 @@ const AdminProfile = () => {
         const filePath = `avatars/${userId}_${Date.now()}.png`;
 
         const { error: uploadError } = await supabase.storage
-            .from('portal-assets')
+            .from('profile image')
             .upload(filePath, file, { upsert: true });
 
         if (uploadError) {
@@ -106,7 +106,7 @@ const AdminProfile = () => {
         }
 
         const { data: { publicUrl } } = supabase.storage
-            .from('portal-assets')
+            .from('profile image')
             .getPublicUrl(filePath);
 
         await supabase
