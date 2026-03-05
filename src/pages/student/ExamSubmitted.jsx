@@ -1,9 +1,20 @@
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '../../supabaseClient';
 import '../auth/PortalLogin.css';
 import './NoExamSchedule.css';
 import logo from '../../assets/logo.jpg';
 
 const ExamSubmitted = () => {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { name, score } = location.state || { name: 'Student', score: null };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate('/portal/student');
+    };
+
     return (
         <div className="portal-login-container">
             {/* Header */}
@@ -13,7 +24,7 @@ const ExamSubmitted = () => {
                     <h1 className="portal-school-name">Fad Mastro Academy</h1>
                 </div>
                 <div className="nes-header-right">
-                    <span className="nes-user-name">Olajire Daniel</span>
+                    <span className="nes-user-name">{name}</span>
                     <div className="nes-avatar">
                         <svg viewBox="0 0 36 36" fill="none" width="36" height="36">
                             <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
@@ -27,23 +38,26 @@ const ExamSubmitted = () => {
             {/* Main */}
             <main className="portal-content">
                 <div className="login-card nes-card">
-                    {/* Info icon */}
-                    <div className="nes-icon-wrap">
+                    {/* Success icon */}
+                    <div className="nes-icon-wrap" style={{ background: '#dcfce7', borderColor: '#86efac' }}>
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
-                            stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" y1="8" x2="12" y2="8" strokeWidth="2.5" />
-                            <line x1="12" y1="12" x2="12" y2="16" />
+                            stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
                         </svg>
                     </div>
 
-                    <h2 className="nes-title">Exam Submitted</h2>
+                    <h2 className="nes-title">Exam Submitted!</h2>
                     <p className="nes-subtitle">
-                        Your exam submitted successfully Olajire Daniel,<br />
-                        please LOGOUT
+                        Great job, <strong>{name}</strong>!<br />
+                        Your exam has been recorded successfully.
+                        {score !== null && <span> (Score: {score}%)</span>}
                     </p>
 
-                    <button className="nes-logout-btn">
+                    <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '10px' }}>
+                        You may now securely logout of the portal.
+                    </p>
+
+                    <button className="nes-logout-btn" onClick={handleLogout}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

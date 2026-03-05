@@ -29,7 +29,19 @@ const CandidateLogin = () => {
         }
 
         if (data.user) {
-            navigate('/portal/candidate/no-exam');
+            // Check if ANY candidate exam is currently ACTIVE
+            const { data: activeExams } = await supabase
+                .from('exam_configs')
+                .select('id')
+                .eq('question_type', 'candidate')
+                .eq('is_active', true)
+                .limit(1);
+
+            if (activeExams && activeExams.length > 0) {
+                navigate('/portal/candidate/active-exam');
+            } else {
+                navigate('/portal/candidate/no-exam');
+            }
         }
     };
 

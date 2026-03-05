@@ -12,6 +12,9 @@ import NewsPage from './pages/media/NewsPage';
 import SuperadminLogin from './pages/superadmin/SuperadminLogin';
 import SchoolConfig from './pages/superadmin/SchoolConfig';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminStudents from './pages/admin/AdminStudents';
+import AdminQuestions from './pages/admin/AdminQuestions';
+import AdminQuestionEditor from './pages/admin/AdminQuestionEditor';
 import AdminInfo from './pages/admin/AdminInfo';
 import AdminProfile from './pages/admin/AdminProfile';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -49,15 +52,22 @@ function App() {
                 <Route path="/news" element={<NewsPage />} />
                 {/* Superadmin Pages */}
                 <Route path="/portal/superadmin" element={<SuperadminLogin />} />
-                <Route path="/portal/superadmin/config" element={<SchoolConfig />} />
+
+                {/* Protected Superadmin Routes */}
+                <Route element={<ProtectedRoute requiredRole="super_admin" />}>
+                    <Route path="/portal/superadmin/config" element={<SchoolConfig />} />
+                </Route>
 
                 {/* Admin Pages */}
                 <Route path="/portal/admin/login" element={<AdminLogin />} />
 
                 {/* Protected Admin Routes */}
-                <Route element={<ProtectedRoute />}>
+                <Route element={<ProtectedRoute requiredRole="admin" />}>
+                    <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
                     <Route element={<AdminLayout />}>
                         <Route path="/portal/admin" element={<AdminDashboard />} />
+                        <Route path="/portal/admin/students" element={<AdminStudents />} />
+                        <Route path="/portal/admin/questions" element={<AdminQuestions />} />
                         <Route path="/portal/admin/info" element={<AdminInfo />} />
                         <Route path="/portal/admin/profile" element={<AdminProfile />} />
                     </Route>
@@ -72,10 +82,14 @@ function App() {
 
                 {/* Student Pages */}
                 <Route path="/portal/student" element={<StudentLogin />} />
-                <Route path="/portal/student/no-exam" element={<NoExamSchedule />} />
-                <Route path="/portal/student/active-exam" element={<ActiveExam />} />
-                <Route path="/portal/student/exam" element={<ExamScreen />} />
-                <Route path="/portal/student/submitted" element={<ExamSubmitted />} />
+
+                {/* Protected Student Routes */}
+                <Route element={<ProtectedRoute requiredRole="student" />}>
+                    <Route path="/portal/student/no-exam" element={<NoExamSchedule />} />
+                    <Route path="/portal/student/active-exam" element={<ActiveExam />} />
+                    <Route path="/portal/student/exam" element={<ExamScreen />} />
+                    <Route path="/portal/student/submitted" element={<ExamSubmitted />} />
+                </Route>
 
 
                 <Route path="*" element={<Navigate to="/" replace />} />

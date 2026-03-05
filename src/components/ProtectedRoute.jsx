@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import LoadingOverlay from './LoadingOverlay';
 
-const ProtectedRoute = () => {
+const ProtectedRoute = ({ requiredRole = 'admin' }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(null);
     const location = useLocation();
 
@@ -17,21 +17,35 @@ const ProtectedRoute = () => {
 
         const verifyAccess = async (session) => {
             if (!session) {
-                // If there's no session, wait a brief moment. Supabase sometimes restores
-                // the session asynchronously immediately after mount.
                 authTimeout = setTimeout(() => {
                     setAuthStatus(false);
                 }, 1000);
                 return;
             }
 
-            // Clear any pending false status if we found a session
             if (authTimeout) clearTimeout(authTimeout);
 
             try {
-                // Set a timeout to prevent infinite loading if DB hangs
+                // Determine if we need to check the 'students' table or 'profiles' table
+                if (requiredRole === 'student') {
+                    const { data: student, error: studentError } = await supabase
+                        .from('students')
+                        .select('id')
+                        .eq('email', session.user.email.toLowerCase())
+                        .maybeSingle();
+
+                    if (studentError || !student) {
+                        console.warn("User is not a student. Denying entry.");
+                        setAuthStatus(false);
+                    } else {
+                        setAuthStatus(true);
+                    }
+                    return;
+                }
+
+                // Default check for 'admin' or 'super_admin' in profiles table
                 const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("Timeout checking Admin role")), 10000)
+                    setTimeout(() => reject(new Error(`Timeout checking ${requiredRole} role`)), 10000)
                 );
 
                 const fetchProfilePromise = supabase
@@ -44,17 +58,21 @@ const ProtectedRoute = () => {
 
                 if (error) {
                     console.error("Error fetching profile role:", error);
-                    // Force false if network fails or role doesn't exist
                     setAuthStatus(false);
                     return;
                 }
 
-                if (profile && profile.role === 'admin') {
-                    setAuthStatus(true);
+                if (profile) {
+                    if (requiredRole === 'super_admin' && profile.role === 'super_admin') {
+                        setAuthStatus(true);
+                    } else if (requiredRole === 'admin' && (profile.role === 'admin' || profile.role === 'super_admin')) {
+                        setAuthStatus(true);
+                    } else {
+                        console.warn(`User role '${profile.role}' does not match required role '${requiredRole}'. Denying entry.`);
+                        setAuthStatus(false);
+                    }
                 } else {
-                    console.warn("User is not an admin, denying entry.");
                     setAuthStatus(false);
-                    await supabase.auth.signOut();
                 }
             } catch (err) {
                 console.error("Auth verification error:", err);
@@ -73,11 +91,9 @@ const ProtectedRoute = () => {
             }
         };
 
-        // Run initial check
         initAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("Auth event:", event);
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
                 if (authTimeout) clearTimeout(authTimeout);
                 await verifyAccess(session);
@@ -91,17 +107,19 @@ const ProtectedRoute = () => {
             if (authTimeout) clearTimeout(authTimeout);
             subscription.unsubscribe();
         };
-    }, []);
+    }, [requiredRole]);
 
     if (isAuthenticated === null) {
-        // Still checking auth state
         return <LoadingOverlay isVisible={true} />;
     }
 
     if (!isAuthenticated) {
-        // Redirect to admin login if not authenticated
-        // Add state so we can redirect back after successful login if needed later
-        return <Navigate to="/portal/admin/login" state={{ from: location }} replace />;
+        // Redirect logic
+        let redirectPath = "/portal/admin/login";
+        if (requiredRole === 'super_admin') redirectPath = "/portal/superadmin";
+        if (requiredRole === 'student') redirectPath = "/portal/student";
+
+        return <Navigate to={redirectPath} state={{ from: location }} replace />;
     }
 
     return <Outlet />;

@@ -1,15 +1,16 @@
-/* SchoolConfig.css */
+/* SchoolConfig.css - Exact UI from image reference */
 
 .sc-container {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     background-color: #FDF2F7;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* Header Styles */
 .sc-header {
-    background: #fff !important;
+    background: #ffffff !important;
     padding: 12px 24px;
     display: flex;
     align-items: center;
@@ -23,12 +24,19 @@
     gap: 12px;
 }
 
+.sc-brand-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: #000;
+}
+
 .sc-header-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
 }
 
+/* Specific Badge style from image */
 .sc-session-badge {
     background: #FFF0F6;
     border-left: 3px solid #9D245A;
@@ -62,6 +70,7 @@
     object-fit: cover;
 }
 
+/* Main content area */
 .sc-main {
     flex: 1;
     display: flex;
@@ -71,12 +80,12 @@
 }
 
 .sc-card {
-    background: #fff;
+    background: #ffffff;
     width: 100%;
     max-width: 480px;
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 48px 40px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -92,6 +101,22 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 24px;
+}
+
+/* Info 'i' icon style */
+.sc-info-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #6B7280;
+    border-radius: 50%;
+    font-family: serif;
+    font-style: italic;
+    font-weight: bold;
+    color: #6B7280;
+    font-size: 16px;
 }
 
 .sc-title {
@@ -131,7 +156,6 @@
     color: #374151;
     background: #fff;
     appearance: none;
-    -webkit-appearance: none;
     outline: none;
     cursor: pointer;
     transition: border-color 0.2s;
@@ -147,6 +171,7 @@
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
+    color: #6B7280;
 }
 
 .sc-save-btn {
@@ -164,4 +189,38 @@
 
 .sc-save-btn:hover {
     background-color: #7B1848;
+}
+
+.sc-save-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.sc-alert {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.sc-alert-success {
+    background: #E1F7E7;
+    color: #1E7E34;
+}
+
+.sc-alert-error {
+    background: #FDECEA;
+    color: #C0392B;
+}
+
+@media (max-width: 640px) {
+    .sc-header {
+        padding: 12px 16px;
+    }
+
+    .sc-session-badge,
+    .sc-user-name {
+        display: none;
+    }
 }

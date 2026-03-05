@@ -1,18 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import './AdminInfo.css';
-import AdminHeader from '../../components/AdminHeader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 
 const AdminInfo = () => {
     const navigate = useNavigate();
-
-    // User Profile
-    const [userName, setUserName] = useState('');
-    const [userInitial, setUserInitial] = useState('A');
-    const [avatarUrl, setAvatarUrl] = useState(null);
-    const [userId, setUserId] = useState(null);
-    const [profileLoading, setProfileLoading] = useState(true);
+    const { userName, userInitial, avatarUrl, profileLoading, userId } = useOutletContext();
 
     // Content
     const [heroImages, setHeroImages] = useState([]);
@@ -30,39 +23,9 @@ const AdminInfo = () => {
     const [lightbox, setLightbox] = useState(null); // { url, caption }
 
     useEffect(() => {
-        const fetchInitialData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            console.log("Current Supabase User:", user);
-
-            if (user) {
-                setUserId(user.id);
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('full_name, avatar_url, role') // Added 'role' to select
-                    .eq('id', user.id)
-                    .single();
-
-                if (!profileError && profile) {
-                    setUserName(profile.full_name || user.email?.split('@')[0]);
-                    if (profile.role !== 'admin' && profile.role !== 'super_admin') {
-                        console.warn("User logged in but does not have admin/super_admin role:", profile.role);
-                    }
-                    setUserInitial((profile.full_name || 'A').charAt(0).toUpperCase());
-                    setAvatarUrl(profile.avatar_url);
-                } else if (profileError) {
-                    console.error("Error fetching profile:", profileError.message);
-                    if (profileError.code === '42501') { // RLS error code
-                        alert("Access denied: You do not have permission to view this profile. Please ensure your RLS policies are correctly configured for 'profiles' table.");
-                    } else {
-                        alert("Failed to load user profile: " + profileError.message);
-                    }
-                }
-                fetchHeroImages();
-                fetchMediaItems();
-            }
-            setProfileLoading(false);
-        };
-        fetchInitialData();
+        // Only fetch content, profile is handled by Layout context
+        fetchHeroImages();
+        fetchMediaItems();
     }, []);
 
     // Close lightbox on Escape
@@ -108,12 +71,11 @@ const AdminInfo = () => {
             }
             const { data: { publicUrl } } = supabase.storage.from('portal-assets').getPublicUrl(path);
 
-            const { data: { user } } = await supabase.auth.getUser();
             const { error: dbErr } = await supabase.from('hero_images').insert({
                 image_url: publicUrl,
                 display_order: heroImages.length,
                 is_active: true,
-                created_by: user.id
+                created_by: userId
             });
             if (dbErr) throw dbErr;
             fetchHeroImages();
@@ -153,13 +115,12 @@ const AdminInfo = () => {
 
             const { data: { publicUrl } } = supabase.storage.from('portal-assets').getPublicUrl(path);
 
-            const { data: { user } } = await supabase.auth.getUser();
             const { error: dbErr } = await supabase.from('media_items').insert({
                 image_url: publicUrl,
                 title: newMediaTitle,
                 description: newMediaDesc,
                 is_active: true,
-                created_by: user.id
+                created_by: userId
             });
             if (dbErr) throw dbErr;
             setShowMediaModal(false);

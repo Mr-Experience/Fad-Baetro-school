@@ -610,6 +610,7 @@
     outline: none;
     transition: border-color 0.2s var(--sl-ease), background 0.2s var(--sl-ease), box-shadow 0.2s var(--sl-ease);
     -webkit-appearance: none;
+    appearance: none;
 }
 
 .sl-input::placeholder {

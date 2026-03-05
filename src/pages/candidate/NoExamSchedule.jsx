@@ -1,9 +1,62 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../supabaseClient';
 import '../auth/PortalLogin.css';
 import './NoExamSchedule.css';
 import logo from '../../assets/logo.jpg';
 
 const NoExamSchedule = () => {
+    const navigate = useNavigate();
+    const [userName, setUserName] = useState('...');
+    const [profileImage, setProfileImage] = useState(null);
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                navigate('/portal/candidate');
+                return;
+            }
+
+            // Fetch identity from students table (assuming candidates are also in students or a similar table)
+            const { data: profile } = await supabase
+                .from('students')
+                .select('full_name, profile_image')
+                .eq('email', user.email.toLowerCase())
+                .maybeSingle();
+
+            if (profile) {
+                setUserName(profile.full_name);
+                setProfileImage(profile.profile_image);
+            } else {
+                setUserName(user.user_metadata?.full_name || user.email);
+            }
+
+            // --- AUTO REDIRECT Logic ---
+            const checkStatus = async () => {
+                const { data: active } = await supabase
+                    .from('exam_configs')
+                    .select('id')
+                    .eq('question_type', 'candidate')
+                    .eq('is_active', true)
+                    .limit(1);
+
+                if (active && active.length > 0) {
+                    navigate('/portal/candidate/active-exam');
+                }
+            };
+
+            checkStatus(); // Initial check
+            const interval = setInterval(checkStatus, 10000); // Check every 10s
+            return () => clearInterval(interval);
+        };
+        getUser();
+    }, [navigate]);
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate('/portal/candidate');
+    };
     return (
         <div className="portal-login-container">
             {/* Header */}
@@ -13,13 +66,17 @@ const NoExamSchedule = () => {
                     <h1 className="portal-school-name">Fad Mastro Academy</h1>
                 </div>
                 <div className="nes-header-right">
-                    <span className="nes-user-name">Olajire Daniel</span>
+                    <span className="nes-user-name">{userName}</span>
                     <div className="nes-avatar">
-                        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-                            <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
-                            <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
-                            <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
-                        </svg>
+                        {profileImage ? (
+                            <img src={profileImage} alt="Profile" className="nes-profile-img" />
+                        ) : (
+                            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+                                <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
+                                <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
+                                <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
+                            </svg>
+                        )}
                     </div>
                 </div>
             </header>
@@ -44,7 +101,7 @@ const NoExamSchedule = () => {
                     </p>
 
                     {/* Logout button */}
-                    <button className="nes-logout-btn">
+                    <button className="nes-logout-btn" onClick={handleLogout}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

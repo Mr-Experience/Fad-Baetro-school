@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../supabaseClient';
 import '../auth/PortalLogin.css';
 import './NoExamSchedule.css';
 import './ExamScreen.css';
@@ -15,96 +17,238 @@ const sampleQuestions = [
 ];
 
 const ExamScreen = () => {
-    const [currentQuestion, setCurrentQuestion] = useState(0);
-    const [answers, setAnswers] = useState({});
+    const navigate = useNavigate();
 
-    const question = sampleQuestions[currentQuestion] || sampleQuestions[0];
-    const questionNumber = currentQuestion + 1;
-    const selectedAnswer = answers[question.id];
+    // Identity & Config
+    const [student, setStudent] = useState(null);
+    const [activeConfig, setActiveConfig] = useState(null);
+    const [questions, setQuestions] = useState([]);
 
+    // Exam State
+    const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+    const [answers, setAnswers] = useState({}); // { question_id: 'A' }
+    const [timeLeft, setTimeLeft] = useState(null); // in seconds
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    // 1. Initial Identity & Config Fetch
+    useEffect(() => {
+        const initExam = async () => {
+            setLoading(true);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { navigate('/portal/student'); return; }
+
+            // Fetch Student
+            const { data: std } = await supabase
+                .from('students')
+                .select('*')
+                .eq('email', user.email.toLowerCase())
+                .maybeSingle();
+
+            if (!std) { navigate('/portal/student'); return; }
+            setStudent(std);
+
+            // Fetch Active Config
+            const { data: cfg } = await supabase
+                .from('exam_configs')
+                .select('*, subjects(subject_name)')
+                .eq('class_id', std.class_id)
+                .eq('is_active', true)
+                .maybeSingle();
+
+            if (!cfg) { navigate('/portal/student/no-exam'); return; }
+            setActiveConfig(cfg);
+
+            // Fetch Questions
+            const { data: qData } = await supabase
+                .from('questions')
+                .select('*')
+                .eq('class_id', std.class_id)
+                .eq('subject_id', cfg.subject_id)
+                .eq('question_type', cfg.question_type);
+
+            if (!qData || qData.length === 0) {
+                alert("No questions found for this exam. Contact admin.");
+                navigate('/portal/student/no-exam');
+                return;
+            }
+
+            // Shuffle and Limit
+            let processed = [...qData];
+            if (cfg.selection_type === 'random') {
+                processed = processed.sort(() => Math.random() - 0.5);
+            }
+            const count = cfg.question_count || processed.length;
+            setQuestions(processed.slice(0, count));
+
+            // Set Timer (from duration_minutes)
+            setTimeLeft((cfg.duration_minutes || 60) * 60);
+            setLoading(false);
+        };
+
+        initExam();
+    }, [navigate]);
+
+    // 2. Timer Hook
+    useEffect(() => {
+        if (timeLeft === null || timeLeft <= 0 || isSubmitting) {
+            if (timeLeft === 0 && !isSubmitting) handleSubmit();
+            return;
+        }
+
+        const interval = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [timeLeft, isSubmitting]);
+
+    // 3. Proactive Admin-Sync Check
+    useEffect(() => {
+        if (!student?.class_id || isSubmitting) return;
+
+        const checkStatus = async () => {
+            const { data: active } = await supabase
+                .from('exam_configs')
+                .select('id')
+                .eq('class_id', student.class_id)
+                .eq('is_active', true)
+                .limit(1);
+
+            if (!active || active.length === 0) {
+                navigate('/portal/student/no-exam');
+            }
+        };
+
+        const interval = setInterval(checkStatus, 5000);
+        return () => clearInterval(interval);
+    }, [student, isSubmitting, navigate]);
+
+    // --- ACTIONS ---
     const handleAnswer = (option) => {
-        setAnswers(prev => ({ ...prev, [question.id]: option }));
+        const q = questions[currentQuestionIdx];
+        setAnswers(prev => ({ ...prev, [q.id]: option }));
     };
 
-    const handlePrev = () => { if (currentQuestion > 0) setCurrentQuestion(c => c - 1); };
-    const handleNext = () => { if (currentQuestion < sampleQuestions.length - 1) setCurrentQuestion(c => c + 1); };
+    const handleSubmit = async () => {
+        if (isSubmitting) return;
+        if (timeLeft > 0 && !window.confirm("Are you sure you want to submit your exam now?")) return;
 
-    const isAnswered = (qIdx) => {
-        const q = sampleQuestions[qIdx];
-        return q && answers[q.id] !== undefined;
+        setIsSubmitting(true);
+
+        try {
+            // Calculate Score
+            let correctCount = 0;
+            questions.forEach(q => {
+                const studentAns = answers[q.id];
+                if (studentAns && studentAns.toUpperCase() === q.correct_answer?.toUpperCase()) {
+                    correctCount++;
+                }
+            });
+
+            const scorePercent = ((correctCount / questions.length) * 100).toFixed(1);
+
+            // Save to Results
+            const { error } = await supabase
+                .from('exam_results')
+                .insert({
+                    student_id: student.id,
+                    class_id: student.class_id,
+                    subject_id: activeConfig.subject_id,
+                    question_type: activeConfig.question_type,
+                    total_questions: questions.length,
+                    correct_answers: correctCount,
+                    score_percent: scorePercent,
+                    answers_json: answers,
+                    completed_at: new Date().toISOString()
+                });
+
+            if (error) {
+                console.error("Save Error:", error);
+                // Even if save fails to results, try to navigate so student doesn't sit in loop
+            }
+
+            navigate('/portal/student/submitted', { state: { score: scorePercent, name: student.full_name } });
+
+        } catch (err) {
+            console.error("Submission crash:", err);
+            alert("An error occurred during submission. Please contact your supervisor.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (loading) return <div className="portal-login-container" style={{ justifyContent: 'center', color: '#9D245A', fontWeight: 'bold' }}>Preparing your exam...</div>;
+
+    const currentQ = questions[currentQuestionIdx];
+    const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
     return (
         <div className="portal-login-container">
-            {/* Header */}
             <header className="portal-header-bar nes-header">
                 <div className="nes-header-left">
                     <img src={logo} alt="Logo" className="portal-logo-img" />
-                    <h1 className="portal-school-name">Fad Mastro Academy</h1>
-                </div>
-                <div className="nes-header-right">
-                    <span className="nes-user-name">Olajire Daniel</span>
-                    <div className="nes-avatar">
-                        <svg viewBox="0 0 36 36" fill="none" width="36" height="36">
-                            <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
-                            <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
-                            <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
-                        </svg>
+                    <div>
+                        <h1 className="portal-school-name" style={{ margin: 0 }}>Fad Mastro Academy</h1>
+                        <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>{activeConfig?.subjects?.subject_name} • {activeConfig?.question_type?.toUpperCase()}</span>
                     </div>
-                    <button className="es-submit-btn">Submit Exam</button>
+                </div>
+
+                <div className="nes-header-right">
+                    <div className="es-timer-box" style={{ marginRight: '15px', background: timeLeft < 60 ? '#fee2e2' : '#f3f4f6', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                        <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', lineHeight: 1 }}>TIME LEFT</span>
+                        <span style={{ fontSize: '18px', fontWeight: '800', color: timeLeft < 60 ? '#ef4444' : '#1f2937' }}>{formatTime(timeLeft)}</span>
+                    </div>
+                    <span className="nes-user-name" style={{ marginRight: '10px' }}>{student?.full_name}</span>
+                    <button className="es-submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+                    </button>
                 </div>
             </header>
 
-            {/* Main two-column layout */}
             <main className="es-main">
-                {/* Left — Question card */}
                 <div className="es-question-card">
-                    <p className="es-question-counter">Question {questionNumber} of {TOTAL_QUESTIONS}</p>
-                    <p className="es-question-text">{question.text}</p>
+                    <p className="es-question-counter">Question {currentQuestionIdx + 1} of {questions.length}</p>
+                    <p className="es-question-text">{currentQ?.question_text}</p>
 
                     <div className="es-options">
-                        {question.options.map((option) => (
-                            <label key={option} className="es-option-label">
+                        {['a', 'b', 'c', 'd'].map((key) => (
+                            <label key={key} className="es-option-label">
                                 <input
                                     type="radio"
-                                    name={`q${question.id}`}
-                                    value={option}
-                                    checked={selectedAnswer === option}
-                                    onChange={() => handleAnswer(option)}
+                                    name={`q${currentQ?.id}`}
+                                    value={key.toUpperCase()}
+                                    checked={answers[currentQ?.id] === key.toUpperCase()}
+                                    onChange={() => handleAnswer(key.toUpperCase())}
                                     className="es-radio"
                                 />
                                 <span className="es-radio-custom" />
-                                <span className="es-option-text">{option}</span>
+                                <span className="es-option-text">{currentQ?.[`option_${key}`]}</span>
                             </label>
                         ))}
                     </div>
 
                     <div className="es-nav-row">
-                        <button
-                            className="es-prev-btn"
-                            onClick={handlePrev}
-                            disabled={currentQuestion === 0}
-                        >
-                            Previous
-                        </button>
-                        <button
-                            className="es-next-btn"
-                            onClick={handleNext}
-                            disabled={currentQuestion === sampleQuestions.length - 1}
-                        >
-                            Next
-                        </button>
+                        <button className="es-prev-btn" onClick={() => setCurrentQuestionIdx(i => i - 1)} disabled={currentQuestionIdx === 0}>Previous</button>
+                        {currentQuestionIdx === questions.length - 1 ? (
+                            <button className="es-next-btn" onClick={handleSubmit} style={{ background: '#10b981' }}>Finish</button>
+                        ) : (
+                            <button className="es-next-btn" onClick={() => setCurrentQuestionIdx(i => i + 1)}>Next</button>
+                        )}
                     </div>
                 </div>
 
-                {/* Right — Question number grid */}
                 <div className="es-grid-card">
                     <div className="es-number-grid">
-                        {Array.from({ length: TOTAL_QUESTIONS }, (_, i) => (
+                        {questions.map((q, i) => (
                             <button
-                                key={i + 1}
-                                className={`es-num-btn ${i === currentQuestion ? 'es-num-current' : ''} ${isAnswered(i) && i !== currentQuestion ? 'es-num-answered' : ''}`}
-                                onClick={() => i < sampleQuestions.length && setCurrentQuestion(i)}
+                                key={q.id}
+                                className={`es-num-btn ${i === currentQuestionIdx ? 'es-num-current' : ''} ${answers[q.id] ? 'es-num-answered' : ''}`}
+                                onClick={() => setCurrentQuestionIdx(i)}
                             >
                                 {i + 1}
                             </button>

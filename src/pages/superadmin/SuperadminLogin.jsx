@@ -17,19 +17,46 @@ const SuperadminLogin = () => {
         setError('');
         setLoading(true);
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            // 1. Sign in with password
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-        if (error) {
-            setError(error.message);
+            if (authError) {
+                setPassword(''); // Reset password input on error
+                throw authError;
+            }
+
+            if (authData.user) {
+                // 2. Fetch user role from profiles table
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', authData.user.id)
+                    .single();
+
+                if (profileError || !profile) {
+                    await supabase.auth.signOut();
+                    setPassword('');
+                    throw new Error('Access denied. No profile found.');
+                }
+
+                // 3. Verify specifically for super_admin
+                if (profile.role === 'super_admin') {
+                    navigate('/portal/superadmin/config');
+                } else {
+                    await supabase.auth.signOut();
+                    setPassword('');
+                    throw new Error('Unauthorized access. You are not a Super Admin.');
+                }
+            }
+        } catch (err) {
+            console.error("Login process error:", err);
+            setError(err.message || 'An error occurred during login');
+        } finally {
             setLoading(false);
-            return;
-        }
-
-        if (data.user) {
-            navigate('/portal/superadmin/config');
         }
     };
 
@@ -48,7 +75,7 @@ const SuperadminLogin = () => {
                 <div className="sal-card">
                     <h2 className="sal-title">Login to staff portal</h2>
 
-                    {error && <div style={{ color: 'red', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>{error}</div>}
+                    {error && <div style={{ color: '#ef4444', fontSize: '14px', marginBottom: '16px', textAlign: 'center', backgroundColor: '#fee2e2', padding: '10px', borderRadius: '8px', border: '1px solid #fecaca' }}>{error}</div>}
 
                     <form className="sal-form" onSubmit={handleLogin}>
                         <div className="sal-form-group">
@@ -56,6 +83,7 @@ const SuperadminLogin = () => {
                             <input
                                 type="email"
                                 className="sal-input"
+                                placeholder="Enter your email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
@@ -67,6 +95,7 @@ const SuperadminLogin = () => {
                             <input
                                 type="password"
                                 className="sal-input"
+                                placeholder="Enter your password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../auth/PortalLogin.css';
 import logo from '../../assets/logo.jpg';
 import { supabase } from '../../supabaseClient';
@@ -14,6 +14,9 @@ const AdminLogin = () => {
     const [showOverlay, setShowOverlay] = useState(false);
     const [checkingSession, setCheckingSession] = useState(true);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const navigateTo = '/portal/admin';
 
     // Check if already logged in
     useEffect(() => {
@@ -31,10 +34,10 @@ const AdminLogin = () => {
                         .eq('id', session.user.id)
                         .single();
 
-                    if (!profileError && profile && profile.role === 'admin') {
-                        if (isChecking) navigate('/portal/admin');
+                    if (!profileError && profile && (profile.role === 'admin' || profile.role === 'super_admin')) {
+                        if (isChecking) navigate(navigateTo, { replace: true });
                         return; // Don't set checkingSession to false, let the redirect happen
-                    } else if (profile && profile.role !== 'admin') {
+                    } else if (profile && profile.role !== 'admin' && profile.role !== 'super_admin') {
                         // If they are logged in as a wrong role on the login page, log them out.
                         await supabase.auth.signOut();
                     }
@@ -60,46 +63,49 @@ const AdminLogin = () => {
         setLoading(true);
         setLoginStatus('logging_in');
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-        if (error) {
-            if (error.message === 'Failed to fetch') {
-                setError('Connection error. Please check your internet.');
-            } else {
-                setError(error.message);
+            if (authError) {
+                if (authError.message === 'Failed to fetch') {
+                    throw new Error('Connection error. Please check your internet.');
+                }
+                throw authError;
             }
+
+            if (data.user) {
+                // Ensure the "Logging in..." label is seen briefly for stability
+                setLoginStatus('verifying');
+
+                // Fetch profile to verify role
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', data.user.id)
+                    .single();
+
+                if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+                    await supabase.auth.signOut();
+                    throw new Error('Unauthorized: Admin access required.');
+                }
+
+                // Brief pause so the user actually sees "Verifying role..."
+                await new Promise(resolve => setTimeout(resolve, 600));
+
+                // Final transition to dashboard
+                setShowOverlay(true);
+                setTimeout(() => {
+                    navigate(navigateTo, { replace: true });
+                }, 800);
+            }
+        } catch (err) {
+            console.error("Login process error:", err);
+            setError(err.message);
             setLoading(false);
             setLoginStatus('');
-            return;
-        }
-
-        if (data.user) {
-            setLoginStatus('verifying');
-            // Verify role before proceeding
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', data.user.id)
-                .single();
-
-            if (profileError || !profile || profile.role !== 'admin') {
-                setError('Unauthorized: Admin access required.');
-                await supabase.auth.signOut();
-                setLoading(false);
-                setLoginStatus('');
-                return;
-            }
-
-            // Show the loading overlay
-            setShowOverlay(true);
-
-            // Wait a short moment for visual effect, then navigate
-            setTimeout(() => {
-                navigate('/portal/admin');
-            }, 1000);
         }
     };
 

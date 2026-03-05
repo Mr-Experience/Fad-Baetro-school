@@ -1,44 +1,136 @@
-import React from 'react';
-import '../student/NoExamSchedule.css';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../supabaseClient';
+import '../student/NoExamSchedule.css'; // Reusing some base header styles if needed
 import './SchoolConfig.css';
 import logo from '../../assets/logo.jpg';
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SchoolConfig = () => {
+    const navigate = useNavigate();
+    const [currentSession, setCurrentSession] = useState('2024/2025');
+    const [currentTerm, setCurrentTerm] = useState('First Term');
+
+    // Header display values
+    const [activeSession, setActiveSession] = useState('2024/2025');
+    const [activeTerm, setActiveTerm] = useState('First Term');
+
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            setLoading(true);
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (user) {
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profileData) {
+                    setProfile(profileData);
+                }
+            }
+            await fetchSettings();
+        };
+
+        fetchUserData();
+    }, []);
+
+    const fetchSettings = async () => {
+        setLoading(true);
+        try {
+            const { data, fetchError } = await supabase
+                .from('system_settings')
+                .select('*')
+                .eq('id', 1)
+                .single();
+
+            if (data) {
+                setCurrentSession(data.current_session);
+                setCurrentTerm(data.current_term);
+                setActiveSession(data.current_session);
+                setActiveTerm(data.current_term);
+            }
+        } catch (err) {
+            console.error("Error fetching settings:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        setMessage('');
+        setError('');
+
+        try {
+            const { error: saveError } = await supabase
+                .from('system_settings')
+                .upsert({
+                    id: 1,
+                    current_session: currentSession,
+                    current_term: currentTerm,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (saveError) throw saveError;
+
+            setMessage('Updated successfully!');
+            setActiveSession(currentSession);
+            setActiveTerm(currentTerm);
+
+            setTimeout(() => setMessage(''), 3000);
+        } catch (err) {
+            setError(err.message || 'Failed to save settings');
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <div className="sc-container">
-            {/* Rich Header */}
-            <header className="portal-header-bar sc-header">
+            <LoadingOverlay isVisible={loading || saving} />
+
+            {/* Exactly as per Image Header */}
+            <header className="sc-header">
                 <div className="sc-header-left">
-                    <img src={logo} alt="Logo" className="portal-logo-img" />
-                    <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                    <img src={logo} alt="Logo" className="portal-logo-img" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                    <span className="sc-brand-name">Fad Mastro Academy</span>
                 </div>
+
                 <div className="sc-header-right">
                     <div className="sc-session-badge">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9D245A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                            <polyline points="10 9 9 9 8 9"></polyline>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9D245A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
                         </svg>
-                        <span>Current Session: 2023/2023 First Term Session</span>
+                        <span>Current Session: {activeSession} {activeTerm} Session</span>
                     </div>
-                    <span className="sc-user-name">Olajire Daniel</span>
+
+                    <span className="sc-user-name">
+                        {profile?.full_name || 'Super Admin'}
+                    </span>
                     <div className="sc-avatar">
-                        <img src="https://ui-avatars.com/api/?name=Olajire+Daniel&background=D1D5DB&color=9CA3AF" alt="Avatar" />
+                        <img
+                            src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.full_name || 'Super Admin')}&background=D1D5DB&color=333`}
+                            alt="Avatar"
+                        />
                     </div>
                 </div>
             </header>
 
-            {/* Main Content */}
+            {/* Main Content Area */}
             <main className="sc-main">
                 <div className="sc-card">
                     <div className="sc-icon-circle">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
+                        <div className="sc-info-icon">i</div>
                     </div>
 
                     <h2 className="sc-title">Set The Current Session</h2>
@@ -46,33 +138,74 @@ const SchoolConfig = () => {
                         Set the current session and term details which will control the data content of the admin and student
                     </p>
 
+                    {message && <div className="sc-alert sc-alert-success">{message}</div>}
+                    {error && <div className="sc-alert sc-alert-error">{error}</div>}
+
                     <div className="sc-form">
                         <div className="sc-select-wrap">
-                            <select className="sc-select" defaultValue="2025/2026">
-                                <option value="2025/2026">Session 2025/2026</option>
+                            <select
+                                className="sc-select"
+                                value={currentSession}
+                                onChange={(e) => setCurrentSession(e.target.value)}
+                                disabled={loading || saving}
+                            >
+                                <option value="2022/2023">Session 2022/2023</option>
+                                <option value="2023/2024">Session 2023/2024</option>
                                 <option value="2024/2025">Session 2024/2025</option>
+                                <option value="2025/2026">Session 2025/2026</option>
+                                <option value="2026/2027">Session 2026/2027</option>
                             </select>
                             <div className="sc-select-arrow">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                     <polyline points="6 9 12 15 18 9"></polyline>
                                 </svg>
                             </div>
                         </div>
 
                         <div className="sc-select-wrap">
-                            <select className="sc-select" defaultValue="First Term">
+                            <select
+                                className="sc-select"
+                                value={currentTerm}
+                                onChange={(e) => setCurrentTerm(e.target.value)}
+                                disabled={loading || saving}
+                            >
                                 <option value="First Term">First Term</option>
                                 <option value="Second Term">Second Term</option>
                                 <option value="Third Term">Third Term</option>
                             </select>
                             <div className="sc-select-arrow">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                     <polyline points="6 9 12 15 18 9"></polyline>
                                 </svg>
                             </div>
                         </div>
 
-                        <button className="sc-save-btn">Save Changes</button>
+                        <button
+                            className="sc-save-btn"
+                            onClick={handleSave}
+                            disabled={loading || saving}
+                        >
+                            {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+
+                        <button
+                            className="sc-reset-btn"
+                            onClick={fetchSettings}
+                            disabled={loading || saving}
+                            style={{
+                                background: 'transparent',
+                                border: '1.5px solid #D1D5DB',
+                                color: '#6B7280',
+                                marginTop: '10px',
+                                height: '48px',
+                                borderRadius: '10px',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Discard Changes
+                        </button>
                     </div>
                 </div>
             </main>

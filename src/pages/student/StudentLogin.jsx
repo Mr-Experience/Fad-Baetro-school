@@ -28,7 +28,36 @@ const StudentLogin = () => {
         }
 
         if (data.user) {
-            // Redirect to student dashboard (or no-exam page as placeholder)
+            // 1. Verify existence in students table (STRICT ROLE CHECK)
+            const { data: student, error: studentError } = await supabase
+                .from('students')
+                .select('class_id')
+                .eq('email', email.toLowerCase())
+                .maybeSingle();
+
+            if (!student) {
+                // If they are NOT a student, kick them out immediately
+                await supabase.auth.signOut();
+                setError('Unauthorized: This portal is for students only.');
+                setLoading(false);
+                return;
+            }
+
+            if (student.class_id) {
+                // 2. Check if ANY exam is currently ACTIVE for this class
+                const { data: activeExams } = await supabase
+                    .from('student_active_exams')
+                    .select('*')
+                    .eq('class_id', student.class_id)
+                    .limit(1);
+
+                if (activeExams && activeExams.length > 0) {
+                    navigate('/portal/student/active-exam');
+                    return;
+                }
+            }
+
+            // Default to no-exam if nothing is active
             navigate('/portal/student/no-exam');
         }
     };

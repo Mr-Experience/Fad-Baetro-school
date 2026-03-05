@@ -1,64 +1,37 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './AdminProfile.css';
-import AdminHeader from '../../components/AdminHeader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 
 const AdminProfile = () => {
     const navigate = useNavigate();
-
-    // User Info
-    const [userId, setUserId] = useState('');
-    const [userName, setUserName] = useState('');
-    const [userInitial, setUserInitial] = useState('A');
-    const [userRole, setUserRole] = useState('Admin');
-    const [avatarUrl, setAvatarUrl] = useState(null);
-    const [profileLoading, setProfileLoading] = useState(true);
+    const {
+        userName, setUserName,
+        userInitial, setUserInitial,
+        avatarUrl, setAvatarUrl,
+        profileLoading, userId
+    } = useOutletContext();
 
     // Name form
     const [fullName, setFullName] = useState('');
     const [nameLoading, setNameLoading] = useState(false);
     const [nameMsg, setNameMsg] = useState({ type: '', text: '' });
 
-    // Password form
+    // Sync local fullName with context userName on mount or update
+    useEffect(() => {
+        if (userName) setFullName(userName);
+    }, [userName]);
+
+    // Password form... (rest of the states remain same)
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [pwLoading, setPwLoading] = useState(false);
     const [pwMsg, setPwMsg] = useState({ type: '', text: '' });
 
-    // Avatar
     const [avatarLoading, setAvatarLoading] = useState(false);
     const fileInputRef = useRef(null);
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setUserId(user.id);
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('full_name, role, avatar_url')
-                    .eq('id', user.id)
-                    .single();
-
-                if (profile) {
-                    const name = profile.full_name || user.email?.split('@')[0] || 'Admin';
-                    setUserName(name);
-                    setFullName(name);
-                    setUserInitial(name.charAt(0).toUpperCase());
-                    setUserRole(profile.role || 'Admin');
-                    if (profile.avatar_url) setAvatarUrl(profile.avatar_url);
-                } else {
-                    const fallback = user.email?.split('@')[0] || 'Admin';
-                    setUserName(fallback);
-                    setFullName(fallback);
-                    setUserInitial(fallback.charAt(0).toUpperCase());
-                }
-            }
-            setProfileLoading(false);
-        };
-        fetchUser();
-    }, []);
+    const userRole = 'Admin'; // Or get from context if needed
 
     // Save full name
     const handleSaveName = async () => {

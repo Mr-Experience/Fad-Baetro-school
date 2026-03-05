@@ -1,10 +1,74 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../supabaseClient';
 import '../auth/PortalLogin.css';
 import './NoExamSchedule.css';
 import './ActiveExam.css';
 import logo from '../../assets/logo.jpg';
 
 const ActiveExam = () => {
+    const navigate = useNavigate();
+    const [studentName, setStudentName] = useState('...');
+    const [profileImage, setProfileImage] = useState(null);
+    const [activeExam, setActiveExam] = useState(null);
+
+    useEffect(() => {
+        const getData = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                navigate('/portal/student');
+                return;
+            }
+
+            // 1. Fetch Student Identity & Class
+            let { data: student, error: fetchError } = await supabase
+                .from('students')
+                .select('full_name, profile_image, class_id')
+                .eq('email', user.email.toLowerCase())
+                .maybeSingle();
+
+            if (fetchError && fetchError.code === 'PGRST204') {
+                const { data: retryData, error: retryError } = await supabase
+                    .from('students')
+                    .select('full_name, class_id')
+                    .eq('email', user.email.toLowerCase())
+                    .maybeSingle();
+                student = retryData;
+                fetchError = retryError;
+            }
+
+            if (student) {
+                setStudentName(student.full_name);
+                setProfileImage(student.profile_image || null);
+
+                // 2. Initial Fetch for Active Exam for this class
+                const fetchActive = async () => {
+                    const { data, error } = await supabase
+                        .from('exam_configs')
+                        .select('*, subjects(subject_name)')
+                        .eq('class_id', student.class_id)
+                        .eq('is_active', true)
+                        .limit(1)
+                        .maybeSingle();
+
+                    if (!error && data) {
+                        setActiveExam(data);
+                    } else if (!data) {
+                        // If no exam found, redirect out
+                        navigate('/portal/student/no-exam');
+                    }
+                };
+
+                fetchActive();
+
+                // 3. Set up polling to catch deactivation (Reduced to 5s for faster response)
+                const interval = setInterval(fetchActive, 5000);
+                return () => clearInterval(interval);
+            }
+        };
+        getData();
+    }, [navigate]);
+
     return (
         <div className="portal-login-container">
             {/* Header */}
@@ -14,13 +78,17 @@ const ActiveExam = () => {
                     <h1 className="portal-school-name">Fad Mastro Academy</h1>
                 </div>
                 <div className="nes-header-right">
-                    <span className="nes-user-name">Olajire Daniel</span>
+                    <span className="nes-user-name">{studentName}</span>
                     <div className="nes-avatar">
-                        <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
-                            <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
-                            <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
-                            <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
-                        </svg>
+                        {profileImage ? (
+                            <img src={profileImage} alt="Profile" className="nes-profile-img" />
+                        ) : (
+                            <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+                                <circle cx="18" cy="18" r="18" fill="#D1D5DB" />
+                                <circle cx="18" cy="14" r="6" fill="#9CA3AF" />
+                                <ellipse cx="18" cy="30" rx="10" ry="7" fill="#9CA3AF" />
+                            </svg>
+                        )}
                     </div>
                 </div>
             </header>
@@ -42,7 +110,7 @@ const ActiveExam = () => {
                     </div>
 
                     {/* Subject name */}
-                    <h2 className="ae-subject">English Language</h2>
+                    <h2 className="ae-subject">{activeExam?.subjects?.subject_name || 'Loading exam...'}</h2>
 
                     {/* Instructions */}
                     <p className="ae-instructions-heading">Read the following instructions carefully:</p>
@@ -55,7 +123,11 @@ const ActiveExam = () => {
                     </ul>
 
                     {/* Start button */}
-                    <button className="login-btn ae-start-btn">
+                    <button
+                        className="login-btn ae-start-btn"
+                        onClick={() => navigate('/portal/student/exam')}
+                        disabled={!activeExam}
+                    >
                         Start now
                     </button>
                 </div>
