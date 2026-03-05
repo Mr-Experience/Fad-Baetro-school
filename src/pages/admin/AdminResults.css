@@ -1,207 +1,341 @@
 /* AdminResults.css */
 .admin-results-container {
-    padding: 24px;
-    background-color: #F8FAFC;
+    padding: 32px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     min-height: 100vh;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 .ar-header {
-    margin-bottom: 24px;
+    margin-bottom: 32px;
 }
 
 .ar-header h2 {
-    font-size: 24px;
-    font-weight: 700;
-    color: #1F2937;
+    font-size: 28px;
+    font-weight: 800;
+    color: #1e293b;
     margin-bottom: 8px;
+    letter-spacing: -0.5px;
 }
 
 .ar-header p {
-    color: #6B7280;
-    font-size: 14px;
+    color: #64748b;
+    font-size: 15px;
 }
 
+/* Filters */
 .ar-filters {
     display: flex;
-    gap: 20px;
-    margin-bottom: 30px;
+    gap: 16px;
+    margin-bottom: 32px;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .ar-filter-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    width: 250px;
+    gap: 6px;
+    flex: 1;
+    max-width: 300px;
 }
 
 .ar-filter-group label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #4B5563;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .ar-select {
     width: 100%;
-    padding: 10px 14px;
-    border: 1px solid #D1D5DB;
-    border-radius: 8px;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     outline: none;
     font-size: 14px;
+    font-weight: 500;
     background-color: #fff;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+    color: #1e293b;
+}
+
+.ar-select:hover:not(:disabled) {
+    border-color: #94a3b8;
 }
 
 .ar-select:focus {
     border-color: #8B1A2A;
-    box-shadow: 0 0 0 3px rgba(139, 26, 42, 0.1);
+    box-shadow: 0 0 0 4px rgba(139, 26, 42, 0.1);
 }
 
-.ar-content {
-    background: transparent;
+.ar-select:disabled {
+    background-color: #f1f5f9;
+    cursor: not-allowed;
+    color: #94a3b8;
 }
 
-.ar-loading {
-    padding: 40px;
-    text-align: center;
-    color: #6B7280;
-    font-weight: 500;
-}
-
-.ar-empty-state {
-    background: white;
-    padding: 60px 20px;
-    border-radius: 12px;
-    text-align: center;
-    border: 1px dashed #D1D5DB;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+/* Loading */
+.ar-loading-spinner {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 16px;
-    color: #6B7280;
+    padding: 100px 0;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f1f5f9;
+    border-top: 3px solid #8B1A2A;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Results Content */
+.ar-empty-state {
+    background: white;
+    padding: 80px 20px;
+    border-radius: 20px;
+    text-align: center;
+    border: 2px dashed #e2e8f0;
+    color: #64748b;
 }
 
 .ar-subject-list {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 32px;
 }
 
 .ar-subject-card {
     background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    padding: 24px;
-    border: 1px solid #E5E7EB;
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+    border: 1px solid #f1f5f9;
 }
 
 .ar-subject-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #F3F4F6;
+    padding: 24px 32px;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
 }
 
 .ar-subject-title h3 {
     margin: 0 0 4px 0;
-    font-size: 18px;
-    color: #111827;
+    font-size: 20px;
+    font-weight: 800;
+    color: #1e293b;
 }
 
-.ar-subject-title span {
-    font-size: 12px;
-    color: #6B7280;
-    font-weight: 600;
+.ar-subject-title p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 500;
 }
 
-.ar-download-btn {
+.ar-actions-group {
+    display: flex;
+    gap: 10px;
+}
+
+.ar-action-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: #10B981;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 10px 16px;
+    border-radius: 12px;
     border: none;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
 }
 
-.ar-download-btn:hover {
-    background-color: #059669;
+.ar-action-btn.csv {
+    background: #f1f5f9;
+    color: #475569;
 }
 
+.ar-action-btn.csv:hover {
+    background: #e2e8f0;
+}
+
+.ar-action-btn.image {
+    background: #8B1A2A;
+    color: white;
+}
+
+.ar-action-btn.image:hover {
+    background: #721522;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 26, 42, 0.2);
+}
+
+/* Table Design */
 .ar-table-responsive {
-    overflow-x: auto;
+    padding: 0 20px 24px 20px;
 }
 
 .ar-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0 8px;
 }
 
 .ar-table th {
-    background-color: #F9FAFB;
-    color: #4B5563;
-    font-size: 12px;
-    font-weight: 600;
+    padding: 16px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
-    padding: 12px 16px;
+    letter-spacing: 1px;
     text-align: left;
-    border-bottom: 1px solid #E5E7EB;
 }
 
-.ar-table td {
-    padding: 14px 16px;
-    border-bottom: 1px solid #E5E7EB;
+.ar-table tr td {
+    background: #ffffff;
+    padding: 16px;
     font-size: 14px;
-    color: #374151;
+    color: #334155;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
 }
 
-.ar-table tbody tr:last-child td {
-    border-bottom: none;
+.ar-table tr td:first-child {
+    border-left: 1px solid #f1f5f9;
+    border-radius: 12px 0 0 12px;
+    font-weight: 700;
+    color: #94a3b8;
 }
 
-.ar-score-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 600;
+.ar-table tr td:last-child {
+    border-right: 1px solid #f1f5f9;
+    border-radius: 0 12px 12px 0;
 }
 
-.ar-score-badge.pass {
-    background-color: #D1FAE5;
-    color: #065F46;
+/* Table Cells */
+.ar-student-cell .ar-student-info {
+    display: flex;
+    flex-direction: column;
 }
 
-.ar-score-badge.fail {
-    background-color: #FEE2E2;
-    color: #991B1B;
+.ar-student-info .ar-name {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.ar-student-info .ar-email {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.ar-type-tag {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.ar-type-tag.exam {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.ar-type-tag.test {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+.ar-type-tag.candidate {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.ar-score-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ar-score-value {
+    font-weight: 800;
+    font-size: 15px;
+    min-width: 45px;
+}
+
+.ar-score-value.pass {
+    color: #10b981;
+}
+
+.ar-score-value.fail {
+    color: #ef4444;
+}
+
+.ar-progress-bar {
+    flex: 1;
+    height: 6px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    width: 80px;
+    overflow: hidden;
+}
+
+.ar-progress-fill {
+    height: 100%;
+    border-radius: 10px;
+}
+
+.ar-progress-fill.pass {
+    background: #10b981;
+}
+
+.ar-progress-fill.fail {
+    background: #ef4444;
+}
+
+.ar-acc-cell strong {
+    color: #1e293b;
+    font-size: 15px;
+}
+
+.ar-date-cell {
+    color: #64748b;
+    font-weight: 500;
 }
 
 .ar-print-footer {
     display: none;
     text-align: center;
-    color: #9CA3AF;
+    padding: 20px;
+    color: #94a3b8;
     font-size: 11px;
-    margin-top: 20px;
-    padding-top: 10px;
-    border-top: 1px dashed #E5E7EB;
+    border-top: 1px dashed #e2e8f0;
 }
 
-/* Print specific styles for html2canvas */
-[data-html2canvas] .ar-download-btn {
-    display: none !important;
-}
-
+/* Snapshot adjustments */
 [data-html2canvas] .ar-subject-card {
     box-shadow: none !important;
-    border: none !important;
+    border: 1px solid #e2e8f0 !important;
 }
 
 [data-html2canvas] .ar-print-footer {

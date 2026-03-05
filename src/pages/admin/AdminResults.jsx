@@ -5,9 +5,10 @@ import './AdminResults.css';
 
 const AdminResults = () => {
     const [classes, setClasses] = useState([]);
+    const [subjects, setSubjects] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
-    const [examTypes, setExamTypes] = useState(['student', 'candidate']); // Add "test" if it exists in your schema
-    const [selectedType, setSelectedType] = useState('');
+    const [selectedSubjectId, setSelectedSubjectId] = useState('');
+    const [selectedType, setSelectedType] = useState('all'); // 'all', 'test', 'exam', 'candidate'
 
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -18,42 +19,59 @@ const AdminResults = () => {
     useEffect(() => {
         const fetchClasses = async () => {
             const { data, error } = await supabase.from('classes').select('id, name').order('name');
-            if (!error && data) {
-                setClasses(data);
-            }
+            if (!error && data) setClasses(data);
         };
         fetchClasses();
     }, []);
 
-    // Fetch Results when class and type change
+    // Fetch Subjects when class changes
+    useEffect(() => {
+        const fetchSubjects = async () => {
+            if (!selectedClassId) {
+                setSubjects([]);
+                setSelectedSubjectId('');
+                return;
+            }
+            const { data, error } = await supabase
+                .from('subjects')
+                .select('id, subject_name')
+                .eq('class_id', selectedClassId)
+                .order('subject_name');
+            if (!error && data) setSubjects(data);
+        };
+        fetchSubjects();
+    }, [selectedClassId]);
+
+    // Fetch Results when filters change
     useEffect(() => {
         const fetchResults = async () => {
-            if (!selectedClassId || !selectedType) {
+            if (!selectedClassId) {
                 setResults([]);
                 return;
             }
 
             setLoading(true);
-            const { data, error } = await supabase
+            let query = supabase
                 .from('exam_results')
                 .select(`
-                    id, 
-                    student_id, 
-                    score_percent, 
-                    correct_answers, 
-                    total_questions, 
-                    completed_at, 
-                    subject_id, 
-                    subject_name,
-                    question_type,
+                    *,
                     students (
                         full_name,
-                        email
+                        email,
+                        image_url
                     )
                 `)
                 .eq('class_id', selectedClassId)
-                .eq('question_type', selectedType)
                 .order('completed_at', { ascending: false });
+
+            if (selectedSubjectId) {
+                query = query.eq('subject_id', selectedSubjectId);
+            }
+            if (selectedType !== 'all') {
+                query = query.eq('question_type', selectedType);
+            }
+
+            const { data, error } = await query;
 
             if (!error && data) {
                 setResults(data);
@@ -61,7 +79,7 @@ const AdminResults = () => {
             setLoading(false);
         };
         fetchResults();
-    }, [selectedClassId, selectedType]);
+    }, [selectedClassId, selectedSubjectId, selectedType]);
 
     // Group results by subject
     const groupedResults = results.reduce((acc, result) => {
@@ -71,31 +89,53 @@ const AdminResults = () => {
         return acc;
     }, {});
 
+    const handleDownloadCSV = (subjectName, subjectResults) => {
+        const headers = ["S/N", "Student Name", "Email", "Type", "Score (%)", "Correct", "Total", "Date"];
+        const rows = subjectResults.map((res, idx) => [
+            idx + 1,
+            res.students?.full_name || 'N/A',
+            res.students?.email || 'N/A',
+            res.question_type?.toUpperCase() || 'N/A',
+            res.score_percent,
+            res.correct_answers,
+            res.total_questions,
+            new Date(res.completed_at).toLocaleDateString()
+        ]);
+
+        let csvContent = "data:text/csv;charset=utf-8,"
+            + headers.join(",") + "\n"
+            + rows.map(e => e.join(",")).join("\n");
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        const clsName = classes.find(c => c.id === selectedClassId)?.name || 'Results';
+        link.setAttribute("download", `${clsName}_${subjectName}_Results.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handleDownloadImage = async (subjectName) => {
         const elementId = `result-table-${subjectName.replace(/\s+/g, '-')}`;
         const element = document.getElementById(elementId);
 
         if (element) {
             try {
-                // Ensure text colors are maintained properly for printing
-                const originalBg = element.style.backgroundColor;
-                element.style.backgroundColor = '#ffffff';
-
-                const canvas = await html2canvas(element, { scale: 2 });
-                element.style.backgroundColor = originalBg;
-
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                });
                 const image = canvas.toDataURL("image/png");
-
-                // Trigger download
                 const link = document.createElement('a');
                 link.href = image;
-
                 const clsName = classes.find(c => c.id === selectedClassId)?.name || 'Class';
-                link.download = `${clsName}_${selectedType}_${subjectName}_Results.png`;
+                link.download = `${clsName}_${subjectName}_Results.png`;
                 link.click();
             } catch (err) {
                 console.error("Failed to generate image:", err);
-                alert("Could not generate the image. Please try again.");
+                alert("Could not generate the image.");
             }
         }
     };
@@ -109,7 +149,7 @@ const AdminResults = () => {
 
             <div className="ar-filters">
                 <div className="ar-filter-group">
-                    <label>Class / Target Audience</label>
+                    <label>Class</label>
                     <select
                         value={selectedClassId}
                         onChange={(e) => setSelectedClassId(e.target.value)}
@@ -123,24 +163,42 @@ const AdminResults = () => {
                 </div>
 
                 <div className="ar-filter-group">
-                    <label>Exam Type</label>
+                    <label>Subject</label>
+                    <select
+                        value={selectedSubjectId}
+                        onChange={(e) => setSelectedSubjectId(e.target.value)}
+                        className="ar-select"
+                        disabled={!selectedClassId}
+                    >
+                        <option value="">All Subjects</option>
+                        {subjects.map(s => (
+                            <option key={s.id} value={s.id}>{s.subject_name}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="ar-filter-group">
+                    <label>Type</label>
                     <select
                         value={selectedType}
                         onChange={(e) => setSelectedType(e.target.value)}
                         className="ar-select"
                     >
-                        <option value="">Select Exam Type...</option>
-                        {examTypes.map(type => (
-                            <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-                        ))}
+                        <option value="all">All Types</option>
+                        <option value="test">Test</option>
+                        <option value="exam">Exam</option>
+                        <option value="candidate">Candidate</option>
                     </select>
                 </div>
             </div>
 
             <div className="ar-content" ref={resultsRef}>
                 {loading ? (
-                    <div className="ar-loading">Fetching results...</div>
-                ) : !selectedClassId || !selectedType ? (
+                    <div className="ar-loading-spinner">
+                        <div className="spinner"></div>
+                        <span>Analyzing results...</span>
+                    </div>
+                ) : !selectedClassId ? (
                     <div className="ar-empty-state">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -162,20 +220,36 @@ const AdminResults = () => {
                                     <div className="ar-subject-header">
                                         <div className="ar-subject-title">
                                             <h3>{subject}</h3>
-                                            <span>{className} • {selectedType.toUpperCase()}</span>
+                                            <p>{className} • {subjectResults.length} Submissions</p>
                                         </div>
-                                        <button
-                                            className="ar-download-btn"
-                                            onClick={() => handleDownloadImage(subject)}
-                                            data-html2canvas-ignore="true" // Prevent the button itself from showing in the printed image
-                                        >
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                                <polyline points="7 10 12 15 17 10" />
-                                                <line x1="12" y1="15" x2="12" y2="3" />
-                                            </svg>
-                                            Download PNG
-                                        </button>
+                                        <div className="ar-actions-group" data-html2canvas-ignore="true">
+                                            <button
+                                                className="ar-action-btn csv"
+                                                onClick={() => handleDownloadCSV(subject, subjectResults)}
+                                                title="Download CSV"
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                                    <polyline points="14 2 14 8 20 8" />
+                                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                                    <polyline points="10 9 9 9 8 9" />
+                                                </svg>
+                                                <span>CSV</span>
+                                            </button>
+                                            <button
+                                                className="ar-action-btn image"
+                                                onClick={() => handleDownloadImage(subject)}
+                                                title="Download Image"
+                                            >
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                    <polyline points="7 10 12 15 17 10" />
+                                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                                </svg>
+                                                <span>PNG</span>
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="ar-table-responsive">
@@ -183,26 +257,51 @@ const AdminResults = () => {
                                             <thead>
                                                 <tr>
                                                     <th>S/N</th>
-                                                    <th>Student Name</th>
-                                                    <th>Email</th>
-                                                    <th>Score (%)</th>
-                                                    <th>Correct / Total</th>
-                                                    <th>Time Completed</th>
+                                                    <th>Student Details</th>
+                                                    <th>Type</th>
+                                                    <th>Score</th>
+                                                    <th>Accuracy</th>
+                                                    <th>Completed At</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {subjectResults.map((res, index) => (
                                                     <tr key={res.id}>
                                                         <td>{index + 1}</td>
-                                                        <td style={{ fontWeight: '500' }}>{res.students?.full_name || 'Unknown'}</td>
-                                                        <td>{res.students?.email || 'N/A'}</td>
+                                                        <td className="ar-student-cell">
+                                                            <div className="ar-student-info">
+                                                                <span className="ar-name">{res.students?.full_name || 'Unknown'}</span>
+                                                                <span className="ar-email">{res.students?.email || 'N/A'}</span>
+                                                            </div>
+                                                        </td>
                                                         <td>
-                                                            <span className={`ar-score-badge ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}>
-                                                                {res.score_percent}%
+                                                            <span className={`ar-type-tag ${res.question_type || 'exam'}`}>
+                                                                {res.question_type?.toUpperCase() || 'EXAM'}
                                                             </span>
                                                         </td>
-                                                        <td>{res.correct_answers} / {res.total_questions}</td>
-                                                        <td>{new Date(res.completed_at).toLocaleString()}</td>
+                                                        <td>
+                                                            <div className="ar-score-wrap">
+                                                                <span className={`ar-score-value ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}>
+                                                                    {res.score_percent}%
+                                                                </span>
+                                                                <div className="ar-progress-bar">
+                                                                    <div
+                                                                        className={`ar-progress-fill ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}
+                                                                        style={{ width: `${res.score_percent}%` }}
+                                                                    ></div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="ar-acc-cell">
+                                                            <strong>{res.correct_answers}</strong> / {res.total_questions}
+                                                        </td>
+                                                        <td className="ar-date-cell">
+                                                            {new Date(res.completed_at).toLocaleDateString(undefined, {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                year: 'numeric'
+                                                            })}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
