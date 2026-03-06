@@ -15,12 +15,17 @@ const AdminLayout = () => {
     const [avatarUrl, setAvatarUrl] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
 
+    // Classes cache
+    const [classes, setClasses] = useState([]);
+    const [classesLoading, setClassesLoading] = useState(true);
+
     useEffect(() => {
         const fetchInitialData = async () => {
             const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
                 setUserId(user.id);
+                // Fetch Profile
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('full_name, avatar_url, role')
@@ -32,6 +37,23 @@ const AdminLayout = () => {
                     setUserInitial((profile.full_name || 'A').charAt(0).toUpperCase());
                     setAvatarUrl(profile.avatar_url);
                 }
+
+                // Fetch System Settings (Session/Term)
+                const { data: settings } = await supabase
+                    .from('system_settings')
+                    .select('current_session, current_term')
+                    .eq('id', 1)
+                    .single();
+
+                if (settings) {
+                    setActiveSession(settings.current_session);
+                    setActiveTerm(settings.current_term);
+                }
+
+                // Fetch Classes (Global Cache)
+                const { data: cls } = await supabase.from('classes').select('id, name').order('name');
+                if (cls) setClasses(cls);
+                setClassesLoading(false);
             }
             setProfileLoading(false);
         };
@@ -102,6 +124,8 @@ const AdminLayout = () => {
                     userName={userName}
                     userInitial={userInitial}
                     avatarUrl={avatarUrl}
+                    activeSession={activeSession}
+                    activeTerm={activeTerm}
                 />
 
                 {/* Individual pages render here - sharing profile context to prevent re-fetching */}
@@ -113,7 +137,9 @@ const AdminLayout = () => {
                     avatarUrl,
                     setAvatarUrl,
                     profileLoading,
-                    userId
+                    userId,
+                    classes,
+                    classesLoading
                 }} />
             </main>
         </div>

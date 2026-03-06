@@ -19,7 +19,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
             if (!session) {
                 authTimeout = setTimeout(() => {
                     setAuthStatus(false);
-                }, 1000);
+                }, 2000); // Increased timeout for better tab syncing
                 return;
             }
 
@@ -82,7 +82,16 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
 
         const initAuth = async () => {
             try {
-                const { data: { session }, error } = await supabase.auth.getSession();
+                // First attempt
+                let { data: { session }, error } = await supabase.auth.getSession();
+
+                // If no session, wait a bit and try again (tab sync race condition)
+                if (!session && !error) {
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    const secondCheck = await supabase.auth.getSession();
+                    session = secondCheck.data.session;
+                }
+
                 if (error) throw error;
                 await verifyAccess(session);
             } catch (err) {
@@ -94,7 +103,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
         initAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                 if (authTimeout) clearTimeout(authTimeout);
                 await verifyAccess(session);
             } else if (event === 'SIGNED_OUT') {

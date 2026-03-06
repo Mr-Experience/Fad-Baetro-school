@@ -35,7 +35,11 @@ const AdminLogin = () => {
                         .single();
 
                     if (!profileError && profile && (profile.role === 'admin' || profile.role === 'super_admin')) {
-                        if (isChecking) navigate(navigateTo, { replace: true });
+                        if (isChecking) {
+                            const from = location.state?.from?.pathname || location.state?.from || navigateTo;
+                            const search = location.state?.from?.search || '';
+                            navigate(from + search, { replace: true });
+                        }
                         return; // Don't set checkingSession to false, let the redirect happen
                     } else if (profile && profile.role !== 'admin' && profile.role !== 'super_admin') {
                         // If they are logged in as a wrong role on the login page, log them out.
@@ -95,10 +99,13 @@ const AdminLogin = () => {
                 // Brief pause so the user actually sees "Verifying role..."
                 await new Promise(resolve => setTimeout(resolve, 600));
 
-                // Final transition to dashboard
+                // Final transition to intended page or dashboard
                 setShowOverlay(true);
+                const from = location.state?.from?.pathname || location.state?.from || navigateTo;
+                const search = location.state?.from?.search || '';
+
                 setTimeout(() => {
-                    navigate(navigateTo, { replace: true });
+                    navigate(from + search, { replace: true });
                 }, 800);
             }
         } catch (err) {

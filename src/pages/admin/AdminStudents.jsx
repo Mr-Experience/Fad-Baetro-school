@@ -32,14 +32,8 @@ const AdminStudents = () => {
     }, [showModal]);
 
     useEffect(() => {
-        fetchClasses();
         fetchStudents();
     }, []);
-
-    const fetchClasses = async () => {
-        const { data, error } = await supabase.from('classes').select('*').order('class_name', { ascending: true });
-        if (!error && data) setClasses(data);
-    };
 
     const fetchStudents = async () => {
         setLoading(true);
@@ -48,7 +42,7 @@ const AdminStudents = () => {
                 .from('students')
                 .select(`
                     *,
-                    classes (class_name)
+                    classes (name)
                 `)
                 .order('created_at', { ascending: false });
 
@@ -149,7 +143,7 @@ const AdminStudents = () => {
                 profile_image: profileImageUrl,
                 role: 'student',
                 created_at: new Date().toISOString(),
-                classes: { class_name: selectedClass?.class_name || '' }
+                classes: { name: selectedClass?.name || '' }
             };
             setStudents(prev => [newStudent, ...prev]);
 
@@ -197,7 +191,7 @@ const AdminStudents = () => {
                         >
                             <option value="all">All Classes</option>
                             {classes.map(c => (
-                                <option key={c.id} value={c.id}>{c.class_name}</option>
+                                <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                         </select>
                         <button className="as-add-btn" onClick={() => setShowModal(true)}>
@@ -227,7 +221,7 @@ const AdminStudents = () => {
                                     <tr key={student.id}>
                                         <td className="as-student-name">{student.full_name}</td>
                                         <td className="as-student-email">{student.email}</td>
-                                        <td><span className="as-badge">{student.classes?.class_name || 'N/A'}</span></td>
+                                        <td><span className="as-badge">{student.classes?.name || 'N/A'}</span></td>
                                         <td>{student.phone_number || '-'}</td>
                                         <td>{new Date(student.created_at).toLocaleDateString()}</td>
                                         <td>
@@ -324,7 +318,7 @@ const AdminStudents = () => {
                                     >
                                         <option value="">Select Class</option>
                                         {classes.map(c => (
-                                            <option key={c.id} value={c.id}>{c.class_name}</option>
+                                            <option key={c.id} value={c.id}>{c.name}</option>
                                         ))}
                                     </select>
                                 </div>
