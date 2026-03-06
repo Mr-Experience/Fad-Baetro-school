@@ -4,7 +4,7 @@ import { supabase } from '../../supabaseClient';
 import './AdminResults.css';
 
 const AdminResults = () => {
-    const { classes } = useOutletContext();
+    const { classes, activeSession, activeTerm } = useOutletContext();
     const [subjects, setSubjects] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [selectedSubjectId, setSelectedSubjectId] = useState('');
@@ -46,7 +46,9 @@ const AdminResults = () => {
                 let query = supabase
                     .from('exam_results')
                     .select('id, subject_id, question_type')
-                    .eq('class_id', selectedClassId);
+                    .eq('class_id', selectedClassId)
+                    .eq('session_id', activeSession)
+                    .eq('term_id', activeTerm);
 
                 if (selectedSubjectId) {
                     query = query.eq('subject_id', selectedSubjectId);
@@ -91,11 +93,14 @@ const AdminResults = () => {
                     correct_answers, 
                     total_questions, 
                     completed_at,
+                    submitted_at,
                     students (full_name, email)
                 `)
                 .eq('class_id', selectedClassId)
                 .eq('subject_id', subject.id)
                 .eq('question_type', type)
+                .eq('session_id', activeSession)
+                .eq('term_id', activeTerm)
                 .order('score_percent', { ascending: false });
 
             if (!error && data) {
@@ -130,7 +135,7 @@ const AdminResults = () => {
                                 onChange={e => setSelectedClassId(e.target.value)}
                             >
                                 <option value="">Select Class</option>
-                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {classes.map(c => <option key={c.id} value={c.id}>{c.class_name}</option>)}
                             </select>
                             <div className="ar-select-icon">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -170,7 +175,7 @@ const AdminResults = () => {
                                     <h2 className="ar-subject-name">{sub.name}</h2>
                                     <div className="ar-box-group">
                                         <div className="aq-box test" onClick={() => handleViewDetails(sub, 'test')}>
-                                            <span className="aq-box-label">Test Result</span>
+                                            <span className="aq-box-label">Test</span>
                                             <span className="aq-box-count">{sub.testCount}</span>
                                         </div>
                                         <div className="aq-box exam" onClick={() => handleViewDetails(sub, 'exam')}>
@@ -228,7 +233,7 @@ const AdminResults = () => {
                                                 </span>
                                             </td>
                                             <td>{res.correct_answers} / {res.total_questions}</td>
-                                            <td>{new Date(res.completed_at).toLocaleDateString()}</td>
+                                            <td>{new Date(res.submitted_at || res.completed_at).toLocaleDateString()}</td>
                                         </tr>
                                     ))}
                                     {modalData.results.length === 0 && (

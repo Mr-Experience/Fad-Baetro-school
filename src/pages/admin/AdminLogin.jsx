@@ -96,17 +96,12 @@ const AdminLogin = () => {
                     throw new Error('Unauthorized: Admin access required.');
                 }
 
-                // Brief pause so the user actually sees "Verifying role..."
-                await new Promise(resolve => setTimeout(resolve, 600));
-
                 // Final transition to intended page or dashboard
                 setShowOverlay(true);
                 const from = location.state?.from?.pathname || location.state?.from || navigateTo;
                 const search = location.state?.from?.search || '';
 
-                setTimeout(() => {
-                    navigate(from + search, { replace: true });
-                }, 800);
+                navigate(from + search, { replace: true });
             }
         } catch (err) {
             console.error("Login process error:", err);

@@ -14,6 +14,8 @@ const AdminLayout = () => {
     const [userInitial, setUserInitial] = useState('A');
     const [avatarUrl, setAvatarUrl] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
+    const [activeSession, setActiveSession] = useState('');
+    const [activeTerm, setActiveTerm] = useState('');
 
     // Classes cache
     const [classes, setClasses] = useState([]);
@@ -46,12 +48,12 @@ const AdminLayout = () => {
                     .single();
 
                 if (settings) {
-                    setActiveSession(settings.current_session);
-                    setActiveTerm(settings.current_term);
+                    setActiveSession(settings.current_session || '');
+                    setActiveTerm(settings.current_term || '');
                 }
 
                 // Fetch Classes (Global Cache)
-                const { data: cls } = await supabase.from('classes').select('id, name').order('name');
+                const { data: cls } = await supabase.from('classes').select('id, class_name').order('class_name');
                 if (cls) setClasses(cls);
                 setClassesLoading(false);
             }
@@ -139,7 +141,9 @@ const AdminLayout = () => {
                     profileLoading,
                     userId,
                     classes,
-                    classesLoading
+                    classesLoading,
+                    activeSession,
+                    activeTerm
                 }} />
             </main>
         </div>

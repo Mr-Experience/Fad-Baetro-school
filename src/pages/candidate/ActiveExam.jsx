@@ -62,19 +62,26 @@ const ActiveExam = () => {
                             .select('*, subjects(subject_name)')
                             .eq('class_id', student?.class_id || null)
                             .eq('question_type', 'candidate')
-                            .eq('is_active', true);
+                            .eq('is_active', true)
+                            .eq('session_id', curSession)
+                            .eq('term_id', curTerm);
 
                         if (!error && activeConfigs && activeConfigs.length > 0) {
                             const { data: results } = await supabase
                                 .from('exam_results')
-                                .select('subject_id, question_type')
+                                .select('exam_id, subject_id, question_type')
                                 .eq('student_id', candidateId)
                                 .eq('session_id', curSession)
                                 .eq('term_id', curTerm)
                                 .eq('question_type', 'candidate');
 
+                            const takenExamIds = new Set(results?.map(r => r.exam_id) || []);
                             const takenKeys = new Set(results?.map(r => `${r.subject_id}_candidate`) || []);
-                            const availableExam = activeConfigs.find(c => !takenKeys.has(`${c.subject_id}_candidate`));
+                            const availableExam = activeConfigs.find(c => {
+                                const notTaken = !takenExamIds.has(c.id) && !takenKeys.has(`${c.subject_id}_candidate`);
+                                const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
+                                return notTaken && isTimeReady;
+                            });
 
                             if (availableExam) {
                                 setActiveExam(availableExam);
@@ -85,6 +92,8 @@ const ActiveExam = () => {
                                         .eq('class_id', availableExam.class_id)
                                         .eq('subject_id', availableExam.subject_id)
                                         .eq('question_type', 'candidate')
+                                        .eq('session_id', curSession)
+                                        .eq('term_id', curTerm)
                                         .then(({ data: qData }) => {
                                             if (qData) {
                                                 let processed = [...qData];
@@ -98,6 +107,9 @@ const ActiveExam = () => {
                                 }
 
                                 setLoading(false);
+                                return;
+                            } else if (activeConfigs.length > 0) {
+                                navigate('/portal/candidate/submitted', { replace: true });
                                 return;
                             }
                         }
@@ -184,7 +196,42 @@ const ActiveExam = () => {
 
                     <button
                         className="login-btn ae-start-btn"
-                        onClick={() => navigate('/portal/candidate/exam', { state: { examConfig: activeExam, preloadedQuestions, sessionInfo } })}
+                        onClick={async () => {
+                            if (!activeExam || !preloadedQuestions) return;
+
+                            // 1. Fetch Candidate ID
+                            const { data: { user } } = await supabase.auth.getUser();
+                            let candidateId = user.id;
+
+                            const { data: profile } = await supabase
+                                .from('students')
+                                .select('id')
+                                .eq('email', user.email.toLowerCase())
+                                .maybeSingle();
+
+                            if (profile) {
+                                candidateId = profile.id;
+                            }
+
+                            // 2. Record Attempt
+                            const startTime = new Date();
+                            const durationSec = (activeExam.duration_minutes || 60) * 60;
+                            const endTime = new Date(startTime.getTime() + (durationSec * 1000));
+
+                            await supabase.from('exam_attempts').insert({
+                                student_id: candidateId,
+                                exam_id: activeExam.id,
+                                start_time: startTime.toISOString(),
+                                end_time: endTime.toISOString(),
+                                session_id: sessionInfo.session,
+                                term_id: sessionInfo.term,
+                                status: 'started'
+                            });
+
+                            navigate('/portal/candidate/exam', {
+                                state: { examConfig: activeExam, preloadedQuestions, sessionInfo }
+                            });
+                        }}
                         disabled={!activeExam || !preloadedQuestions}
                     >
                         {preloadedQuestions ? 'Start now' : 'Loading exam paper...'}

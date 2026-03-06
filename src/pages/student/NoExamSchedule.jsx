@@ -77,7 +77,11 @@ const NoExamSchedule = () => {
                                     .eq('term_id', curTerm);
 
                                 const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
-                                const availableExam = activeConfigs.find(c => !takenKeys.has(`${c.subject_id}_${c.question_type}`));
+                                const availableExam = activeConfigs.find(c => {
+                                    const notTaken = !takenKeys.has(`${c.subject_id}_${c.question_type}`);
+                                    const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
+                                    return notTaken && isTimeReady;
+                                });
 
                                 if (availableExam) {
                                     navigate('/portal/student/active-exam');

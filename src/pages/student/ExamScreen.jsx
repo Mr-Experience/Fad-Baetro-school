@@ -99,7 +99,7 @@ const ExamScreen = () => {
                         return;
                     }
 
-                    // Find available Exam by checking current term results
+                    // Find available Exam by checking current term results & visibility time
                     const { data: results } = await supabase
                         .from('exam_results')
                         .select('subject_id, question_type')
@@ -108,9 +108,21 @@ const ExamScreen = () => {
                         .eq('term_id', curTerm);
 
                     const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
-                    cfg = activeConfigs.find(c => !takenKeys.has(`${c.subject_id}_${c.question_type}`));
+                    cfg = activeConfigs.find(c => {
+                        const notTaken = !takenKeys.has(`${c.subject_id}_${c.question_type}`);
+                        const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
+                        return notTaken && isTimeReady;
+                    });
 
                     if (!cfg) {
+                        setLoading(false);
+                        navigate('/portal/student/no-exam');
+                        return;
+                    }
+                } else {
+                    // If cfg passed from state, still check visibility time for security
+                    const isTimeReady = !cfg.visible_at || new Date(cfg.visible_at) <= new Date();
+                    if (!isTimeReady) {
                         setLoading(false);
                         navigate('/portal/student/no-exam');
                         return;
@@ -126,7 +138,9 @@ const ExamScreen = () => {
                         .select('*')
                         .eq('class_id', std.class_id)
                         .eq('subject_id', cfg.subject_id)
-                        .eq('question_type', cfg.question_type);
+                        .eq('question_type', cfg.question_type)
+                        .eq('session_id', curSession)
+                        .eq('term_id', curTerm);
 
                     if (qError) console.error("Questions fetch error:", qError);
                     if (!qData || qData.length === 0) {
@@ -198,10 +212,7 @@ const ExamScreen = () => {
             return;
         }
 
-        const interval = setInterval(() => {
-            setTimeLeft(prev => prev - 1);
-        }, 1000);
-
+        const interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         return () => clearInterval(interval);
     }, [timeLeft, isSubmitting]);
 
@@ -292,6 +303,7 @@ const ExamScreen = () => {
                 .from('exam_results')
                 .insert({
                     student_id: student.id,
+                    exam_id: activeConfig.id,
                     class_id: student.class_id,
                     subject_id: activeConfig.subject_id,
                     question_type: activeConfig.question_type,
@@ -299,7 +311,7 @@ const ExamScreen = () => {
                     correct_answers: correctCount,
                     score_percent: scorePercent,
                     answers_json: answers,
-                    completed_at: new Date().toISOString(),
+                    submitted_at: new Date().toISOString(),
                     session_id: sessionInfo.session,
                     term_id: sessionInfo.term,
                     class_name: className,
@@ -313,6 +325,13 @@ const ExamScreen = () => {
                     throw insertError;
                 }
             }
+
+            // Update Attempt status
+            await supabase
+                .from('exam_attempts')
+                .update({ status: 'completed' })
+                .eq('student_id', student.id)
+                .eq('exam_id', activeConfig.id);
 
             // Clear progress
             localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);

@@ -19,7 +19,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
             if (!session) {
                 authTimeout = setTimeout(() => {
                     setAuthStatus(false);
-                }, 2000); // Increased timeout for better tab syncing
+                }, 50); // Reduced delay to prevent loading hang
                 return;
             }
 
@@ -87,7 +87,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
 
                 // If no session, wait a bit and try again (tab sync race condition)
                 if (!session && !error) {
-                    await new Promise(resolve => setTimeout(resolve, 800));
+                    await new Promise(resolve => setTimeout(resolve, 50)); // reduced from 800ms
                     const secondCheck = await supabase.auth.getSession();
                     session = secondCheck.data.session;
                 }

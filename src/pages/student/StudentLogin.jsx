@@ -29,35 +29,69 @@ const StudentLogin = () => {
 
         if (data.user) {
             // 1. Verify existence in students table (STRICT ROLE CHECK)
-            const { data: student, error: studentError } = await supabase
+            const { data: student } = await supabase
                 .from('students')
-                .select('class_id')
+                .select('id, class_id')
                 .eq('email', email.toLowerCase())
                 .maybeSingle();
 
             if (!student) {
-                // If they are NOT a student, kick them out immediately
                 await supabase.auth.signOut();
                 setError('Unauthorized: This portal is for students only.');
                 setLoading(false);
                 return;
             }
 
-            if (student.class_id) {
-                // 2. Check if ANY exam is currently ACTIVE for this class
-                const { data: activeExams } = await supabase
-                    .from('student_active_exams')
-                    .select('*')
-                    .eq('class_id', student.class_id)
-                    .limit(1);
+            // 2. FETCH GLOBAL SESSION CONTEXT (Step 1)
+            const { data: settings } = await supabase
+                .from('system_settings')
+                .select('current_session, current_term')
+                .eq('id', 1)
+                .single();
 
-                if (activeExams && activeExams.length > 0) {
-                    navigate('/portal/student/active-exam');
-                    return;
+            const activeSession = settings?.current_session || '';
+            const activeTerm = settings?.current_term || '';
+
+            if (student.class_id) {
+                // 3. DETERMINE ACTIVE EXAM (Step 2)
+                const { data: activeConfigs } = await supabase
+                    .from('exam_configs')
+                    .select('id, subject_id, question_type, visible_at')
+                    .eq('class_id', student.class_id)
+                    .eq('session_id', activeSession)
+                    .eq('term_id', activeTerm)
+                    .eq('is_active', true);
+
+                if (activeConfigs && activeConfigs.length > 0) {
+                    // 4. CHECK IF STUDENT ALREADY TOOK EXAM (Step 3 & 11)
+                    const { data: results } = await supabase
+                        .from('exam_results')
+                        .select('exam_id, subject_id, question_type')
+                        .eq('student_id', student.id)
+                        .eq('session_id', activeSession)
+                        .eq('term_id', activeTerm);
+
+                    const takenExamIds = new Set(results?.map(r => r.exam_id) || []);
+                    const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
+
+                    const availableExams = activeConfigs.filter(c => {
+                        const notTaken = !takenExamIds.has(c.id) && !takenKeys.has(`${c.subject_id}_${c.question_type}`);
+                        const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
+                        return notTaken && isTimeReady;
+                    });
+
+                    if (availableExams.length > 0) {
+                        navigate('/portal/student/active-exam');
+                        return;
+                    } else if (activeConfigs.length > 0) {
+                        // If all active exams for this class are taken, REDIRECT TO SUBMITTED SCREEN (Step 11)
+                        navigate('/portal/student/submitted', { replace: true });
+                        return;
+                    }
                 }
             }
 
-            // Default to no-exam if nothing is active
+            // Default to no-exam if nothing configured at all
             navigate('/portal/student/no-exam');
         }
     };

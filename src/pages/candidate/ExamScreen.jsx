@@ -82,9 +82,21 @@ const ExamScreen = () => {
                         .eq('question_type', 'candidate');
 
                     const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
-                    cfg = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+                    cfg = activeConfigs.find(c => {
+                        const notTaken = !takenSubjects.has(c.subject_id);
+                        const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
+                        return notTaken && isTimeReady;
+                    });
 
                     if (!cfg) {
+                        setLoading(false);
+                        navigate('/portal/candidate/no-exam');
+                        return;
+                    }
+                } else {
+                    // Check time even if passed from state
+                    const isTimeReady = !cfg.visible_at || new Date(cfg.visible_at) <= new Date();
+                    if (!isTimeReady) {
                         setLoading(false);
                         navigate('/portal/candidate/no-exam');
                         return;
@@ -100,7 +112,9 @@ const ExamScreen = () => {
                         .select('*')
                         .eq('class_id', cfg.class_id)
                         .eq('subject_id', cfg.subject_id)
-                        .eq('question_type', 'candidate');
+                        .eq('question_type', 'candidate')
+                        .eq('session_id', curSession)
+                        .eq('term_id', curTerm);
 
                     if (!qData || qData.length === 0) {
                         alert("No questions found for this exam. Contact admin.");
@@ -174,6 +188,31 @@ const ExamScreen = () => {
         return () => clearInterval(interval);
     }, [timeLeft, isSubmitting]);
 
+    // Admin-Sync Check (Candidate)
+    useEffect(() => {
+        if (!candidate?.id || !activeConfig?.id || isSubmitting) return;
+
+        const checkStatus = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('exam_configs')
+                    .select('is_active')
+                    .eq('id', activeConfig.id)
+                    .maybeSingle();
+
+                if (!error && (data === null || data.is_active === false)) {
+                    console.log("Exam deactivated, redirecting...");
+                    navigate('/portal/candidate/no-exam');
+                }
+            } catch (err) {
+                console.warn("Status check failed.");
+            }
+        };
+
+        const interval = setInterval(checkStatus, 5000);
+        return () => clearInterval(interval);
+    }, [candidate, activeConfig, isSubmitting, navigate]);
+
     const handleAnswer = (option) => {
         const q = questions[currentQuestionIdx];
         const newAnswers = { ...answers, [q.id]: option };
@@ -232,6 +271,7 @@ const ExamScreen = () => {
                 .from('exam_results')
                 .insert({
                     student_id: candidate.id,
+                    exam_id: activeConfig.id,
                     class_id: activeConfig.class_id,
                     subject_id: activeConfig.subject_id,
                     question_type: 'candidate',
@@ -239,7 +279,7 @@ const ExamScreen = () => {
                     correct_answers: correctCount,
                     score_percent: scorePercent,
                     answers_json: answers,
-                    completed_at: new Date().toISOString(),
+                    submitted_at: new Date().toISOString(),
                     session_id: sessionInfo.session,
                     term_id: sessionInfo.term,
                     class_name: className,
@@ -253,6 +293,13 @@ const ExamScreen = () => {
                     throw insertError;
                 }
             }
+
+            // Update local attempt status
+            await supabase
+                .from('exam_attempts')
+                .update({ status: 'completed' })
+                .eq('student_id', candidate.id)
+                .eq('exam_id', activeConfig.id);
 
             // Clear progress
             localStorage.removeItem(`exam_prog_cand_${candidate.id}_${activeConfig.id}`);

@@ -61,10 +61,10 @@ function App() {
 
                 {/* Admin Pages */}
                 <Route path="/portal/admin/login" element={<AdminLogin />} />
-                <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
 
                 {/* Protected Admin Routes */}
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
+                    <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
 
                     <Route element={<AdminLayout />}>
                         <Route path="/portal/admin" element={<AdminDashboard />} />

@@ -21,7 +21,17 @@ const AdminQuestionEditor = () => {
     const [activeSession, setActiveSession] = useState('');
     const [activeTerm, setActiveTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [configSaving, setConfigSaving] = useState(false);
+
+    const [configForm, setConfigForm] = useState({
+        is_active: false,
+        visible_at: '',
+        duration_minutes: 60,
+        question_count: 0,
+        selection_type: 'random'
+    });
 
     // Profile state for header
     const [userName, setUserName] = useState('');
@@ -46,7 +56,7 @@ const AdminQuestionEditor = () => {
                 // 1. SILENT AUTH CHECK
                 let { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
-                    await new Promise(r => setTimeout(r, 800));
+                    await new Promise(r => setTimeout(r, 50)); // reduced from 800ms
                     const retry = await supabase.auth.getSession();
                     session = retry.data.session;
                 }
@@ -97,8 +107,31 @@ const AdminQuestionEditor = () => {
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
                         .eq('question_type', questionType)
+                        .eq('session_id', settings.current_session)
+                        .eq('term_id', settings.current_term)
                         .order('created_at', { ascending: true });
                     if (data) setQuestions(data);
+
+                    // 4. Fetch EXAM CONFIG
+                    const { data: config } = await supabase
+                        .from('exam_configs')
+                        .select('*')
+                        .eq('class_id', classId)
+                        .eq('subject_id', subjectId)
+                        .eq('question_type', questionType)
+                        .eq('session_id', settings.current_session)
+                        .eq('term_id', settings.current_term)
+                        .maybeSingle();
+
+                    if (config) {
+                        setConfigForm({
+                            is_active: config.is_active,
+                            visible_at: config.visible_at ? new Date(config.visible_at).toISOString().slice(0, 16) : '',
+                            duration_minutes: config.duration_minutes || 60,
+                            question_count: config.question_count || 0,
+                            selection_type: config.selection_type || 'random'
+                        });
+                    }
                 }
             } catch (err) {
                 console.error("Initiation error:", err);
@@ -194,6 +227,38 @@ const AdminQuestionEditor = () => {
         }
     };
 
+    const handleSaveConfig = async (e) => {
+        e.preventDefault();
+        setConfigSaving(true);
+        try {
+            const payload = {
+                class_id: classId,
+                subject_id: subjectId,
+                question_type: questionType,
+                session_id: activeSession,
+                term_id: activeTerm,
+                is_active: configForm.is_active,
+                visible_at: configForm.visible_at || null,
+                duration_minutes: parseInt(configForm.duration_minutes),
+                question_count: parseInt(configForm.question_count),
+                selection_type: configForm.selection_type,
+                updated_at: new Date().toISOString()
+            };
+
+            const { error } = await supabase
+                .from('exam_configs')
+                .upsert(payload, { onConflict: 'class_id,subject_id,question_type,session_id,term_id' });
+
+            if (error) throw error;
+            setIsConfigModalOpen(false);
+            alert("Settings updated successfully!");
+        } catch (err) {
+            alert("Error saving settings: " + err.message);
+        } finally {
+            setConfigSaving(false);
+        }
+    };
+
     const handleExit = () => {
         if (window.opener || window.history.length === 1) {
             window.close();
@@ -220,7 +285,7 @@ const AdminQuestionEditor = () => {
                         </div>
 
                         <div className="qe-header-actions">
-                            <button className="qe-settings-btn">
+                            <button className="qe-settings-btn" onClick={() => setIsConfigModalOpen(true)} title="Exam Configuration">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
                                     <circle cx="12" cy="12" r="3" />
@@ -334,6 +399,74 @@ const AdminQuestionEditor = () => {
                                     </button>
                                     <button type="submit" className="qe-btn-save" disabled={saving}>
                                         {saving ? 'Saving...' : editingId ? 'Update' : 'Save'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Config Modal */}
+                {isConfigModalOpen && (
+                    <div className="qe-modal-overlay" onClick={() => setIsConfigModalOpen(false)}>
+                        <div className="qe-modal config" onClick={e => e.stopPropagation()}>
+                            <div className="qe-modal-header">
+                                <h2 className="qe-modal-title">Exam Settings - {subjectName}</h2>
+                                <p className="qe-modal-subtitle">Configure access controls for this {questionType}.</p>
+                            </div>
+                            <form className="qe-form" onSubmit={handleSaveConfig}>
+                                <div className="qe-config-grid">
+                                    <div className="qe-form-group">
+                                        <label className="qe-label">Active (Live Status)</label>
+                                        <div className="qe-toggle-wrap" onClick={() => setConfigForm({ ...configForm, is_active: !configForm.is_active })}>
+                                            <div className={`qe-toggle-track ${configForm.is_active ? 'active' : ''}`}>
+                                                <div className="qe-toggle-thumb"></div>
+                                            </div>
+                                            <span className="qe-toggle-label">{configForm.is_active ? 'LIVE & ACCESSIBLE' : 'NOT LIVE'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="qe-form-group">
+                                        <label className="qe-label">When will it go live?</label>
+                                        <input
+                                            type="datetime-local"
+                                            className="qe-input"
+                                            value={configForm.visible_at}
+                                            onChange={e => setConfigForm({ ...configForm, visible_at: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="qe-form-group">
+                                        <label className="qe-label">Duration (Minutes)</label>
+                                        <input
+                                            type="number"
+                                            className="qe-input"
+                                            min="1"
+                                            required
+                                            value={configForm.duration_minutes}
+                                            onChange={e => setConfigForm({ ...configForm, duration_minutes: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="qe-form-group">
+                                        <label className="qe-label">Questions to show (0 = All)</label>
+                                        <input
+                                            type="number"
+                                            className="qe-input"
+                                            min="0"
+                                            required
+                                            value={configForm.question_count}
+                                            onChange={e => setConfigForm({ ...configForm, question_count: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="qe-modal-footer">
+                                    <button type="button" className="qe-btn-cancel" onClick={() => setIsConfigModalOpen(false)}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="qe-btn-save" disabled={configSaving}>
+                                        {configSaving ? 'Updating...' : 'Apply Config'}
                                     </button>
                                 </div>
                             </form>

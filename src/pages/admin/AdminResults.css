@@ -40,6 +40,18 @@
     margin: 0;
 }
 
+.aq-session-badge {
+    display: inline-block;
+    background: #FDF2F8;
+    color: #9D245A;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px !important;
+    font-weight: 700;
+    margin-top: 12px !important;
+    border: 1px solid rgba(157, 36, 90, 0.1);
+}
+
 /* Filters */
 .ar-filters {
     display: flex;
@@ -48,7 +60,7 @@
 
 .ar-select-wrapper {
     position: relative;
-    min-width: 160px;
+    width: 220px;
 }
 
 .ar-select {
@@ -87,13 +99,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 100px 0;
+    padding: 140px 0;
+    animation: arFadeIn 0.4s ease-out;
 }
 
 .ar-empty-text {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 500;
-    color: #6B7280;
+    color: #9CA3AF;
     text-align: center;
     max-width: 300px;
 }
@@ -103,20 +116,42 @@
     display: flex;
     flex-direction: column;
     gap: 32px;
+    animation: arFadeIn 0.5s ease-out;
+}
+
+@keyframes arFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .ar-subject-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 0;
+    padding: 20px 28px;
+    border: 1.2px solid #E5E7EB;
+    border-radius: 20px;
+    background-color: transparent;
+    transition: all 0.3s ease;
+}
+
+.ar-subject-row:hover {
+    border-color: #FDF2F8;
+    box-shadow: 0 10px 25px -5px rgba(157, 36, 90, 0.05);
 }
 
 .ar-subject-name {
-    font-size: 22px;
-    font-weight: 600;
-    color: #111827;
-    width: 320px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6B7280;
+    width: 300px;
 }
 
 .ar-box-group {
@@ -125,8 +160,8 @@
 }
 
 .aq-box {
-    width: 160px;
-    height: 90px;
+    width: 200px;
+    height: 100px;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;

@@ -29,19 +29,63 @@ const CandidateLogin = () => {
         }
 
         if (data.user) {
-            // Check if ANY candidate exam is currently ACTIVE
-            const { data: activeExams } = await supabase
+            // 1. Fetch System Context
+            const { data: settings } = await supabase
+                .from('system_settings')
+                .select('current_session, current_term')
+                .eq('id', 1)
+                .single();
+
+            const curSession = settings?.current_session || '';
+            const curTerm = settings?.current_term || '';
+
+            // 2. Fetch candidate identity (if in students table)
+            const { data: candidate } = await supabase
+                .from('students')
+                .select('id, class_id')
+                .eq('email', email.toLowerCase())
+                .maybeSingle();
+
+            // 3. Check for ACTIVE candidate exams
+            const { data: activeConfigs } = await supabase
                 .from('exam_configs')
-                .select('id')
+                .select('id, subject_id, visible_at')
                 .eq('question_type', 'candidate')
                 .eq('is_active', true)
-                .limit(1);
+                .eq('session_id', curSession)
+                .eq('term_id', curTerm);
 
-            if (activeExams && activeExams.length > 0) {
-                navigate('/portal/candidate/active-exam');
-            } else {
-                navigate('/portal/candidate/no-exam');
+            if (activeConfigs && activeConfigs.length > 0) {
+                // Check if already taken (Step 3 & 11)
+                const { data: results } = await supabase
+                    .from('exam_results')
+                    .select('exam_id, subject_id')
+                    .eq('student_id', candidate?.id || data.user.id)
+                    .eq('session_id', curSession)
+                    .eq('term_id', curTerm)
+                    .eq('question_type', 'candidate');
+
+                const takenExamIds = new Set(results?.map(r => r.exam_id) || []);
+                const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
+
+                const availableExams = activeConfigs.filter(c => {
+                    const notTaken = !takenExamIds.has(c.id) && !takenSubjects.has(c.subject_id);
+                    const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
+                    return notTaken && isTimeReady;
+                });
+
+                if (availableExams.length > 0) {
+                    navigate('/portal/candidate/active-exam');
+                    return;
+                } else if (activeConfigs.length > 0) {
+                    // Redirect to Submitted Screen if they have completed (Step 11)
+                    navigate('/portal/candidate/submitted', { replace: true });
+                    return;
+                }
             }
+
+            // Default to no-exam
+            navigate('/portal/candidate/no-exam');
         }
     };
 

@@ -5,7 +5,7 @@ import './AdminQuestions.css';
 
 const AdminQuestions = () => {
     const navigate = useNavigate();
-    const { classes } = useOutletContext();
+    const { classes, activeSession, activeTerm } = useOutletContext();
 
     const [subjects, setSubjects] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
@@ -40,17 +40,21 @@ const AdminQuestions = () => {
             if (!selectedClassId || subjects.length === 0) return;
             setLoading(true);
             try {
-                // Fetch counts per category
+                // 2. Fetch counts per category (Filtered by Session/Term)
                 const { data: qData } = await supabase
                     .from('questions')
                     .select('subject_id, question_type')
-                    .eq('class_id', selectedClassId);
+                    .eq('class_id', selectedClassId)
+                    .eq('session_id', activeSession)
+                    .eq('term_id', activeTerm);
 
-                // Fetch activation status
+                // 3. Fetch activation status
                 const { data: cData } = await supabase
                     .from('exam_configs')
                     .select('subject_id, question_type, is_active')
-                    .eq('class_id', selectedClassId);
+                    .eq('class_id', selectedClassId)
+                    .eq('session_id', activeSession)
+                    .eq('term_id', activeTerm);
 
                 const relevantSubjects = selectedSubjectId
                     ? subjects.filter(s => s.id === selectedSubjectId)
@@ -88,8 +92,8 @@ const AdminQuestions = () => {
     }, [selectedClassId, selectedSubjectId, subjects]);
 
     const handleOpenEditor = (subject, type) => {
-        const className = classes.find(c => c.id === selectedClassId)?.name || 'Class';
-        const url = `/portal/admin/questions/editor?classId=${selectedClassId}&subjectId=${subject.id}&className=${encodeURIComponent(className)}&subjectName=${encodeURIComponent(subject.name)}&type=${type}`;
+        const className = classes.find(c => c.id === selectedClassId)?.class_name || 'Class';
+        const url = `/portal/admin/questions/editor?classId=${selectedClassId}&subjectId=${subject.id}&className=${encodeURIComponent(className)}&subjectName=${encodeURIComponent(subject.name || subject.subject_name)}&type=${type}`;
         window.open(url, '_blank');
     };
 
@@ -110,7 +114,7 @@ const AdminQuestions = () => {
                                 onChange={e => setSelectedClassId(e.target.value)}
                             >
                                 <option value="">Select Class</option>
-                                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {classes.map(c => <option key={c.id} value={c.id}>{c.class_name}</option>)}
                             </select>
                             <div className="aq-select-icon">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -150,17 +154,17 @@ const AdminQuestions = () => {
                                     <h2 className="aq-subject-name">{sub.name}</h2>
                                     <div className="aq-box-group">
                                         <div className="aq-box test" onClick={() => handleOpenEditor(sub, 'test')}>
-                                            <span className="aq-box-label">Test Question</span>
+                                            <span className="aq-box-label">Test</span>
                                             <span className="aq-box-count">{sub.test.count}</span>
                                             {sub.test.isLive && <div className="aq-live-indicator" title="Live"></div>}
                                         </div>
                                         <div className="aq-box exam" onClick={() => handleOpenEditor(sub, 'exam')}>
-                                            <span className="aq-box-label">Exam Question</span>
+                                            <span className="aq-box-label">Exam</span>
                                             <span className="aq-box-count">{sub.exam.count}</span>
                                             {sub.exam.isLive && <div className="aq-live-indicator" title="Live"></div>}
                                         </div>
                                         <div className="aq-box candidate" onClick={() => handleOpenEditor(sub, 'candidate')}>
-                                            <span className="aq-box-label">Candidate Question</span>
+                                            <span className="aq-box-label">Candidate</span>
                                             <span className="aq-box-count">{sub.candidate.count}</span>
                                             {sub.candidate.isLive && <div className="aq-live-indicator" title="Live"></div>}
                                         </div>

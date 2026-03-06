@@ -64,7 +64,11 @@ const NoExamSchedule = () => {
                                 .eq('question_type', 'candidate');
 
                             const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
-                            const availableExam = activeConfigs.find(c => !takenSubjects.has(c.subject_id));
+                            const availableExam = activeConfigs.find(c => {
+                                const notTaken = !takenSubjects.has(c.subject_id);
+                                const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
+                                return notTaken && isTimeReady;
+                            });
 
                             if (availableExam) {
                                 navigate('/portal/candidate/active-exam');
