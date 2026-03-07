@@ -5,7 +5,7 @@
 
 .welcome-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(clamp(320px, 45vw, 600px), 1fr));
+    grid-template-columns: 1.1fr 0.9fr;
     gap: clamp(40px, 8vw, 100px);
     align-items: center;
     text-align: left;
@@ -73,5 +73,15 @@
 @media (max-width: 992px) {
     .welcome-container {
         grid-template-columns: 1fr;
+        gap: 60px;
+    }
+
+    .welcome-image-container {
+        max-width: 100%;
+        order: 2;
+    }
+
+    .welcome-content {
+        order: 1;
     }
 }

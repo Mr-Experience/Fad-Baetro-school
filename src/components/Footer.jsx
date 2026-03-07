@@ -52,16 +52,7 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Column 4: Portals */}
-                    <div className="footer-col">
-                        <h3 className="footer-heading">PORTALS</h3>
-                        <ul className="footer-links">
-                            <li><Link to="/portal/student">Student Portal</Link></li>
-                            <li><Link to="/portal/candidate">Candidate Portal</Link></li>
-                            <li><Link to="/portal/admin/login">Admin Portal</Link></li>
-                            <li><Link to="/portal/superadmin">Super Admin</Link></li>
-                        </ul>
-                    </div>
+
 
                     {/* Column 4: Contact Info */}
                     <div className="footer-col contact-col">
