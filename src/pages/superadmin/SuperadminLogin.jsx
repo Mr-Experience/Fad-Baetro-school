@@ -16,7 +16,9 @@ const SuperadminLogin = () => {
     React.useEffect(() => {
         const fetchSettings = async () => {
             const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
-            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
+            if (data?.school_logo_url && data.school_logo_url.startsWith('http') && !data.school_logo_url.includes('YOUR_DIRECT_PUBLIC')) {
+                setDbLogo(data.school_logo_url);
+            }
         };
         fetchSettings();
     }, []);

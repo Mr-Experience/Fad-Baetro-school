@@ -10,7 +10,9 @@ const InquirySection = () => {
     React.useEffect(() => {
         const fetchSettings = async () => {
             const { data } = await supabase.from('system_settings').select('inquiry_bg_url').eq('id', 1).maybeSingle();
-            if (data?.inquiry_bg_url) setBgImage(data.inquiry_bg_url);
+            if (data?.inquiry_bg_url && data.inquiry_bg_url.startsWith('http') && !data.inquiry_bg_url.includes('YOUR_DIRECT_PUBLIC')) {
+                setBgImage(data.inquiry_bg_url);
+            }
         };
         fetchSettings();
     }, []);
