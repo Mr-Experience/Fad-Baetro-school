@@ -16,6 +16,7 @@ import AdminStudents from './pages/admin/AdminStudents';
 import AdminQuestions from './pages/admin/AdminQuestions';
 import AdminQuestionEditor from './pages/admin/AdminQuestionEditor';
 import AdminResults from './pages/admin/AdminResults';
+import AdminResultDetail from './pages/admin/AdminResultDetail';
 import AdminEvents from './pages/admin/AdminEvents';
 import AdminInfo from './pages/admin/AdminInfo';
 import AdminProfile from './pages/admin/AdminProfile';
@@ -68,6 +69,7 @@ function App() {
                 {/* Protected Admin Routes */}
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
                     <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
+                    <Route path="/portal/admin/results/detail" element={<AdminResultDetail />} />
 
                     <Route element={<AdminLayout />}>
                         <Route path="/portal/admin" element={<AdminDashboard />} />

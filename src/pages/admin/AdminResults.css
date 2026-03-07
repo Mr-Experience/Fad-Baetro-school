@@ -174,8 +174,59 @@
 
 .aq-box:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 15px -3px rgba(157, 36, 90, 0.1);
-    border-color: rgba(157, 36, 90, 0.2);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.08);
+}
+
+.aq-box.has-results {
+    border: 2px solid #9D245A;
+    position: relative;
+    overflow: hidden;
+}
+
+.aq-box.test.has-results {
+    border-color: #9D245A;
+    background-color: #FFF1F7;
+}
+
+.aq-box.exam.has-results {
+    border-color: #2563EB;
+    background-color: #EFF6FF;
+}
+
+.aq-box.candidate.has-results {
+    border-color: #7C3AED;
+    background-color: #F5F3FF;
+}
+
+.aq-saved-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: white;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.aq-box.test .aq-saved-badge {
+    color: #9D245A;
+    border: 1px solid #9D245A;
+}
+
+.aq-box.exam .aq-saved-badge {
+    color: #2563EB;
+    border: 1px solid #2563EB;
+}
+
+.aq-box.candidate .aq-saved-badge {
+    color: #7C3AED;
+    border: 1px solid #7C3AED;
 }
 
 .aq-box.test {

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { CheckCircle } from 'lucide-react';
 import './AdminResults.css';
 
 const AdminResults = () => {
@@ -9,6 +9,7 @@ const AdminResults = () => {
     const [selectedClassId, setSelectedClassId] = useState('');
     const [selectedSubjectId, setSelectedSubjectId] = useState('');
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     // Results summary state
     const [resultsSummary, setResultsSummary] = useState([]);
@@ -82,40 +83,8 @@ const AdminResults = () => {
         fetchSummary();
     }, [selectedClassId, selectedSubjectId, subjects]);
 
-    const handleViewDetails = async (subject, type) => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('exam_results')
-                .select(`
-                    id, 
-                    score_percent, 
-                    correct_answers, 
-                    total_questions, 
-                    completed_at,
-                    submitted_at,
-                    profiles (full_name, email)
-                `)
-                .eq('class_id', selectedClassId)
-                .eq('subject_id', subject.id)
-                .eq('question_type', type)
-                .eq('session_id', activeSession)
-                .eq('term_id', activeTerm)
-                .order('score_percent', { ascending: false });
-
-            if (!error && data) {
-                setModalData({
-                    title: `${subject.name} - ${type.toUpperCase()} Results`,
-                    type: type,
-                    results: data
-                });
-                setShowModal(true);
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
+    const handleViewDetails = (subject, type) => {
+        navigate(`/portal/admin/results/detail?classId=${selectedClassId}&subjectId=${subject.id}&className=${classes.find(c => c.id === selectedClassId)?.class_name}&subjectName=${subject.name}&type=${type}`);
     };
 
     return (
@@ -174,17 +143,20 @@ const AdminResults = () => {
                                 <div key={sub.id} className="ar-subject-row">
                                     <h2 className="ar-subject-name">{sub.name}</h2>
                                     <div className="ar-box-group">
-                                        <div className="aq-box test" onClick={() => handleViewDetails(sub, 'test')}>
+                                        <div className={`aq-box test ${sub.testCount > 0 ? 'has-results' : ''}`} onClick={() => handleViewDetails(sub, 'test')}>
                                             <span className="aq-box-label">Test</span>
                                             <span className="aq-box-count">{sub.testCount}</span>
+                                            {sub.testCount > 0 && <span className="aq-saved-badge"><CheckCircle size={10} /> Saved</span>}
                                         </div>
-                                        <div className="aq-box exam" onClick={() => handleViewDetails(sub, 'exam')}>
+                                        <div className={`aq-box exam ${sub.examCount > 0 ? 'has-results' : ''}`} onClick={() => handleViewDetails(sub, 'exam')}>
                                             <span className="aq-box-label">Exam</span>
                                             <span className="aq-box-count">{sub.examCount}</span>
+                                            {sub.examCount > 0 && <span className="aq-saved-badge"><CheckCircle size={10} /> Saved</span>}
                                         </div>
-                                        <div className="aq-box candidate" onClick={() => handleViewDetails(sub, 'candidate')}>
+                                        <div className={`aq-box candidate ${sub.candidateCount > 0 ? 'has-results' : ''}`} onClick={() => handleViewDetails(sub, 'candidate')}>
                                             <span className="aq-box-label">Candidate</span>
                                             <span className="aq-box-count">{sub.candidateCount}</span>
+                                            {sub.candidateCount > 0 && <span className="aq-saved-badge"><CheckCircle size={10} /> Saved</span>}
                                         </div>
                                     </div>
                                 </div>
