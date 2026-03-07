@@ -6,18 +6,6 @@ import logoFallback from '../assets/logo.jpg';
 import './Footer.css';
 
 const Footer = () => {
-    const [dbLogo, setDbLogo] = React.useState(null);
-
-    React.useEffect(() => {
-        const fetchSettings = async () => {
-            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
-            if (data?.school_logo_url && data.school_logo_url.startsWith('http') && !data.school_logo_url.includes('YOUR_DIRECT_PUBLIC')) {
-                setDbLogo(data.school_logo_url);
-            }
-        };
-        fetchSettings();
-    }, []);
-
     return (
         <footer className="footer-main-group">
             <div className="footer-container">
@@ -26,8 +14,7 @@ const Footer = () => {
                     <div className="footer-col school-branding-col">
                         <div className="footer-logo-group">
                             <img
-                                src={dbLogo || logoFallback}
-                                onError={(e) => { e.target.src = logoFallback; }}
+                                src={logoFallback}
                                 alt="Fad Maestro Academy"
                                 className="footer-logo-img"
                             />

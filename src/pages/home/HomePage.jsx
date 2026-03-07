@@ -19,10 +19,8 @@ const HomePage = () => {
             <Hero />
             <NoticeBanner />
             <AdmissionSection />
-            <div className="home-side-sections-wrapper">
-                <WelcomeSection />
-                <AcademicsSection />
-            </div>
+            <WelcomeSection />
+            <AcademicsSection />
             <NewsSection />
             <PortalQuickAccess />
             <TestimonialsSection />

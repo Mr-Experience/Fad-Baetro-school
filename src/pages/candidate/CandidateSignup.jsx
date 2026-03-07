@@ -10,15 +10,6 @@ const CandidateSignup = () => {
     const [error, setError] = useState('');
     const [classes, setClasses] = useState([]);
     const [success, setSuccess] = useState(false);
-    const [dbLogo, setDbLogo] = useState(null);
-
-    useEffect(() => {
-        const fetchSettings = async () => {
-            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
-            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
-        };
-        fetchSettings();
-    }, []);
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -142,8 +133,7 @@ const CandidateSignup = () => {
         <div className="cs-container">
             <div className="cs-header-bar">
                 <img
-                    src={dbLogo || logoFallback}
-                    onError={(e) => { e.target.src = logoFallback; }}
+                    src={logoFallback}
                     alt="Logo"
                     className="cs-logo"
                 />

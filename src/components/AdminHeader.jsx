@@ -5,25 +5,12 @@ import logoFallback from '../assets/logo.jpg';
 import './AdminHeader.css';
 
 const AdminHeader = ({ profileLoading, userName, userInitial, avatarUrl, activeSession, activeTerm }) => {
-    const [dbLogo, setDbLogo] = React.useState(null);
-
-    React.useEffect(() => {
-        const fetchSettings = async () => {
-            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle(); // Corrected line
-            if (data?.school_logo_url && data.school_logo_url.startsWith('http') && !data.school_logo_url.includes('YOUR_DIRECT_PUBLIC')) {
-                setDbLogo(data.school_logo_url);
-            }
-        };
-        fetchSettings();
-    }, []);
-
     return (
         <header className="ad-header">
             <div className="ad-header-left">
                 <Link to="/portal/admin">
                     <img
-                        src={dbLogo || logoFallback}
-                        onError={(e) => { e.target.src = logoFallback; }}
+                        src={logoFallback}
                         alt="Logo"
                         className="ad-header-logo"
                     />

@@ -11,17 +11,6 @@ const SuperadminLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const [dbLogo, setDbLogo] = useState(null);
-
-    React.useEffect(() => {
-        const fetchSettings = async () => {
-            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
-            if (data?.school_logo_url && data.school_logo_url.startsWith('http') && !data.school_logo_url.includes('YOUR_DIRECT_PUBLIC')) {
-                setDbLogo(data.school_logo_url);
-            }
-        };
-        fetchSettings();
-    }, []);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -77,8 +66,7 @@ const SuperadminLogin = () => {
             <header className="portal-header-bar sal-header">
                 <div className="sal-header-left">
                     <img
-                        src={dbLogo || logoFallback}
-                        onError={(e) => { e.target.src = logoFallback; }}
+                        src={logoFallback}
                         alt="Logo"
                         className="portal-logo-img"
                     />

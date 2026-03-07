@@ -15,17 +15,6 @@ const AdminLogin = () => {
     const [checkingSession, setCheckingSession] = useState(true);
     const navigate = useNavigate();
     const location = useLocation();
-    const [dbLogo, setDbLogo] = useState(null);
-
-    useEffect(() => {
-        const fetchSettings = async () => {
-            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
-            if (data?.school_logo_url && data.school_logo_url.startsWith('http') && !data.school_logo_url.includes('YOUR_DIRECT_PUBLIC')) {
-                setDbLogo(data.school_logo_url);
-            }
-        };
-        fetchSettings();
-    }, []);
 
     const navigateTo = '/portal/admin';
 
@@ -144,8 +133,7 @@ const AdminLogin = () => {
             <div className="portal-login-container">
                 <header className="portal-header-bar">
                     <img
-                        src={dbLogo || logoFallback}
-                        onError={(e) => { e.target.src = logoFallback; }}
+                        src={logoFallback}
                         alt="Logo"
                         className="portal-logo-img"
                     />

@@ -9,18 +9,7 @@ const Header = () => {
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isQuickLinksOpen, setIsQuickLinksOpen] = useState(false);
     const [mobileDropdown, setMobileDropdown] = useState(null);
-    const [dbLogo, setDbLogo] = useState(null);
     const location = useLocation();
-
-    React.useEffect(() => {
-        const fetchSettings = async () => {
-            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
-            if (data?.school_logo_url && data.school_logo_url.startsWith('http') && !data.school_logo_url.includes('YOUR_DIRECT')) {
-                setDbLogo(data.school_logo_url);
-            }
-        };
-        fetchSettings();
-    }, []);
 
     const toggleDropdown = (menu) => {
         setActiveDropdown(activeDropdown === menu ? null : menu);
@@ -88,8 +77,7 @@ const Header = () => {
                         <Link to="/" className="school-logo-group">
                             <div className="school-logo">
                                 <img
-                                    src={dbLogo || logoFallback}
-                                    onError={(e) => { e.target.src = logoFallback; }}
+                                    src={logoFallback}
                                     alt="Fad Maestro Academy"
                                     className="logo-img"
                                 />

@@ -36,25 +36,3 @@
     color: #94a3b8;
     margin-bottom: 2.5rem;
 }
-
-/* Home Page Specific Sections */
-.home-side-sections-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    width: 100%;
-}
-
-.home-side-sections-wrapper>* {
-    flex: 1;
-    min-width: 50%;
-}
-
-@media (max-width: 1024px) {
-    .home-side-sections-wrapper {
-        flex-direction: column;
-    }
-
-    .home-side-sections-wrapper>* {
-        min-width: 100%;
-    }
-}
