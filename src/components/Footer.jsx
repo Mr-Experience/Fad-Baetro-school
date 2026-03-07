@@ -61,6 +61,18 @@ const Footer = () => {
                         <ul className="footer-links">
                             <li><Link to="/process">Admission Process</Link></li>
                             <li><Link to="/frequently-asked-questions">FAQs</Link></li>
+                            <li><Link to="/signup">Apply for Admission</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Column 4: Portals */}
+                    <div className="footer-col">
+                        <h3 className="footer-heading">PORTALS</h3>
+                        <ul className="footer-links">
+                            <li><Link to="/portal/student">Student Portal</Link></li>
+                            <li><Link to="/portal/candidate">Candidate Portal</Link></li>
+                            <li><Link to="/portal/admin/login">Admin Portal</Link></li>
+                            <li><Link to="/portal/superadmin">Super Admin</Link></li>
                         </ul>
                     </div>
 

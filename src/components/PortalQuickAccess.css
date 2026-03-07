@@ -1,0 +1,107 @@
+.portal-access-header {
+    margin-bottom: clamp(40px, 6vw, 60px);
+}
+
+.portal-access-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+}
+
+.portal-card {
+    display: flex;
+    flex-direction: column;
+    padding: 40px 30px;
+    background: white;
+    border-radius: 24px;
+    border: 1.5px solid var(--gray-100);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.portal-card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    transition: all 0.3s ease;
+}
+
+.portal-card-info h3 {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--gray-900);
+    margin-bottom: 12px;
+}
+
+.portal-card-info p {
+    font-size: 14px;
+    color: var(--gray-500);
+    line-height: 1.6;
+}
+
+.portal-card:hover {
+    transform: translateY(-8px);
+    border-color: transparent;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* Color Themes */
+.card-pink .portal-card-icon {
+    background: #FFF0F6;
+    color: #D63384;
+}
+
+.card-pink:hover {
+    box-shadow: 0 20px 40px rgba(214, 51, 132, 0.12);
+}
+
+.card-blue .portal-card-icon {
+    background: #E7F5FF;
+    color: #228BE6;
+}
+
+.card-blue:hover {
+    box-shadow: 0 20px 40px rgba(34, 139, 230, 0.12);
+}
+
+.card-green .portal-card-icon {
+    background: #EBFBEE;
+    color: #40C057;
+}
+
+.card-green:hover {
+    box-shadow: 0 20px 40px rgba(64, 192, 87, 0.12);
+}
+
+.card-purple .portal-card-icon {
+    background: #F3F0FF;
+    color: #7950F2;
+}
+
+.card-purple:hover {
+    box-shadow: 0 20px 40px rgba(121, 80, 242, 0.12);
+}
+
+/* Decoration */
+.portal-card::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 80px;
+    height: 80px;
+    background: currentColor;
+    opacity: 0.03;
+    border-radius: 50%;
+    transition: all 0.4s ease;
+}
+
+.portal-card:hover::after {
+    transform: scale(2);
+}

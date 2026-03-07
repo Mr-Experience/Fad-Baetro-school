@@ -7,6 +7,7 @@ import WelcomeSection from '../../components/WelcomeSection';
 import AcademicsSection from '../../components/AcademicsSection';
 import NewsSection from '../../components/NewsSection';
 import TestimonialsSection from '../../components/TestimonialsSection';
+import PortalQuickAccess from '../../components/PortalQuickAccess';
 import InquirySection from '../../components/InquirySection';
 import Footer from '../../components/Footer';
 import './HomePage.css';
@@ -23,6 +24,7 @@ const HomePage = () => {
                 <AcademicsSection />
             </div>
             <NewsSection />
+            <PortalQuickAccess />
             <TestimonialsSection />
             <main className="home-content">
                 {/* Content will be added here */}
