@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../student/NoExamSchedule.css'; // Reusing header styles
 import './SuperadminLogin.css';
-import logo from '../../assets/logo.jpg';
 import { supabase } from '../../supabaseClient';
+import logoFallback from '../../assets/logo.jpg';
 
 const SuperadminLogin = () => {
     const [email, setEmail] = useState('');
@@ -11,6 +11,15 @@ const SuperadminLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const [dbLogo, setDbLogo] = useState(null);
+
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
+            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
+        };
+        fetchSettings();
+    }, []);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -65,7 +74,7 @@ const SuperadminLogin = () => {
             {/* Simple Header */}
             <header className="portal-header-bar sal-header">
                 <div className="sal-header-left">
-                    <img src={logo} alt="Logo" className="portal-logo-img" />
+                    <img src={dbLogo || logoFallback} alt="Logo" className="portal-logo-img" />
                     <h1 className="portal-school-name">Fad Mastro Academy</h1>
                 </div>
             </header>

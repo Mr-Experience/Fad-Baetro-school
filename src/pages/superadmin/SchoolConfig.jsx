@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import '../student/NoExamSchedule.css'; // Reusing some base header styles if needed
 import './SchoolConfig.css';
-import logo from '../../assets/logo.jpg';
+import logoFallback from '../../assets/logo.jpg';
 import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SchoolConfig = () => {
@@ -20,6 +20,7 @@ const SchoolConfig = () => {
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [dbLogo, setDbLogo] = useState(null);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -57,6 +58,7 @@ const SchoolConfig = () => {
                 setCurrentTerm(data.current_term);
                 setActiveSession(data.current_session);
                 setActiveTerm(data.current_term);
+                if (data.school_logo_url) setDbLogo(data.school_logo_url);
             }
         } catch (err) {
             console.error("Error fetching settings:", err);
@@ -101,7 +103,7 @@ const SchoolConfig = () => {
             {/* Exactly as per Image Header */}
             <header className="sc-header">
                 <div className="sc-header-left">
-                    <img src={logo} alt="Logo" className="portal-logo-img" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                    <img src={dbLogo || logoFallback} alt="Logo" className="portal-logo-img" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
                     <span className="sc-brand-name">Fad Mastro Academy</span>
                 </div>
 

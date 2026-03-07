@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../auth/PortalLogin.css';
-import logo from '../../assets/logo.jpg';
 import { supabase } from '../../supabaseClient';
+import logoFallback from '../../assets/logo.jpg';
 import LoadingOverlay from '../../components/LoadingOverlay';
 
 const AdminLogin = () => {
@@ -15,6 +15,15 @@ const AdminLogin = () => {
     const [checkingSession, setCheckingSession] = useState(true);
     const navigate = useNavigate();
     const location = useLocation();
+    const [dbLogo, setDbLogo] = useState(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
+            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
+        };
+        fetchSettings();
+    }, []);
 
     const navigateTo = '/portal/admin';
 
@@ -132,7 +141,7 @@ const AdminLogin = () => {
             <LoadingOverlay isVisible={showOverlay} />
             <div className="portal-login-container">
                 <header className="portal-header-bar">
-                    <img src={logo} alt="Logo" className="portal-logo-img" />
+                    <img src={dbLogo || logoFallback} alt="Logo" className="portal-logo-img" />
                     <h1 className="portal-school-name">Fad Mastro Academy</h1>
                 </header>
 

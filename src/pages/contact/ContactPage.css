@@ -293,11 +293,13 @@ textarea.contact-form-input {
     }
 
     .contact-form-grid {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
     }
 
     .form-group {
-        grid-column: span 1;
+        width: 100%;
     }
 
     .contact-card-info h2 {

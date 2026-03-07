@@ -1,13 +1,25 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+import logoFallback from '../assets/logo.jpg';
 import './AdminHeader.css';
-import logo from '../assets/logo.jpg';
 
 const AdminHeader = ({ profileLoading, userName, userInitial, avatarUrl, activeSession, activeTerm }) => {
+    const [dbLogo, setDbLogo] = React.useState(null);
+
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle(); // Corrected line
+            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
+        };
+        fetchSettings();
+    }, []);
+
     return (
         <header className="ad-header">
             <div className="ad-header-left">
                 <Link to="/portal/admin">
-                    <img src={logo} alt="Logo" className="ad-header-logo" />
+                    <img src={dbLogo || logoFallback} alt="Logo" className="ad-header-logo" />
                 </Link>
             </div>
             <div className="ad-header-right">

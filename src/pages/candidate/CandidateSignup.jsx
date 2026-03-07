@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import logo from '../../assets/logo.jpg';
+import logoFallback from '../../assets/logo.jpg';
 import './CandidateSignup.css';
 
 const CandidateSignup = () => {
@@ -10,6 +10,15 @@ const CandidateSignup = () => {
     const [error, setError] = useState('');
     const [classes, setClasses] = useState([]);
     const [success, setSuccess] = useState(false);
+    const [dbLogo, setDbLogo] = useState(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
+            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
+        };
+        fetchSettings();
+    }, []);
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -132,7 +141,7 @@ const CandidateSignup = () => {
     return (
         <div className="cs-container">
             <div className="cs-header-bar">
-                <img src={logo} alt="Logo" className="cs-logo" />
+                <img src={dbLogo || logoFallback} alt="Logo" className="cs-logo" />
                 <h1 className="cs-school-name">Fad Maestro Academy</h1>
             </div>
 
