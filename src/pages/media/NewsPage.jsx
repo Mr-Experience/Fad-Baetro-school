@@ -9,6 +9,15 @@ const NewsPage = () => {
     const [newsItems, setNewsItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedNews, setSelectedNews] = useState(null);
+    const [dbLogo, setDbLogo] = useState(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
+            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
+        };
+        fetchSettings();
+    }, []);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -86,7 +95,7 @@ const NewsPage = () => {
                     <aside className="news-sidebar">
                         <div className="sidebar-widget facebook-widget">
                             <div className="widget-header">
-                                <img src="/src/assets/logo.jpg" alt="Logo" className="widget-logo" />
+                                <img src={dbLogo || "https://ui-avatars.com/api/?name=Fad+Maestro&background=9D245A&color=fff"} alt="Logo" className="widget-logo" />
                                 <div className="widget-info">
                                     <h4>Fad Maestro Academy</h4>
                                     <span>67,337 followers</span>

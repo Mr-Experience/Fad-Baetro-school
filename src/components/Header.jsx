@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, Search, Menu, X, Home, School, Calendar, Users, Image as ImageIcon, ChevronDown, Award, FileText, Library, UserCheck, Monitor, Newspaper, Building2, GraduationCap } from 'lucide-react';
+import { supabase } from '../supabaseClient';
+import logoFallback from '../assets/logo.jpg';
 import './Header.css';
 
 const Header = () => {
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isQuickLinksOpen, setIsQuickLinksOpen] = useState(false);
     const [mobileDropdown, setMobileDropdown] = useState(null);
+    const [dbLogo, setDbLogo] = useState(null);
     const location = useLocation();
+
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
+            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
+        };
+        fetchSettings();
+    }, []);
 
     const toggleDropdown = (menu) => {
         setActiveDropdown(activeDropdown === menu ? null : menu);
@@ -74,7 +85,7 @@ const Header = () => {
                     <div className="header-main-left">
                         <Link to="/" className="school-logo-group">
                             <div className="school-logo">
-                                <img src="/src/assets/logo.jpg" alt="Fad Maestro Academy" className="logo-img" />
+                                <img src={dbLogo || logoFallback} alt="Fad Maestro Academy" className="logo-img" />
                             </div>
                             <div className="school-branding">
                                 <h1 className="school-name">FAD MAESTRO<br />ACADEMY</h1>

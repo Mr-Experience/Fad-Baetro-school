@@ -1,9 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, Facebook, Instagram } from 'lucide-react';
+import { supabase } from '../supabaseClient';
+import logoFallback from '../assets/logo.jpg';
 import './Footer.css';
 
 const Footer = () => {
+    const [dbLogo, setDbLogo] = React.useState(null);
+
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
+            if (data?.school_logo_url) setDbLogo(data.school_logo_url);
+        };
+        fetchSettings();
+    }, []);
+
     return (
         <footer className="footer-main-group">
             <div className="footer-container">
@@ -11,7 +23,7 @@ const Footer = () => {
                     {/* Column 1: School Info */}
                     <div className="footer-col school-branding-col">
                         <div className="footer-logo-group">
-                            <img src="/src/assets/logo.jpg" alt="Fad Maestro Academy" className="footer-logo-img" />
+                            <img src={dbLogo || logoFallback} alt="Fad Maestro Academy" className="footer-logo-img" />
                             <div className="footer-branding">
                                 <h2 className="footer-school-name">FAD MAESTRO<br />ACADEMY</h2>
                                 <p className="footer-school-motto">Knowledge and Service</p>

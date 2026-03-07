@@ -2,7 +2,7 @@
     position: relative;
     width: 100%;
     padding: clamp(60px, 10vw, 120px) 0;
-    background-image: url('/src/assets/images/hero1.jpg');
+    /* Background is handled dynamically via Supabase in the JSX */
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

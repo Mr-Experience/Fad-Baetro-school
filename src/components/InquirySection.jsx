@@ -1,11 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Users } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 import './InquirySection.css';
 
 const InquirySection = () => {
+    const [bgImage, setBgImage] = React.useState(null);
+
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            const { data } = await supabase.from('system_settings').select('inquiry_bg_url').eq('id', 1).maybeSingle();
+            if (data?.inquiry_bg_url) setBgImage(data.inquiry_bg_url);
+        };
+        fetchSettings();
+    }, []);
+
     return (
-        <section className="inquiry-section">
+        <section className="inquiry-section" style={bgImage ? { backgroundImage: `url(${bgImage})` } : {}}>
             <div className="inquiry-overlay"></div>
             <div className="inquiry-container">
                 <div className="inquiry-header">
