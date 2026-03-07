@@ -79,8 +79,14 @@ const NoExamSchedule = () => {
                                 const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
                                 const availableExam = activeConfigs.find(c => {
                                     const notTaken = !takenKeys.has(`${c.subject_id}_${c.question_type}`);
-                                    const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
-                                    return notTaken && isTimeReady;
+                                    const examStartTime = c.visible_at ? new Date(c.visible_at).getTime() : 0;
+                                    const examExpiryTime = examStartTime + (c.duration_minutes || 60) * 60 * 1000;
+                                    const now = Date.now();
+
+                                    const isTimeReady = !c.visible_at || now >= examStartTime;
+                                    const isNotExpired = !c.visible_at || now < examExpiryTime;
+
+                                    return notTaken && isTimeReady && isNotExpired;
                                 });
 
                                 if (availableExam) {

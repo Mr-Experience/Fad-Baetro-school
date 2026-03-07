@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import AdminHeader from '../../components/AdminHeader';
-import { Download, Users, CheckCircle, ArrowLeft, Printer } from 'lucide-react';
+import { Download, Users, CheckCircle, ArrowLeft, Printer, TrendingUp } from 'lucide-react';
 import './AdminResultDetail.css';
 
 const AdminResultDetail = () => {
@@ -23,6 +23,7 @@ const AdminResultDetail = () => {
     // Stats
     const [totalStudents, setTotalStudents] = useState(0);
     const [submissionCount, setSubmissionCount] = useState(0);
+    const [avgScore, setAvgScore] = useState(0);
 
     // Profile state for header
     const [userName, setUserName] = useState('');
@@ -34,7 +35,7 @@ const AdminResultDetail = () => {
         const init = async () => {
             setLoading(true);
             try {
-                // 1. SILENT AUTH CHECK
+                // 1. AUTH CHECK
                 let { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
                     navigate('/portal/admin/login');
@@ -62,7 +63,7 @@ const AdminResultDetail = () => {
                 }
                 setProfileLoading(false);
 
-                // 2. Fetch DATA (Session/Term)
+                // 2. Fetch Settings
                 const { data: settings } = await supabase
                     .from('system_settings')
                     .select('current_session, current_term')
@@ -74,18 +75,17 @@ const AdminResultDetail = () => {
                     setActiveTerm(settings.current_term || '');
                 }
 
-                // 3. Fetch Class Stats
-                if (classId) {
-                    const { count: studentCount } = await supabase
+                // 3. Fetch stats and results
+                if (classId && subjectId) {
+                    // Total students in class
+                    const { count } = await supabase
                         .from('students')
                         .select('*', { count: 'exact', head: true })
                         .eq('class_id', classId);
-                    setTotalStudents(studentCount || 0);
-                }
+                    setTotalStudents(count || 0);
 
-                // 4. Fetch RESULTS
-                if (classId && subjectId) {
-                    const { data, error } = await supabase
+                    // Submissions
+                    const { data: resData } = await supabase
                         .from('exam_results')
                         .select(`
                             id, 
@@ -103,9 +103,14 @@ const AdminResultDetail = () => {
                         .eq('term_id', settings.current_term)
                         .order('score_percent', { ascending: false });
 
-                    if (data) {
-                        setResults(data);
-                        setSubmissionCount(data.length);
+                    if (resData) {
+                        setResults(resData);
+                        setSubmissionCount(resData.length);
+
+                        if (resData.length > 0) {
+                            const avgValue = Math.round(resData.reduce((acc, curr) => acc + Number(curr.score_percent), 0) / resData.length);
+                            setAvgScore(avgValue);
+                        }
                     }
                 }
             } catch (err) {
@@ -117,14 +122,12 @@ const AdminResultDetail = () => {
         init();
     }, [classId, subjectId, questionType, navigate]);
 
-    const handlePrint = () => {
-        window.print();
-    };
+    const handlePrint = () => window.print();
 
     const handleExport = () => {
-        // Simple CSV export
-        const headers = ["Student Name", "Email", "Score (%)", "Correct", "Total", "Date"];
-        const rows = results.map(r => [
+        const headers = ["Rank", "Student Name", "Email", "Score (%)", "Correct", "Total", "Date"];
+        const rows = results.map((r, i) => [
+            i + 1,
             r.profiles?.full_name || 'N/A',
             r.profiles?.email || 'N/A',
             r.score_percent,
@@ -158,128 +161,102 @@ const AdminResultDetail = () => {
             />
 
             <div className="rd-container">
-                <div className="rd-sidebar">
-                    <button className="rd-back-btn" onClick={() => navigate('/portal/admin/results')}>
-                        <ArrowLeft size={18} />
-                        Back to Overview
-                    </button>
-
-                    <div className="rd-stats-card">
-                        <div className="rd-stat-header">
-                            <Users size={20} />
-                            <span>Class Status</span>
-                        </div>
-                        <div className="rd-stat-body">
-                            <div className="rd-stat-main">
-                                <span className="rd-stat-number">{submissionCount}</span>
-                                <span className="rd-stat-label">Submissions</span>
-                            </div>
-                            <div className="rd-progress-track">
-                                <div
-                                    className="rd-progress-bar"
-                                    style={{ width: `${totalStudents > 0 ? (submissionCount / totalStudents) * 100 : 0}%` }}
-                                ></div>
-                            </div>
-                            <p className="rd-stat-desc">
-                                Out of {totalStudents} students in this class.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="rd-stats-card performance">
-                        <div className="rd-stat-header">
-                            <CheckCircle size={20} />
-                            <span>Average Score</span>
-                        </div>
-                        <div className="rd-stat-body">
-                            <div className="rd-stat-main">
-                                <span className="rd-stat-number">
-                                    {results.length > 0
-                                        ? Math.round(results.reduce((acc, curr) => acc + Number(curr.score_percent), 0) / results.length)
-                                        : 0}%
-                                </span>
-                                <span className="rd-stat-label">Class Average</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rd-actions-card">
-                        <h3>Actions</h3>
-                        <div className="rd-action-btns">
-                            <button className="rd-action-btn print" onClick={handlePrint}>
-                                <Printer size={18} />
-                                Print Results
-                            </button>
-                            <button className="rd-action-btn download" onClick={handleExport}>
-                                <Download size={18} />
-                                Download CSV
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="rd-main-content">
-                    <div className="rd-content-header">
+                <div className="rd-content-card">
+                    <header className="rd-header">
                         <div className="rd-title-group">
-                            <h1 className="rd-title">{questionType.toUpperCase()} Results</h1>
-                            <p className="rd-subtitle">{className} • {subjectName} • {activeSession} • {activeTerm}</p>
+                            <button className="qe-back-link" onClick={() => navigate('/portal/admin/results')} style={{ background: 'none', border: 'none', padding: 0 }}>
+                                <ArrowLeft size={14} /> Back to Results
+                            </button>
+                            <h1 className="rd-title">{questionType.toUpperCase()} Results - {subjectName}</h1>
+                            <p className="rd-subtitle">{className} | {activeSession} | {activeTerm}</p>
+                        </div>
+
+                        <div className="rd-header-actions">
+                            <button className="rd-action-btn" onClick={handlePrint}>
+                                <Printer size={16} /> Print
+                            </button>
+                            <button className="rd-action-btn primary" onClick={handleExport}>
+                                <Download size={16} /> Download CSV
+                            </button>
+                        </div>
+                    </header>
+
+                    <div className="rd-stats-row">
+                        <div className="rd-stat-box">
+                            <div className="rd-stat-icon-wrap"><Users size={22} /></div>
+                            <div className="rd-stat-info">
+                                <span className="rd-stat-val">{submissionCount} / {totalStudents}</span>
+                                <span className="rd-stat-lab">Total Submissions</span>
+                            </div>
+                        </div>
+                        <div className="rd-stat-box">
+                            <div className="rd-stat-icon-wrap" style={{ color: '#059669', background: '#ECFDF5' }}><CheckCircle size={22} /></div>
+                            <div className="rd-stat-info">
+                                <span className="rd-stat-val">{submissionCount}</span>
+                                <span className="rd-stat-lab">Marked Results</span>
+                            </div>
+                        </div>
+                        <div className="rd-stat-box">
+                            <div className="rd-stat-icon-wrap" style={{ color: '#2563EB', background: '#EFF6FF' }}><TrendingUp size={22} /></div>
+                            <div className="rd-stat-info">
+                                <span className="rd-stat-val">{avgScore}%</span>
+                                <span className="rd-stat-lab">Class Average Score</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="rd-table-card">
+                    <main className="rd-main-list">
                         {loading ? (
                             <div className="rd-loading">
                                 <div className="rd-spinner"></div>
-                                <p>Loading results...</p>
+                                <p>Analyzing results...</p>
                             </div>
                         ) : results.length === 0 ? (
                             <div className="rd-empty">
                                 <span className="rd-empty-icon">📊</span>
-                                <h3>No results yet</h3>
-                                <p>No student has submitted this {questionType} for the current session.</p>
+                                <h3>No Data Found</h3>
+                                <p>No records match your selection for this class/subject.</p>
                             </div>
                         ) : (
-                            <table className="rd-table">
-                                <thead>
-                                    <tr>
-                                        <th>Student Name</th>
-                                        <th>Status</th>
-                                        <th>Score</th>
-                                        <th>Accuracy</th>
-                                        <th>Submission Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {results.map((res, i) => (
-                                        <tr key={res.id}>
-                                            <td className="rd-td-student">
-                                                <div className="rd-student-name">{res.profiles?.full_name || 'Unknown'}</div>
-                                                <div className="rd-student-email">{res.profiles?.email}</div>
-                                            </td>
-                                            <td>
-                                                <span className="rd-status-badge">Submitted</span>
-                                            </td>
-                                            <td>
-                                                <div className={`rd-score-pill ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}>
-                                                    {res.score_percent}%
-                                                </div>
-                                            </td>
-                                            <td className="rd-accuracy">
-                                                {res.correct_answers} / {res.total_questions}
-                                            </td>
-                                            <td className="rd-date">
-                                                {new Date(res.submitted_at || res.completed_at).toLocaleDateString(undefined, {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric'
-                                                })}
-                                            </td>
+                            <div className="rd-table-wrap">
+                                <table className="rd-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Rank</th>
+                                            <th>Candidate Name</th>
+                                            <th>Score</th>
+                                            <th>Accuracy</th>
+                                            <th>Date Submitted</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {results.map((res, i) => (
+                                            <tr key={res.id}>
+                                                <td style={{ fontWeight: '700', color: '#6B7280' }}>#{i + 1}</td>
+                                                <td className="rd-td-student">
+                                                    <span className="rd-student-name">{res.profiles?.full_name || 'Anonymous Student'}</span>
+                                                    <span className="rd-student-email">{res.profiles?.email || 'no-email'}</span>
+                                                </td>
+                                                <td>
+                                                    <span className={`rd-score-pill ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}>
+                                                        {res.score_percent}%
+                                                    </span>
+                                                </td>
+                                                <td className="rd-accuracy">
+                                                    {res.correct_answers} / {res.total_questions} points
+                                                </td>
+                                                <td className="rd-date">
+                                                    {new Date(res.submitted_at || res.completed_at).toLocaleDateString(undefined, {
+                                                        day: 'numeric', month: 'short', year: 'numeric'
+                                                    })}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
-                    </div>
+                    </main>
                 </div>
             </div>
         </div>

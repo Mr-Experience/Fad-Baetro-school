@@ -197,3 +197,192 @@
         font-size: 20px;
     }
 }
+
+/* Quick Action Cards */
+.ad-quick-links {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.ad-link-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid #F1F5F9;
+    position: relative;
+    overflow: hidden;
+}
+
+.ad-link-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+.ad-link-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Colors for Link Cards */
+.ad-link-card.student .ad-link-icon {
+    background: #F0FDF4;
+    color: #10B981;
+}
+
+.ad-link-card.candidate .ad-link-icon {
+    background: #EFF6FF;
+    color: #3B82F6;
+}
+
+.ad-link-card.exam .ad-link-icon {
+    background: #FFF7ED;
+    color: #F59E0B;
+}
+
+.ad-link-card.result .ad-link-icon {
+    background: #FDF2F8;
+    color: #9D245A;
+}
+
+.ad-link-text h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1E293B;
+    margin: 0;
+}
+
+.ad-link-text p {
+    font-size: 12px;
+    color: #64748B;
+    margin: 4px 0 0 0;
+}
+
+.ad-link-arrow {
+    margin-left: auto;
+    color: #CBD5E1;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.ad-link-card:hover .ad-link-arrow {
+    transform: translateX(4px);
+    color: #1E293B;
+}
+
+/* Bottom Layout */
+.ad-bottom-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.ad-bottom-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px 32px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.ad-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ad-activity-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #F8FAFC;
+}
+
+.ad-activity-item:last-child {
+    border-bottom: none;
+}
+
+.ad-activity-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.ad-activity-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E293B;
+}
+
+.ad-activity-meta {
+    font-size: 12px;
+    color: #64748B;
+}
+
+.ad-activity-score {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.ad-activity-score.pass {
+    background: #ECFDF5;
+    color: #059669;
+}
+
+/* Health Stats */
+.ad-health-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.ad-health-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ad-health-item span {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748B;
+}
+
+.ad-health-bar {
+    height: 8px;
+    background: #F1F5F9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.ad-health-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease-in-out;
+}
+
+/* Responsive Bottom Layout */
+@media (max-width: 1024px) {
+    .ad-quick-links {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ad-bottom-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .ad-quick-links {
+        grid-template-columns: 1fr;
+    }
+}

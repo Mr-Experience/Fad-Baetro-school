@@ -5,8 +5,6 @@ import './AdmissionSection.css';
 import admissionImg from '../assets/images/school_group_red.jpg';
 
 const AdmissionSection = () => {
-    const [isPortalDropdownOpen, setIsPortalDropdownOpen] = useState(false);
-
     return (
         <section className="admission-section section-padding">
             <div className="admission-grid container-std">

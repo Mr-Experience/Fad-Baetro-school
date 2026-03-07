@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { Users, UserCheck, BookOpen, BarChart3, Clock, ArrowRight } from 'lucide-react';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
     const { activeSession, activeTerm } = useOutletContext();
+    const navigate = useNavigate();
     const [stats, setStats] = useState({
         students: 0,
         subjects: 0,
@@ -12,6 +14,7 @@ const AdminDashboard = () => {
         testResults: 0,
         examResults: 0
     });
+    const [recentSubmissions, setRecentSubmissions] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -49,6 +52,16 @@ const AdminDashboard = () => {
                     testResults: testResultCount || 0,
                     examResults: examResultCount || 0
                 });
+
+                // Fetch Recent Submissions
+                const { data: recent } = await supabase
+                    .from('exam_results')
+                    .select('*, profiles(full_name), subjects(subject_name)')
+                    .order('submitted_at', { ascending: false })
+                    .limit(5);
+
+                if (recent) setRecentSubmissions(recent);
+
             } catch (err) {
                 console.error("Dashboard metric error:", err);
             } finally {
@@ -118,6 +131,97 @@ const AdminDashboard = () => {
                             <span className="ad-stat-label">Exam Submissions</span>
                             <div className="ad-stat-value-row">
                                 <span className="ad-stat-number">{loading ? '...' : stats.examResults}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Quick Actions Grid */}
+            <section className="ad-content-grid" style={{ marginTop: '20px' }}>
+                <div className="ad-quick-links">
+                    <div className="ad-link-card student" onClick={() => navigate('/portal/admin/students')}>
+                        <div className="ad-link-icon"><Users size={24} /></div>
+                        <div className="ad-link-text">
+                            <h3>Students</h3>
+                            <p>Manage school enrollment</p>
+                        </div>
+                        <ArrowRight className="ad-link-arrow" size={18} />
+                    </div>
+
+                    <div className="ad-link-card candidate" onClick={() => navigate('/portal/admin/candidates')}>
+                        <div className="ad-link-icon"><UserCheck size={24} /></div>
+                        <div className="ad-link-text">
+                            <h3>Candidates</h3>
+                            <p>Entrance exam applicants</p>
+                        </div>
+                        <ArrowRight className="ad-link-arrow" size={18} />
+                    </div>
+
+                    <div className="ad-link-card exam" onClick={() => navigate('/portal/admin/questions')}>
+                        <div className="ad-link-icon"><BookOpen size={24} /></div>
+                        <div className="ad-link-text">
+                            <h3>Exams</h3>
+                            <p>Configure question papers</p>
+                        </div>
+                        <ArrowRight className="ad-link-arrow" size={18} />
+                    </div>
+
+                    <div className="ad-link-card result" onClick={() => navigate('/portal/admin/results')}>
+                        <div className="ad-link-icon"><BarChart3 size={24} /></div>
+                        <div className="ad-link-text">
+                            <h3>Results</h3>
+                            <p>Analyze performance data</p>
+                        </div>
+                        <ArrowRight className="ad-link-arrow" size={18} />
+                    </div>
+                </div>
+            </section>
+
+            {/* Bottom Details Section */}
+            <section className="ad-content-grid" style={{ marginTop: '20px', marginBottom: '40px' }}>
+                <div className="ad-bottom-layout">
+                    {/* Recent Submissions */}
+                    <div className="ad-bottom-card recent-activity">
+                        <div className="ad-card-header">
+                            <h2><Clock size={18} /> Recent Submissions</h2>
+                        </div>
+                        <div className="ad-activity-list">
+                            {recentSubmissions.length === 0 ? (
+                                <p className="ad-no-data">No recent activity found.</p>
+                            ) : (
+                                recentSubmissions.map(res => (
+                                    <div key={res.id} className="ad-activity-item">
+                                        <div className="ad-activity-info">
+                                            <span className="ad-activity-name">{res.profiles?.full_name}</span>
+                                            <span className="ad-activity-meta">{res.subjects?.subject_name} • {res.question_type}</span>
+                                        </div>
+                                        <div className="ad-activity-score pass">
+                                            {res.score_percent}%
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* System Info / Distribution */}
+                    <div className="ad-bottom-card system-health">
+                        <div className="ad-card-header">
+                            <h2>Database Tracking</h2>
+                        </div>
+                        <div className="ad-health-stats">
+                            <div className="ad-health-item">
+                                <span>Security Level</span>
+                                <div className="ad-health-bar"><div className="ad-health-fill" style={{ width: '100%', background: '#10B981' }}></div></div>
+                            </div>
+                            <div className="ad-health-item">
+                                <span>Active Session Sync</span>
+                                <div className="ad-health-bar"><div className="ad-health-fill" style={{ width: '92%', background: '#3B82F6' }}></div></div>
+                            </div>
+                            <div className="ad-health-item">
+                                <span>Storage Utilization</span>
+                                <div className="ad-health-bar"><div className="ad-health-fill" style={{ width: '14%', background: '#9D245A' }}></div></div>
                             </div>
                         </div>
                     </div>

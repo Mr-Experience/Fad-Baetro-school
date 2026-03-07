@@ -42,13 +42,23 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Column 3: Quick Links - Admission */}
+                    {/* Column 3: Admissions */}
                     <div className="footer-col">
                         <h3 className="footer-heading">ADMISSIONS</h3>
                         <ul className="footer-links">
                             <li><Link to="/process">Admission Process</Link></li>
                             <li><Link to="/frequently-asked-questions">FAQs</Link></li>
                             <li><Link to="/signup">Apply for Admission</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Column 4: Portals */}
+                    <div className="footer-col">
+                        <h3 className="footer-heading">PORTALS</h3>
+                        <ul className="footer-links">
+                            <li><Link to="/portal/student">Student Login</Link></li>
+                            <li><Link to="/portal/admin/login">Admin Login</Link></li>
+                            <li><Link to="/portal/candidate">Candidate Login</Link></li>
                         </ul>
                     </div>
 

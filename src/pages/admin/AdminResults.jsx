@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import { CheckCircle } from 'lucide-react';
@@ -13,10 +14,6 @@ const AdminResults = () => {
 
     // Results summary state
     const [resultsSummary, setResultsSummary] = useState([]);
-
-    // Modal state
-    const [showModal, setShowModal] = useState(false);
-    const [modalData, setModalData] = useState({ title: '', type: '', results: [] });
 
     // Fetch Subjects when class changes
     useEffect(() => {
@@ -165,60 +162,6 @@ const AdminResults = () => {
                     )}
                 </main>
             </div>
-
-            {/* Modal */}
-            {showModal && (
-                <div className="ar-modal-overlay">
-                    <div className="ar-modal">
-                        <header className="ar-modal-header">
-                            <div className="ar-modal-title">
-                                <h2>{modalData.title}</h2>
-                                <p>{modalData.results.length} student submissions found</p>
-                            </div>
-                            <button className="ar-close-btn" onClick={() => setShowModal(false)}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                                </svg>
-                            </button>
-                        </header>
-
-                        <div className="ar-table-wrap">
-                            <table className="ar-table">
-                                <thead>
-                                    <tr>
-                                        <th>Student Name</th>
-                                        <th>Score</th>
-                                        <th>Accuracy</th>
-                                        <th>Date Sent</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {modalData.results.map(res => (
-                                        <tr key={res.id}>
-                                            <td>
-                                                <div style={{ fontWeight: '600' }}>{res.profiles?.full_name || 'Unknown'}</div>
-                                                <div style={{ fontSize: '12px', color: '#6B7280' }}>{res.profiles?.email}</div>
-                                            </td>
-                                            <td>
-                                                <span className={`ar-score-badge ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}>
-                                                    {res.score_percent}%
-                                                </span>
-                                            </td>
-                                            <td>{res.correct_answers} / {res.total_questions}</td>
-                                            <td>{new Date(res.submitted_at || res.completed_at).toLocaleDateString()}</td>
-                                        </tr>
-                                    ))}
-                                    {modalData.results.length === 0 && (
-                                        <tr>
-                                            <td colSpan="4" style={{ textAlign: 'center', padding: '40px' }}>No records found.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
