@@ -16,10 +16,13 @@ import AdminStudents from './pages/admin/AdminStudents';
 import AdminQuestions from './pages/admin/AdminQuestions';
 import AdminQuestionEditor from './pages/admin/AdminQuestionEditor';
 import AdminResults from './pages/admin/AdminResults';
+import AdminEvents from './pages/admin/AdminEvents';
 import AdminInfo from './pages/admin/AdminInfo';
 import AdminProfile from './pages/admin/AdminProfile';
+import AdminCandidates from './pages/admin/AdminCandidates';
 import AdminLogin from './pages/admin/AdminLogin';
 import CandidateLogin from './pages/candidate/CandidateLogin';
+import CandidateSignup from './pages/candidate/CandidateSignup';
 import CandidateNoExam from './pages/candidate/NoExamSchedule';
 import CandidateActiveExam from './pages/candidate/ActiveExam';
 import CandidateExamScreen from './pages/candidate/ExamScreen';
@@ -69,8 +72,10 @@ function App() {
                     <Route element={<AdminLayout />}>
                         <Route path="/portal/admin" element={<AdminDashboard />} />
                         <Route path="/portal/admin/students" element={<AdminStudents />} />
+                        <Route path="/portal/admin/candidates" element={<AdminCandidates />} />
                         <Route path="/portal/admin/questions" element={<AdminQuestions />} />
                         <Route path="/portal/admin/results" element={<AdminResults />} />
+                        <Route path="/portal/admin/events" element={<AdminEvents />} />
                         <Route path="/portal/admin/info" element={<AdminInfo />} />
                         <Route path="/portal/admin/profile" element={<AdminProfile />} />
                     </Route>
@@ -78,10 +83,15 @@ function App() {
 
                 {/* Candidate Pages */}
                 <Route path="/portal/candidate" element={<CandidateLogin />} />
-                <Route path="/portal/candidate/no-exam" element={<CandidateNoExam />} />
-                <Route path="/portal/candidate/active-exam" element={<CandidateActiveExam />} />
-                <Route path="/portal/candidate/exam" element={<CandidateExamScreen />} />
-                <Route path="/portal/candidate/submitted" element={<CandidateSubmitted />} />
+                <Route path="/signup" element={<CandidateSignup />} />
+
+                {/* Protected Candidate Routes */}
+                <Route element={<ProtectedRoute requiredRole="candidate" />}>
+                    <Route path="/portal/candidate/no-exam" element={<CandidateNoExam />} />
+                    <Route path="/portal/candidate/active-exam" element={<CandidateActiveExam />} />
+                    <Route path="/portal/candidate/exam" element={<CandidateExamScreen />} />
+                    <Route path="/portal/candidate/submitted" element={<CandidateSubmitted />} />
+                </Route>
 
                 {/* Student Pages */}
                 <Route path="/portal/student" element={<StudentLogin />} />

@@ -5,24 +5,29 @@
 
 .admission-grid {
     display: flex;
+    flex-wrap: wrap;
+    /* Allow wrapping */
     gap: 0;
 }
 
 .admission-left {
-    flex: 1;
+    flex: 1 1 500px;
+    /* Adaptive basis */
     background-color: #1a365d;
     color: white;
     display: flex;
     align-items: center;
-    padding: 60px 40px;
+    padding: clamp(40px, 6vw, 80px) clamp(20px, 4vw, 60px);
     box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.05);
 }
 
 .admission-right {
-    flex: 1;
+    flex: 1 1 500px;
+    /* Adaptive basis */
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 400px;
 }
 
 .admission-image-wrapper {
@@ -35,54 +40,49 @@
     height: 100%;
     object-fit: cover;
     display: block;
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
 }
 
 .admission-card {
     width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .admission-title {
-    font-size: 28px;
+    font-size: clamp(24px, 4vw, 36px);
     font-weight: 800;
-    line-height: 1.2;
-    margin-bottom: 20px;
+    line-height: 1.1;
+    margin-bottom: 24px;
     text-transform: uppercase;
 }
 
 .admission-text {
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: clamp(14px, 1.5vw, 16px);
+    line-height: 1.7;
     margin-bottom: 34px;
-    color: #e2e8f0;
+    color: #cbd5e1;
 }
 
 .admission-actions {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 15px;
 }
 
-
-@media (max-width: 1024px) {
-    .admission-grid {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .admission-left {
-        min-width: 100%;
-        height: auto;
-        padding: 40px 24px;
-    }
+.admission-actions .btn {
+    flex: 1 1 200px;
+    text-align: center;
 }
 
-@media (max-width: 768px) {
-    .admission-title {
-        font-size: 22px;
+@media (max-width: 1024px) {
+    .admission-left {
+        flex: 1 1 100%;
     }
 
     .admission-right {
-        padding: 30px 20px;
+        flex: 1 1 100%;
+        order: -1;
+        /* Image on top for tablet/mobile */
+        min-height: 300px;
     }
 }

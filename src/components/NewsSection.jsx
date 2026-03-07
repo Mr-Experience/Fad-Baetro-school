@@ -1,36 +1,40 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MoveRight } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 import './NewsSection.css';
-import newsImg from '../assets/images/school_group_yellow.jpg';
+import placeholderImg from '../assets/images/school_group_yellow.jpg';
 
 const NewsSection = () => {
-    const newsItems = [
-        {
-            id: 1,
-            image: "/src/assets/images/gallery_photo_1.jpg",
-            title: "School Resumption Notice",
-            description: "Detailed information about the 2026/2027 academic session resumption dates and requirements."
-        },
-        {
-            id: 2,
-            image: "/src/assets/images/gallery_photo_2.jpg",
-            title: "Outstanding Performance",
-            description: "Celebrating our students who achieved exceptional results in the recent national competitions."
-        },
-        {
-            id: 3,
-            image: "/src/assets/images/gallery_photo_3.jpg",
-            title: "Community Outreach",
-            description: "Fad Maestro students visiting local centers as part of our character development program."
-        },
-        {
-            id: 4,
-            image: "/src/assets/images/gallery_photo_4.jpg",
-            title: "Upcoming Sports Day",
-            description: "Get ready for our annual inter-house sports competition. Parents are invited to join the fun!"
-        }
-    ];
+    const [newsItems, setNewsItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchLatestNews = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('system_posts')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(4);
+
+                if (!error && data) {
+                    setNewsItems(data.map(item => ({
+                        id: item.id,
+                        image: item.image_url || placeholderImg,
+                        title: item.title,
+                        description: item.content.length > 80 ? item.content.substring(0, 80) + '...' : item.content
+                    })));
+                }
+            } catch (err) {
+                console.error("Error fetching homepage news:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchLatestNews();
+    }, []);
 
     return (
         <section className="news-section">
@@ -51,17 +55,27 @@ const NewsSection = () => {
                     </button>
 
                     <div className="news-grid">
-                        {newsItems.map((item) => (
-                            <div key={item.id} className="news-card">
-                                <div className="news-card-image watermark-crop">
-                                    <img src={newsImg} alt={item.title} />
-                                </div>
-                                <div className="news-card-content">
-                                    <h3 className="news-card-title">{item.title}</h3>
-                                    <p className="news-card-text">{item.description}</p>
-                                </div>
+                        {loading ? (
+                            <div style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '40px', color: '#666' }}>
+                                Loading latest updates...
                             </div>
-                        ))}
+                        ) : newsItems.length === 0 ? (
+                            <div style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '40px', color: '#666', gridTemplateColumns: 'minmax(0, 1fr)' }}>
+                                No recent updates available.
+                            </div>
+                        ) : (
+                            newsItems.map((item) => (
+                                <div key={item.id} className="news-card">
+                                    <div className="news-card-image watermark-crop">
+                                        <img src={item.image} alt={item.title} />
+                                    </div>
+                                    <div className="news-card-content">
+                                        <h3 className="news-card-title">{item.title}</h3>
+                                        <p className="news-card-text">{item.description}</p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
 
                     <button className="news-nav-btn next">

@@ -136,8 +136,6 @@ const StudentLogin = () => {
                             />
                         </div>
 
-                        <a href="#reset" className="forgot-password-link">Reset Password</a>
-
                         <button type="submit" className="login-btn" disabled={loading}>
                             {loading ? 'Logging in...' : 'Login to portal'}
                         </button>

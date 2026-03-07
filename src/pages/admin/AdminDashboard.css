@@ -141,7 +141,59 @@
     color: #059669;
 }
 
-.ad-stat-percent.negative {
-    background-color: #FEF2F2;
-    color: #DC2626;
+@media (max-width: 1200px) {
+    .ad-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .ad-stat-item:nth-child(3) {
+        border-right: none;
+    }
+}
+
+@media (max-width: 992px) {
+    .ad-banner {
+        padding: 0 24px;
+        height: 180px;
+    }
+
+    .ad-content-grid {
+        padding: 0 24px;
+    }
+
+    .ad-banner-content h1 {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .ad-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .ad-stat-item {
+        border-right: none;
+        padding-right: 0;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #F1F5F9;
+    }
+
+    .ad-stat-item:last-child {
+        border-bottom: none;
+    }
+
+    .ad-overview-card {
+        padding: 20px 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ad-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ad-stat-number {
+        font-size: 20px;
+    }
 }

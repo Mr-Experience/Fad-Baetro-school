@@ -105,6 +105,53 @@
     transition: background-color 0.2s;
 }
 
-.nes-logout-btn:hover {
-    background-color: #6F1322;
+@media (max-width: 640px) {
+    .nes-header {
+        flex-direction: column;
+        padding: 10px 16px;
+        height: auto;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .nes-header-left {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .nes-header-right {
+        justify-content: center;
+        width: 100%;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        padding-top: 8px;
+    }
+
+    .portal-school-name {
+        font-size: 15px;
+    }
+
+    .nes-card {
+        padding: 24px 20px;
+        min-width: 90%;
+        margin: 0 16px;
+    }
+
+    .ae-card {
+        padding: 24px 20px;
+    }
+
+    .ae-subject {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 400px) {
+    .portal-school-name {
+        display: none;
+        /* Only show logo on very small screens to avoid wrap */
+    }
+
+    .nes-user-name {
+        font-size: 12px;
+    }
 }

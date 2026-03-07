@@ -67,6 +67,11 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
                         setAuthStatus(true);
                     } else if (requiredRole === 'admin' && (profile.role === 'admin' || profile.role === 'super_admin')) {
                         setAuthStatus(true);
+                    } else if (requiredRole === 'candidate' && profile.role === 'candidate') {
+                        setAuthStatus(true);
+                    } else if (requiredRole === 'student' && profile.role === 'student') {
+                        // Allow students if they have the role in profiles
+                        setAuthStatus(true);
                     } else {
                         console.warn(`User role '${profile.role}' does not match required role '${requiredRole}'. Denying entry.`);
                         setAuthStatus(false);
@@ -127,6 +132,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
         let redirectPath = "/portal/admin/login";
         if (requiredRole === 'super_admin') redirectPath = "/portal/superadmin";
         if (requiredRole === 'student') redirectPath = "/portal/student";
+        if (requiredRole === 'candidate') redirectPath = "/portal/candidate";
 
         return <Navigate to={redirectPath} state={{ from: location }} replace />;
     }

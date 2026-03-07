@@ -1,0 +1,340 @@
+/* AdminEvents.css */
+
+.ae-container {
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+    font-family: 'Inter', sans-serif;
+    color: #1F2937;
+    box-sizing: border-box;
+}
+
+.ae-content-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    width: 100%;
+    min-height: calc(100vh - 160px);
+    padding: 28px 32px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.ae-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.ae-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #4B5563;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ae-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #E5E7EB;
+}
+
+.ae-empty-text {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px;
+    background: #F9FAFB;
+    border: 2px dashed #E5E7EB;
+    border-radius: 12px;
+    color: #9CA3AF;
+    font-weight: 500;
+}
+
+.ae-title-area h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 10px 0;
+}
+
+.ae-title-area p {
+    font-size: 14px;
+    color: #6B7280;
+    margin: 0;
+}
+
+.ae-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: var(--primary-600);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.ae-add-btn:hover {
+    background-color: var(--primary-700);
+}
+
+.ae-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.ae-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #E5E7EB;
+    transition: transform 0.2s;
+}
+
+.ae-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.ae-card-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.ae-card-img-placeholder {
+    width: 100%;
+    height: 180px;
+    background: #F3F4F6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9CA3AF;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.ae-card-body {
+    padding: 20px;
+    position: relative;
+}
+
+.ae-badge {
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.news-badge {
+    background: #DBEAFE;
+    color: #1D4ED8;
+}
+
+.event-badge {
+    background: #FCE7F3;
+    color: #BE185D;
+}
+
+.ae-card-title {
+    margin: 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.ae-card-excerpt {
+    font-size: 14px;
+    color: #4B5563;
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.ae-date-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #6B7280;
+    margin-bottom: 16px;
+    background: #F9FAFB;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.ae-delete-btn {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #FEE2E2;
+    background: #FEF2F2;
+    color: #DC2626;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.ae-delete-btn:hover {
+    background: #FEE2E2;
+}
+
+/* Modal Styling */
+.ae-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.ae-modal {
+    background: white;
+    width: 500px;
+    max-width: 90%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    animation: asSlideUp 0.3s ease-out;
+}
+
+@keyframes asSlideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.ae-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.ae-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.ae-close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #9CA3AF;
+    cursor: pointer;
+}
+
+.ae-modal-body {
+    padding: 24px;
+}
+
+.ae-type-selector {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.ae-type-btn {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #D1D5DB;
+    background: white;
+    color: #6B7280;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ae-type-btn.active {
+    background: var(--primary-50);
+    color: var(--primary-700);
+    border-color: var(--primary-300);
+}
+
+.ae-form-group {
+    margin-bottom: 20px;
+}
+
+.ae-form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.ae-form-group input,
+.ae-form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.ae-form-group input[type="file"] {
+    padding: 8px;
+    background: #F9FAFB;
+    cursor: pointer;
+}
+
+.ae-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    background: #F9FAFB;
+    border-top: 1px solid #E5E7EB;
+}
+
+.ae-cancel-btn {
+    padding: 10px 16px;
+    background: white;
+    border: 1px solid #D1D5DB;
+    color: #374151;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.ae-save-btn {
+    padding: 10px 20px;
+    background: var(--primary-600);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}

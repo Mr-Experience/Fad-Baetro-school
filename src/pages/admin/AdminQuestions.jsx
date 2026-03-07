@@ -94,7 +94,7 @@ const AdminQuestions = () => {
     const handleOpenEditor = (subject, type) => {
         const className = classes.find(c => c.id === selectedClassId)?.class_name || 'Class';
         const url = `/portal/admin/questions/editor?classId=${selectedClassId}&subjectId=${subject.id}&className=${encodeURIComponent(className)}&subjectName=${encodeURIComponent(subject.name || subject.subject_name)}&type=${type}`;
-        window.open(url, '_blank');
+        navigate(url);
     };
 
     return (

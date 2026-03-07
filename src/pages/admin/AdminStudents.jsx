@@ -33,7 +33,13 @@ const AdminStudents = () => {
 
     useEffect(() => {
         fetchStudents();
+        fetchClasses();
     }, []);
+
+    const fetchClasses = async () => {
+        const { data } = await supabase.from('classes').select('*').order('class_name');
+        if (data) setClasses(data);
+    };
 
     const fetchStudents = async () => {
         setLoading(true);

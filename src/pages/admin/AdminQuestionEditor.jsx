@@ -56,7 +56,7 @@ const AdminQuestionEditor = () => {
                 // 1. SILENT AUTH CHECK
                 let { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
-                    await new Promise(r => setTimeout(r, 50)); // reduced from 800ms
+                    await new Promise(r => setTimeout(r, 500)); // Increased to 500ms
                     const retry = await supabase.auth.getSession();
                     session = retry.data.session;
                 }

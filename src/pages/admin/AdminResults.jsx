@@ -94,7 +94,7 @@ const AdminResults = () => {
                     total_questions, 
                     completed_at,
                     submitted_at,
-                    students (full_name, email)
+                    profiles (full_name, email)
                 `)
                 .eq('class_id', selectedClassId)
                 .eq('subject_id', subject.id)
@@ -224,8 +224,8 @@ const AdminResults = () => {
                                     {modalData.results.map(res => (
                                         <tr key={res.id}>
                                             <td>
-                                                <div style={{ fontWeight: '600' }}>{res.students?.full_name || 'Unknown'}</div>
-                                                <div style={{ fontSize: '12px', color: '#6B7280' }}>{res.students?.email}</div>
+                                                <div style={{ fontWeight: '600' }}>{res.profiles?.full_name || 'Unknown'}</div>
+                                                <div style={{ fontSize: '12px', color: '#6B7280' }}>{res.profiles?.email}</div>
                                             </td>
                                             <td>
                                                 <span className={`ar-score-badge ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}>

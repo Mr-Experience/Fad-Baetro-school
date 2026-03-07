@@ -6,16 +6,6 @@ import './NoExamSchedule.css';
 import './ExamScreen.css';
 import logo from '../../assets/logo.jpg';
 
-const TOTAL_QUESTIONS = 60;
-
-const sampleQuestions = [
-    { id: 1, text: 'The ultimate ?', options: ['Nova', 'The Ultimate', 'The Birds', 'Skippa'] },
-    { id: 2, text: 'Which of the following is a vowel?', options: ['B', 'C', 'A', 'D'] },
-    { id: 3, text: 'What is the plural of "child"?', options: ['Childs', 'Childes', 'Children', 'Childrens'] },
-    { id: 4, text: 'Choose the correct spelling:', options: ['Recieve', 'Receive', 'Receve', 'Recive'] },
-    { id: 5, text: 'Which is a noun?', options: ['Run', 'Quickly', 'Beautiful', 'Table'] },
-];
-
 const ExamScreen = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -162,27 +152,43 @@ const ExamScreen = () => {
                     if (!sErr && sData) setSessionInfo({ session: curSession, term: curTerm });
                 }
 
-                // Restore Progress or Set Initial Timer
+                // 5. Restore Progress or Set Initial Timer from Server
                 const storageKey = `exam_prog_${std.id}_${cfg.id}`;
                 const savedStr = localStorage.getItem(storageKey);
                 let loadedAnswers = {};
                 let loadedIdx = 0;
                 let remainingTime = (cfg.duration_minutes || 60) * 60;
 
-                if (savedStr) {
-                    try {
-                        const saved = JSON.parse(savedStr);
-                        if (saved.answers) loadedAnswers = saved.answers;
-                        if (saved.currentQuestionIdx) loadedIdx = saved.currentQuestionIdx;
-                        if (saved.endTime) {
-                            const diff = Math.floor((saved.endTime - Date.now()) / 1000);
-                            remainingTime = diff > 0 ? diff : 0;
-                        }
-                    } catch (e) {
-                        console.error("Error parsing saved progress", e);
+                // Sync with Server Attempt
+                const { data: attempt } = await supabase
+                    .from('exam_attempts')
+                    .select('end_time')
+                    .eq('student_id', std.id)
+                    .eq('exam_id', cfg.id)
+                    .eq('status', 'started')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (attempt && attempt.end_time) {
+                    const serverEndTime = new Date(attempt.end_time).getTime();
+                    const diff = Math.floor((serverEndTime - Date.now()) / 1000);
+                    remainingTime = diff > 0 ? diff : 0;
+
+                    // If we have local storage, restore answers/index but keep server time
+                    if (savedStr) {
+                        try {
+                            const saved = JSON.parse(savedStr);
+                            if (saved.answers) loadedAnswers = saved.answers;
+                            if (saved.currentQuestionIdx) loadedIdx = saved.currentQuestionIdx;
+                        } catch (e) { console.error(e); }
+                    } else {
+                        // First time found on server but not local (perhaps cache cleared)
+                        localStorage.setItem(storageKey, JSON.stringify({ endTime: serverEndTime, answers: {}, currentQuestionIdx: 0 }));
                     }
                 } else {
-                    // First time starting, set end time
+                    // No server attempt found? The student shouldn't be here.
+                    // But for resilience, we'll allow it and create one if ActiveExam missed it.
                     const endTime = Date.now() + (remainingTime * 1000);
                     localStorage.setItem(storageKey, JSON.stringify({ endTime, answers: {}, currentQuestionIdx: 0 }));
                 }

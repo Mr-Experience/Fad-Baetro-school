@@ -27,8 +27,9 @@
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    padding: 0 80px;
-    height: 35px;
+    padding: 0 max(16px, 4%);
+    /* Fluid horizontal padding */
+    height: clamp(30px, 4vh, 40px);
     max-width: 100%;
 }
 
@@ -441,8 +442,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 80px;
-    height: 80px;
+    padding: 0 max(16px, 4%);
+    /* Fluid horizontal padding */
+    height: clamp(70px, 8vh, 90px);
     max-width: 100%;
 }
 
@@ -577,12 +579,12 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    /* Remove stretch as that often causes full-height backgrounds */
-    gap: 44px;
+    gap: clamp(16px, 3vw, 44px);
+    /* Fluid gap between items */
     list-style: none;
     margin: 0;
     padding: 0;
-    height: 80px;
+    height: 100%;
 }
 
 .nav-item {
@@ -705,13 +707,36 @@
         padding-right: 16px;
     }
 
-    .school-info {
-        font-size: 12px;
+    .header-top {
+        height: auto;
+        padding: 5px 0;
     }
 
-    /* Hide middle dividers and secondary info on very small screens */
-    .info-divider,
-    .info-item:not(:first-child) {
+    .header-top-container {
+        justify-content: center;
+        height: auto;
+        min-height: 35px;
+    }
+
+    .school-info {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 15px;
+        text-align: center;
+        padding: 4px 0;
+    }
+
+    .info-divider {
+        display: none;
+        /* Hide bars, use gaps instead for stacking */
+    }
+
+    .info-item {
+        font-size: 11px;
+    }
+
+    /* Hide search icon on mobile */
+    .action-icon[title="Search"] {
         display: none;
     }
 
@@ -726,11 +751,11 @@
     }
 
     .school-name {
-        font-size: 13px;
+        font-size: clamp(12px, 3.5vw, 15px);
     }
 
     .school-motto {
-        font-size: 10px;
+        font-size: clamp(8px, 2.5vw, 11px);
     }
 
     .logo-img {

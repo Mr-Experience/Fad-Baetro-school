@@ -34,14 +34,18 @@ const AdminLogin = () => {
                         .eq('id', session.user.id)
                         .single();
 
-                    if (!profileError && profile && (profile.role === 'admin' || profile.role === 'super_admin')) {
+                    if (!profileError && profile && profile.role === 'admin') {
                         if (isChecking) {
                             const from = location.state?.from?.pathname || location.state?.from || navigateTo;
                             const search = location.state?.from?.search || '';
                             navigate(from + search, { replace: true });
                         }
                         return; // Don't set checkingSession to false, let the redirect happen
-                    } else if (profile && profile.role !== 'admin' && profile.role !== 'super_admin') {
+                    } else if (profile && profile.role === 'super_admin') {
+                        // Redirect them to super admin side if they are already logged in as super admin
+                        if (isChecking) navigate('/portal/superadmin/config', { replace: true });
+                        return;
+                    } else if (profile && profile.role !== 'admin') {
                         // If they are logged in as a wrong role on the login page, log them out.
                         await supabase.auth.signOut();
                     }
@@ -91,7 +95,15 @@ const AdminLogin = () => {
                     .eq('id', data.user.id)
                     .single();
 
-                if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+                if (profileError || !profile) {
+                    await supabase.auth.signOut();
+                    throw new Error('Unauthorized: Admin access required.');
+                }
+
+                if (profile.role === 'super_admin') {
+                    await supabase.auth.signOut();
+                    throw new Error('Super Admins must log in through the Super Admin portal (/portal/superadmin).');
+                } else if (profile.role !== 'admin') {
                     await supabase.auth.signOut();
                     throw new Error('Unauthorized: Admin access required.');
                 }
@@ -158,8 +170,6 @@ const AdminLogin = () => {
                                     required
                                 />
                             </div>
-
-                            <a href="#reset" className="forgot-password-link">Reset Password</a>
 
                             <button type="submit" className="login-btn" disabled={loading}>
                                 {loginStatus === 'logging_in' ? 'Logging in...' :

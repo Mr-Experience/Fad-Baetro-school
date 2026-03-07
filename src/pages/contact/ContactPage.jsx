@@ -2,13 +2,10 @@ import React, { useState } from 'react';
 import { Phone, Mail } from 'lucide-react';
 import Header from '../../components/Header';
 // ToastContext removed
+import { supabase } from '../../supabaseClient';
 import './ContactPage.css';
 
 const ContactPage = () => {
-    // const { showToast } = useToast();
-
-    // ... later in code ...
-    // showToast('Message sent successfully!', 'success'); -> alert('Message sent successfully!');
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
@@ -16,6 +13,7 @@ const ContactPage = () => {
         subject: '',
         message: ''
     });
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -25,24 +23,59 @@ const ContactPage = () => {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Form Submitted:', formData);
-        alert('Thank you for contacting us! We will get back to you soon.');
-        setFormData({
-            name: '',
-            phone: '',
-            email: '',
-            subject: '',
-            message: ''
-        });
+        setLoading(true);
+
+        try {
+            // 1. Save to Supabase for Record Keeping
+            const { error } = await supabase
+                .from('contact_messages')
+                .insert([
+                    {
+                        name: formData.name,
+                        phone: formData.phone,
+                        email: formData.email.toLowerCase().trim(),
+                        subject: formData.subject,
+                        message: formData.message
+                    }
+                ]);
+
+            if (error) throw error;
+
+            // 2. Trigger fallback email client (Optional, but good for direct response)
+            const emailBody = `Name: ${formData.name}\nPhone: ${formData.phone}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`;
+            const mailtoUrl = `mailto:fadmaestro2017@gmail.com?subject=${encodeURIComponent(formData.subject || 'New Contact Form Message')}&body=${encodeURIComponent(emailBody)}`;
+
+            // Show success and clear
+            alert('Your message has been sent successfully! We will get back to you shortly.');
+
+            // Only open mail client if user confirms they want to send a direct copy
+            if (window.confirm('Would you also like to open your email client to send a direct copy?')) {
+                window.location.href = mailtoUrl;
+            }
+
+            setFormData({
+                name: '',
+                phone: '',
+                email: '',
+                subject: '',
+                message: ''
+            });
+
+        } catch (err) {
+            console.error("Contact form error:", err);
+            alert('Failed to send message: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <>
             <Header />
             <div className="contact-page">
-                {/* Map Background (Fixed 600px Height) */}
+                {/* Map Background - Controlled via CSS (Hidden on Mobile) */}
                 <div className="contact-map-container">
                     <iframe
                         title="School Location Map"
@@ -51,7 +84,6 @@ const ContactPage = () => {
                         loading="lazy"
                         referrerPolicy="no-referrer-when-downgrade"
                     ></iframe>
-
                 </div>
 
                 {/* Main Overlaid Contact Card (Overlaps map by 24px) */}

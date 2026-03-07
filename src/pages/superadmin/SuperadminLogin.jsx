@@ -73,7 +73,7 @@ const SuperadminLogin = () => {
             {/* Main Login Card */}
             <main className="sal-main">
                 <div className="sal-card">
-                    <h2 className="sal-title">Login to staff portal</h2>
+                    <h2 className="sal-title">Login to Super Admin Portal</h2>
 
                     {error && <div style={{ color: '#ef4444', fontSize: '14px', marginBottom: '16px', textAlign: 'center', backgroundColor: '#fee2e2', padding: '10px', borderRadius: '8px', border: '1px solid #fecaca' }}>{error}</div>}
 
@@ -100,10 +100,6 @@ const SuperadminLogin = () => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
-                        </div>
-
-                        <div className="sal-reset-row">
-                            <a href="#reset" className="sal-reset-link">Reset Password</a>
                         </div>
 
                         <button type="submit" className="sal-login-btn" disabled={loading}>

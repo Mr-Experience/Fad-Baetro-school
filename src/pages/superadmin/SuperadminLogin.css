@@ -111,6 +111,26 @@
     transition: background-color 0.2s;
 }
 
-.sal-login-btn:hover {
-    background-color: #7B1848;
+@media (max-width: 640px) {
+    .sal-header {
+        padding: 10px 16px;
+        justify-content: center;
+    }
+
+    .sal-header-left {
+        gap: 8px;
+    }
+
+    .sal-card {
+        padding: 32px 20px;
+    }
+
+    .sal-title {
+        font-size: 20px;
+        margin-bottom: 24px;
+    }
+
+    .portal-school-name {
+        font-size: 16px;
+    }
 }

@@ -135,27 +135,40 @@ const ExamScreen = () => {
                     if (!sErr && sData) setSessionInfo({ session: curSession, term: curTerm });
                 }
 
-                // Restore Progress or Set Initial Timer
+                // 5. Restore Progress or Set Initial Timer from Server
                 const storageKey = `exam_prog_cand_${user.id}_${cfg.id}`;
                 const savedStr = localStorage.getItem(storageKey);
                 let loadedAnswers = {};
                 let loadedIdx = 0;
                 let remainingTime = (cfg.duration_minutes || 60) * 60;
 
-                if (savedStr) {
-                    try {
-                        const saved = JSON.parse(savedStr);
-                        if (saved.answers) loadedAnswers = saved.answers;
-                        if (saved.currentQuestionIdx) loadedIdx = saved.currentQuestionIdx;
-                        if (saved.endTime) {
-                            const diff = Math.floor((saved.endTime - Date.now()) / 1000);
-                            remainingTime = diff > 0 ? diff : 0;
-                        }
-                    } catch (e) {
-                        console.error("Error parsing saved progress", e);
+                // Sync with Server Attempt
+                const { data: attempt } = await supabase
+                    .from('exam_attempts')
+                    .select('end_time')
+                    .eq('student_id', std?.id || user.id)
+                    .eq('exam_id', cfg.id)
+                    .eq('status', 'started')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (attempt && attempt.end_time) {
+                    const serverEndTime = new Date(attempt.end_time).getTime();
+                    const diff = Math.floor((serverEndTime - Date.now()) / 1000);
+                    remainingTime = diff > 0 ? diff : 0;
+
+                    // Restore content from storage but favor server time
+                    if (savedStr) {
+                        try {
+                            const saved = JSON.parse(savedStr);
+                            if (saved.answers) loadedAnswers = saved.answers;
+                            if (saved.currentQuestionIdx) loadedIdx = saved.currentQuestionIdx;
+                        } catch (e) { console.error(e); }
+                    } else {
+                        localStorage.setItem(storageKey, JSON.stringify({ endTime: serverEndTime, answers: {}, currentQuestionIdx: 0 }));
                     }
                 } else {
-                    // First time starting, set end time
                     const endTime = Date.now() + (remainingTime * 1000);
                     localStorage.setItem(storageKey, JSON.stringify({ endTime, answers: {}, currentQuestionIdx: 0 }));
                 }

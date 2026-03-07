@@ -1,11 +1,13 @@
 .hero-section {
     width: 100%;
-    height: 630px;
+    min-height: 400px;
+    /* Floor for very narrow screens */
+    aspect-ratio: 16 / 7.5;
+    /* Maintain cinematic ratio */
     position: relative;
     overflow: hidden;
     margin-bottom: 20px;
-    background-color: #f1f5f9;
-    /* Stable light gray placeholder */
+    background-color: var(--gray-100);
 }
 
 .hero-slider {
@@ -16,14 +18,9 @@
 
 .hero-slide {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: 110%;
-    /* Scale up to ensure watermark remains hidden */
-    background-position: center center;
-    /* Perfect centralization */
+    inset: 0;
+    background-size: cover;
+    background-position: center;
     background-repeat: no-repeat;
     opacity: 0;
     transition: opacity 1s ease-in-out;
@@ -35,47 +32,44 @@
     z-index: 2;
 }
 
-/* Navigation Controls */
+/* Navigation Controls - Adapt size to screen */
 .hero-controls {
     position: absolute;
     top: 50%;
-    left: 0;
-    right: 0;
+    inset-inline: 0;
     transform: translateY(-50%);
     display: flex;
     justify-content: space-between;
-    padding: 0 16px;
-    /* 16px away from screen */
+    padding: 0 max(10px, 2vw);
     z-index: 10;
     pointer-events: none;
 }
 
 .control-btn {
-    width: 45px;
-    height: 45px;
-    background-color: rgba(74, 85, 104, 0.8);
-    /* Gray background box */
+    width: clamp(32px, 5vw, 45px);
+    height: clamp(32px, 5vw, 45px);
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
     color: white;
     border: none;
-    border-radius: 4px;
-    /* 4px corner radius */
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 20px;
     transition: all 0.3s ease;
     pointer-events: auto;
 }
 
 .control-btn:hover {
     background-color: var(--primary-600);
+    transform: scale(1.1);
 }
 
 /* Indicators */
 .hero-indicators {
     position: absolute;
-    bottom: 30px;
+    bottom: clamp(15px, 4vw, 30px);
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -84,59 +78,25 @@
 }
 
 .indicator {
-    width: 12px;
-    height: 12px;
+    width: clamp(8px, 1.5vw, 12px);
+    height: clamp(8px, 1.5vw, 12px);
     border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.5);
-    border: none;
+    background-color: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
 .indicator.active {
     background-color: white;
-    transform: scale(1.2);
+    width: clamp(16px, 3vw, 24px);
+    border-radius: 10px;
 }
 
-/* Responsive Adjustments */
-@media (max-width: 1024px) {
-    .hero-section {
-        height: 450px;
-    }
-}
-
+/* Fluid responsive adjustments - no more fixed heights */
 @media (max-width: 768px) {
     .hero-section {
-        height: 350px;
-    }
-
-    .control-btn {
-        width: 38px;
-        height: 38px;
-    }
-
-    .hero-indicators {
-        bottom: 20px;
-        gap: 8px;
-    }
-
-    .indicator {
-        width: 10px;
-        height: 10px;
-    }
-}
-
-@media (max-width: 480px) {
-    .hero-section {
-        height: 280px;
-    }
-
-    .hero-controls {
-        padding: 0 8px;
-    }
-
-    .control-btn {
-        width: 32px;
-        height: 32px;
+        aspect-ratio: 16 / 9;
+        /* Slightly taller for mobile */
     }
 }

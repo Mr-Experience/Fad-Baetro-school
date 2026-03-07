@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import '../auth/PortalLogin.css';
 import './CandidateLogin.css';
 import logo from '../../assets/logo.jpg';
@@ -39,12 +39,21 @@ const CandidateLogin = () => {
             const curSession = settings?.current_session || '';
             const curTerm = settings?.current_term || '';
 
-            // 2. Fetch candidate identity (if in students table)
-            const { data: candidate } = await supabase
+            // 2. Fetch identity (Check students first, then candidates)
+            let { data: identity } = await supabase
                 .from('students')
                 .select('id, class_id')
                 .eq('email', email.toLowerCase())
                 .maybeSingle();
+
+            if (!identity) {
+                const { data: cand } = await supabase
+                    .from('candidates')
+                    .select('id, class_id')
+                    .eq('email', email.toLowerCase())
+                    .maybeSingle();
+                identity = cand;
+            }
 
             // 3. Check for ACTIVE candidate exams
             const { data: activeConfigs } = await supabase
@@ -60,7 +69,7 @@ const CandidateLogin = () => {
                 const { data: results } = await supabase
                     .from('exam_results')
                     .select('exam_id, subject_id')
-                    .eq('student_id', candidate?.id || data.user.id)
+                    .eq('student_id', identity?.id || data.user.id)
                     .eq('session_id', curSession)
                     .eq('term_id', curTerm)
                     .eq('question_type', 'candidate');
@@ -134,6 +143,9 @@ const CandidateLogin = () => {
                         <button type="submit" className="login-btn" disabled={loading}>
                             {loading ? 'Logging in...' : 'Login to portal'}
                         </button>
+                        <p className="signup-prompt" style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px', color: '#64748B' }}>
+                            New candidate? <Link to="/signup" style={{ color: '#4F46E5', fontWeight: 'bold', textDecoration: 'none' }}>Start Admission Application</Link>
+                        </p>
                     </form>
                 </div>
             </main>

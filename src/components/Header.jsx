@@ -119,6 +119,7 @@ const Header = () => {
                                     </span>
                                     <ul className={`dropdown-menu ${activeDropdown === 'admission' ? 'show' : ''}`}>
                                         <li><Link to="/process">ADMISSION PROCESS</Link></li>
+                                        <li><Link to="/signup" style={{ color: 'var(--primary-600)', fontWeight: 'bold' }}>APPLY NOW</Link></li>
                                         <li><Link to="/frequently-asked-questions">FAQs</Link></li>
                                     </ul>
                                 </li>
@@ -262,6 +263,7 @@ const Header = () => {
                                     </div>
                                     <ul className={`mobile-submenu ${mobileDropdown === 'admission' ? 'open' : ''}`}>
                                         <li><Link to="/process" onClick={closeAllDropdowns}>ADMISSION PROCESS</Link></li>
+                                        <li><Link to="/signup" onClick={closeAllDropdowns} style={{ color: 'var(--primary-600)', fontWeight: 'bold' }}>APPLY NOW</Link></li>
                                         <li><Link to="/frequently-asked-questions" onClick={closeAllDropdowns}>FAQs</Link></li>
                                     </ul>
                                 </li>

@@ -262,33 +262,26 @@ textarea.contact-form-input {
 
 /* Responsive */
 @media (max-width: 1024px) {
+    .contact-map-container {
+        display: none;
+        /* Hide map on smaller screens */
+    }
+
     .contact-overlay-card {
         flex-direction: column;
-        top: 120px;
-        left: 5%;
-        right: 5%;
-        transform: none;
-        width: 90%;
-        margin-bottom: 50px;
-        position: relative;
+        margin: 40px auto;
+        /* Normal margin, no overlay */
+        width: 92%;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     }
 
     .contact-page {
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding-top: 60px;
-        min-height: 100vh;
-    }
-
-    .contact-map-container {
-        position: fixed;
+        padding-top: 20px;
+        background-color: #f8fafc;
     }
 
     .map-location-box {
         display: none;
-        /* Hide on mobile to save space, or reposition */
     }
 }
 

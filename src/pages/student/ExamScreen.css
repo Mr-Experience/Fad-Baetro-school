@@ -214,9 +214,47 @@
 }
 
 /* Answered question — lighter maroon tint */
-.es-num-btn.es-num-answered {
-    background: #FDE8F3;
-    border-color: #C93D7A;
-    color: #9D245A;
-    font-weight: 600;
+/* ── Responsiveness ── */
+@media (max-width: 1024px) {
+    .es-main {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .es-question-card,
+    .es-grid-card {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .es-number-grid {
+        grid-template-columns: repeat(8, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .es-number-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    .es-main {
+        padding: 16px;
+    }
+
+    .es-question-card {
+        padding: 16px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .es-number-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .es-submit-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
 }

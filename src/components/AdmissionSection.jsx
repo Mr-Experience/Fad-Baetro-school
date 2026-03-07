@@ -19,10 +19,10 @@ const AdmissionSection = () => {
                             Interested candidates should begin to apply immediately.
                         </p>
                         <div className="admission-actions">
-                            <Link to="/admission" className="btn btn-accent">
+                            <Link to="/process" className="btn btn-accent">
                                 VIEW ADMISSION PROCESS
                             </Link>
-                            <Link to="/portal/candidate" className="btn btn-accent">
+                            <Link to="/signup" className="btn btn-accent">
                                 APPLY ONLINE NOW
                             </Link>
                         </div>

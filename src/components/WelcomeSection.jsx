@@ -38,9 +38,6 @@ const WelcomeSection = () => {
                         <Link to="/about" className="btn btn-primary">
                             About Us <MoveRight size={18} />
                         </Link>
-                        <Link to="/contact" className="btn btn-secondary">
-                            Management Messages <MoveRight size={18} />
-                        </Link>
                     </div>
                 </div>
 

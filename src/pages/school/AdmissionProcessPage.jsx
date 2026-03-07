@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { UserPlus, FormInput, CheckCircle, Smartphone, Globe, ClipboardCheck } from 'lucide-react';
@@ -78,7 +79,7 @@ const AdmissionProcessPage = () => {
                                 <li>If you encounter any issues, please contact our support desk via the contact page.</li>
                             </ul>
                             <div className="btn-wrapper">
-                                <button className="btn-apply-now">Start Application Now</button>
+                                <Link to="/signup" className="btn-apply-now" style={{ textDecoration: 'none', display: 'inline-block' }}>Start Application Now</Link>
                             </div>
                         </div>
                     </div>
