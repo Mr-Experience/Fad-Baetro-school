@@ -146,6 +146,22 @@ const Header = () => {
                                 <li className="nav-item">
                                     <Link to="/contact" className={`nav-link ${isActive('/contact') ? 'active' : ''}`}>CONTACT US</Link>
                                 </li>
+                                <li className="nav-item has-dropdown">
+                                    <span
+                                        className={`nav-link ${location.pathname.startsWith('/portal') ? 'active' : ''}`}
+                                        onClick={() => toggleDropdown('portals')}
+                                        style={{ cursor: 'pointer', color: 'var(--primary-600)', fontWeight: '700' }}
+                                    >
+                                        PORTALS
+                                        <ChevronDown size={14} className="dropdown-icon" />
+                                    </span>
+                                    <ul className={`dropdown-menu ${activeDropdown === 'portals' ? 'show' : ''}`}>
+                                        <li><Link to="/portal/student">STUDENT PORTAL</Link></li>
+                                        <li><Link to="/portal/candidate">CANDIDATE PORTAL</Link></li>
+                                        <li><Link to="/portal/admin/login">ADMIN PORTAL</Link></li>
+                                        <li><Link to="/portal/superadmin">SUPER ADMIN</Link></li>
+                                    </ul>
+                                </li>
                             </ul>
                         </nav>
                     </div>
@@ -298,6 +314,25 @@ const Header = () => {
                                             <span>CONTACT US</span>
                                         </div>
                                     </Link>
+                                </li>
+
+                                <li className="mobile-menu-item has-submenu">
+                                    <div
+                                        className={`mobile-menu-link ${location.pathname.startsWith('/portal') ? 'active' : ''}`}
+                                        onClick={() => toggleMobileDropdown('portals')}
+                                    >
+                                        <div className="link-content">
+                                            <Monitor size={20} />
+                                            <span>PORTALS</span>
+                                        </div>
+                                        <ChevronDown size={18} className={`submenu-icon ${mobileDropdown === 'portals' ? 'rotate' : ''}`} />
+                                    </div>
+                                    <ul className={`mobile-submenu ${mobileDropdown === 'portals' ? 'open' : ''}`}>
+                                        <li><Link to="/portal/student" onClick={closeAllDropdowns}>STUDENT PORTAL</Link></li>
+                                        <li><Link to="/portal/candidate" onClick={closeAllDropdowns}>CANDIDATE PORTAL</Link></li>
+                                        <li><Link to="/portal/admin/login" onClick={closeAllDropdowns}>ADMIN PORTAL</Link></li>
+                                        <li><Link to="/portal/superadmin" onClick={closeAllDropdowns}>SUPER ADMIN</Link></li>
+                                    </ul>
                                 </li>
                             </ul>
                         </nav>
