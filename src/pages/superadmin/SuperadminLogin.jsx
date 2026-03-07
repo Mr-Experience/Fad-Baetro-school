@@ -76,7 +76,12 @@ const SuperadminLogin = () => {
             {/* Simple Header */}
             <header className="portal-header-bar sal-header">
                 <div className="sal-header-left">
-                    <img src={dbLogo || logoFallback} alt="Logo" className="portal-logo-img" />
+                    <img
+                        src={dbLogo || logoFallback}
+                        onError={(e) => { e.target.src = logoFallback; }}
+                        alt="Logo"
+                        className="portal-logo-img"
+                    />
                     <h1 className="portal-school-name">Fad Mastro Academy</h1>
                 </div>
             </header>

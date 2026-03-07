@@ -103,7 +103,13 @@ const SchoolConfig = () => {
             {/* Exactly as per Image Header */}
             <header className="sc-header">
                 <div className="sc-header-left">
-                    <img src={dbLogo || logoFallback} alt="Logo" className="portal-logo-img" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                    <img
+                        src={dbLogo || logoFallback}
+                        onError={(e) => { e.target.src = logoFallback; }}
+                        alt="Logo"
+                        className="portal-logo-img"
+                        style={{ width: '40px', height: '40px', borderRadius: '50%' }}
+                    />
                     <span className="sc-brand-name">Fad Mastro Academy</span>
                 </div>
 

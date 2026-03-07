@@ -141,7 +141,12 @@ const CandidateSignup = () => {
     return (
         <div className="cs-container">
             <div className="cs-header-bar">
-                <img src={dbLogo || logoFallback} alt="Logo" className="cs-logo" />
+                <img
+                    src={dbLogo || logoFallback}
+                    onError={(e) => { e.target.src = logoFallback; }}
+                    alt="Logo"
+                    className="cs-logo"
+                />
                 <h1 className="cs-school-name">Fad Maestro Academy</h1>
             </div>
 

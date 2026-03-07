@@ -15,7 +15,7 @@ const Header = () => {
     React.useEffect(() => {
         const fetchSettings = async () => {
             const { data } = await supabase.from('system_settings').select('school_logo_url').eq('id', 1).maybeSingle();
-            if (data?.school_logo_url && data.school_logo_url.startsWith('http') && !data.school_logo_url.includes('YOUR_DIRECT_PUBLIC')) {
+            if (data?.school_logo_url && data.school_logo_url.startsWith('http') && !data.school_logo_url.includes('YOUR_DIRECT')) {
                 setDbLogo(data.school_logo_url);
             }
         };
@@ -87,7 +87,12 @@ const Header = () => {
                     <div className="header-main-left">
                         <Link to="/" className="school-logo-group">
                             <div className="school-logo">
-                                <img src={dbLogo || logoFallback} alt="Fad Maestro Academy" className="logo-img" />
+                                <img
+                                    src={dbLogo || logoFallback}
+                                    onError={(e) => { e.target.src = logoFallback; }}
+                                    alt="Fad Maestro Academy"
+                                    className="logo-img"
+                                />
                             </div>
                             <div className="school-branding">
                                 <h1 className="school-name">FAD MAESTRO<br />ACADEMY</h1>

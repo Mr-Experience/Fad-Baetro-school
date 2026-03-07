@@ -25,7 +25,12 @@ const Footer = () => {
                     {/* Column 1: School Info */}
                     <div className="footer-col school-branding-col">
                         <div className="footer-logo-group">
-                            <img src={dbLogo || logoFallback} alt="Fad Maestro Academy" className="footer-logo-img" />
+                            <img
+                                src={dbLogo || logoFallback}
+                                onError={(e) => { e.target.src = logoFallback; }}
+                                alt="Fad Maestro Academy"
+                                className="footer-logo-img"
+                            />
                             <div className="footer-branding">
                                 <h2 className="footer-school-name">FAD MAESTRO<br />ACADEMY</h2>
                                 <p className="footer-school-motto">Knowledge and Service</p>

@@ -18,8 +18,10 @@ const HomePage = () => {
             <Hero />
             <NoticeBanner />
             <AdmissionSection />
-            <WelcomeSection />
-            <AcademicsSection />
+            <div className="home-side-sections-wrapper">
+                <WelcomeSection />
+                <AcademicsSection />
+            </div>
             <NewsSection />
             <TestimonialsSection />
             <main className="home-content">

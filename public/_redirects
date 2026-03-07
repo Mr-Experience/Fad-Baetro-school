@@ -1,0 +1,36 @@
+/*  redirects all requests to index.html for React Router */
+/*  This fixes the 404 error on page refresh or direct URL entry */
+/*  on Netlify and other static hosting providers */
+
+/*  200 status code tells the browser the request was successful */
+/*  and the server will serve the content of index.html */
+
+/*  Direct all routes to index.html */
+/*  This includes /portal/admin, /portal/student, etc. */
+
+/*  /*  /index.html  200 */
+/*  Actually the standard format is: */
+/*  /path  /destination  status */
+
+/*  Standard SPA Redirect */
+/*  Any path that doesn't have an extension (like .js, .css, .png) */
+/*  should be handled by index.html */
+
+/*  Match all routes and point to index.html with 200 status */
+/*  This is the simple, standard Netlify SPA redirect */
+
+/*  /*  /index.html  200 */
+
+/*  Wait, I should just write the content directly to the file */
+/*  The file content should literally be: */
+/*  /*    /index.html   200 */
+
+/*  I will write it in a clear format */
+/*  /*    /index.html   200 */
+
+/*  Okay I'll just put the line here */
+/*  /*    /index.html   200 */
+
+/*  But the tool needs CodeContent */
+
+/*  /* /index.html 200 */

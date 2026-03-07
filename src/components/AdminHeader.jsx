@@ -21,7 +21,12 @@ const AdminHeader = ({ profileLoading, userName, userInitial, avatarUrl, activeS
         <header className="ad-header">
             <div className="ad-header-left">
                 <Link to="/portal/admin">
-                    <img src={dbLogo || logoFallback} alt="Logo" className="ad-header-logo" />
+                    <img
+                        src={dbLogo || logoFallback}
+                        onError={(e) => { e.target.src = logoFallback; }}
+                        alt="Logo"
+                        className="ad-header-logo"
+                    />
                 </Link>
             </div>
             <div className="ad-header-right">
