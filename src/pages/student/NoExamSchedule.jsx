@@ -60,8 +60,8 @@ const NoExamSchedule = () => {
                                 .select('current_session, current_term')
                                 .maybeSingle();
 
-                            const curSession = sData?.current_session || '';
-                            const curTerm = sData?.current_term || '';
+                            const curSession = (sData?.current_session || '').trim();
+                            const curTerm = (sData?.current_term || '').trim();
 
                             const { data: activeExams, error: examError } = await supabase
                                 .from('active_exams')
@@ -94,6 +94,7 @@ const NoExamSchedule = () => {
                                 });
 
                                 if (availableExam) {
+                                    if (intervalId) clearInterval(intervalId);
                                     navigate('/portal/student/active-exam');
                                     return;
                                 } else {

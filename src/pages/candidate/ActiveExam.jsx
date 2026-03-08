@@ -53,8 +53,8 @@ const ActiveExam = () => {
                             .select('current_session, current_term')
                             .maybeSingle();
 
-                        const curSession = sData?.current_session || '';
-                        const curTerm = sData?.current_term || '';
+                        const curSession = (sData?.current_session || '').trim();
+                        const curTerm = (sData?.current_term || '').trim();
                         if (sData) setSessionInfo({ session: curSession, term: curTerm });
 
                         const { data: activeConfigs, error } = await supabase
@@ -123,16 +123,24 @@ const ActiveExam = () => {
                                 }
 
                                 setLoading(false);
+                                if (intervalId) clearInterval(intervalId); // Clear interval when an exam is found and ready
                                 return;
                             } else if (allTaken) {
+                                setLoading(false);
+                                if (intervalId) clearInterval(intervalId);
                                 navigate('/portal/candidate/submitted', { replace: true });
                                 return;
                             }
                         }
 
+                        // If no active configs or no available exam after filtering
+                        setLoading(false);
+                        if (intervalId) clearInterval(intervalId);
                         navigate('/portal/candidate/no-exam');
                     } catch (err) {
                         console.error("fetchActive Error:", err);
+                        setLoading(false);
+                        if (intervalId) clearInterval(intervalId); // Ensure interval is cleared on error
                     }
                 };
 

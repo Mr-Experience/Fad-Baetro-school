@@ -45,9 +45,8 @@ const NoExamSchedule = () => {
                             .select('current_session, current_term')
                             .maybeSingle();
 
-                        const curSession = sData?.current_session || '';
-                        const curTerm = sData?.current_term || '';
-
+                        const curSession = (sData?.current_session || '').trim();
+                        const curTerm = (sData?.current_term || '').trim();
                         const { data: activeExams } = await supabase
                             .from('active_exams')
                             .select('*, exam_configs!inner(*)')
@@ -80,12 +79,15 @@ const NoExamSchedule = () => {
                             });
 
                             if (availableExam) {
+                                if (intervalId) clearInterval(intervalId);
                                 navigate('/portal/candidate/active-exam');
                                 return;
                             }
                         }
 
                         setLoading(false);
+                        if (intervalId) clearInterval(intervalId);
+                        navigate('/portal/candidate/no-exam');
                     } catch (e) {
                         console.error("Status check fail:", e);
                         setLoading(false);

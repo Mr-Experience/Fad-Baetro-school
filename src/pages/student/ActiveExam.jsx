@@ -61,8 +61,8 @@ const ActiveExam = () => {
                                 .select('current_session, current_term')
                                 .maybeSingle();
 
-                            const curSession = sData?.current_session || '';
-                            const curTerm = sData?.current_term || '';
+                            const curSession = (sData?.current_session || '').trim();
+                            const curTerm = (sData?.current_term || '').trim();
                             if (sData) setSessionInfo({ session: curSession, term: curTerm });
 
                             const { data: activeExams, error } = await supabase
@@ -91,6 +91,8 @@ const ActiveExam = () => {
                                 });
 
                                 if (filteredExams.length === 0) {
+                                    setLoading(false);
+                                    if (intervalId) clearInterval(intervalId);
                                     navigate('/portal/student/no-exam', { replace: true });
                                     return;
                                 }
@@ -149,6 +151,7 @@ const ActiveExam = () => {
                             }
 
                             setLoading(false);
+                            if (intervalId) clearInterval(intervalId);
                             navigate('/portal/student/no-exam');
                         } catch (err) {
                             console.error("fetchActive Error:", err);

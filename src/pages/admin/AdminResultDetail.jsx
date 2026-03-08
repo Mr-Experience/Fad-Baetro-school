@@ -94,7 +94,7 @@ const AdminResultDetail = () => {
                             total_questions, 
                             submitted_at,
                             completed_at,
-                            students:student_id (full_name, email)
+                            profiles:student_id (full_name, email)
                         `)
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
@@ -234,8 +234,8 @@ const AdminResultDetail = () => {
                                             <tr key={res.id}>
                                                 <td style={{ fontWeight: '700', color: '#6B7280' }}>#{i + 1}</td>
                                                 <td className="rd-td-student">
-                                                    <span className="rd-student-name">{res.students?.full_name || 'Anonymous Student'}</span>
-                                                    <span className="rd-student-email">{res.students?.email || 'no-email'}</span>
+                                                    <span className="rd-student-name">{res.profiles?.full_name || 'Anonymous Student'}</span>
+                                                    <span className="rd-student-email">{res.profiles?.email || 'no-email'}</span>
                                                 </td>
                                                 <td>
                                                     <span className={`rd-score-pill ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}>
