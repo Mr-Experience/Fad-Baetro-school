@@ -36,12 +36,12 @@ const AdminDashboard = () => {
                         .eq('session_id', activeSession)
                         .eq('term_id', activeTerm),
                     supabase.from('exam_results').select('*', { count: 'exact', head: true })
-                        .eq('session_id', activeSession)
-                        .eq('term_id', activeTerm)
+                        .eq('session_id', (activeSession || '').trim())
+                        .eq('term_id', (activeTerm || '').trim())
                         .eq('question_type', 'test'),
                     supabase.from('exam_results').select('*', { count: 'exact', head: true })
-                        .eq('session_id', activeSession)
-                        .eq('term_id', activeTerm)
+                        .eq('session_id', (activeSession || '').trim())
+                        .eq('term_id', (activeTerm || '').trim())
                         .eq('question_type', 'exam')
                 ]);
 

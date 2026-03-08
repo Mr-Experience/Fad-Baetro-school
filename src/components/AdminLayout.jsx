@@ -48,8 +48,8 @@ const AdminLayout = () => {
                     .single();
 
                 if (settings) {
-                    setActiveSession(settings.current_session || '');
-                    setActiveTerm(settings.current_term || '');
+                    setActiveSession((settings.current_session || '').trim());
+                    setActiveTerm((settings.current_term || '').trim());
                 }
 
                 // Fetch Classes (Global Cache)

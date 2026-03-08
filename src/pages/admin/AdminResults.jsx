@@ -45,8 +45,8 @@ const AdminResults = () => {
                     .from('exam_results')
                     .select('id, subject_id, question_type')
                     .eq('class_id', selectedClassId)
-                    .eq('session_id', activeSession)
-                    .eq('term_id', activeTerm);
+                    .eq('session_id', (activeSession || '').trim())
+                    .eq('term_id', (activeTerm || '').trim());
 
                 if (selectedSubjectId) {
                     query = query.eq('subject_id', selectedSubjectId);

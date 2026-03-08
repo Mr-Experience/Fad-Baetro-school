@@ -71,8 +71,8 @@ const AdminResultDetail = () => {
                     .single();
 
                 if (settings) {
-                    setActiveSession(settings.current_session || '');
-                    setActiveTerm(settings.current_term || '');
+                    setActiveSession((settings.current_session || '').trim());
+                    setActiveTerm((settings.current_term || '').trim());
                 }
 
                 // 3. Fetch stats and results
@@ -94,13 +94,13 @@ const AdminResultDetail = () => {
                             total_questions, 
                             submitted_at,
                             completed_at,
-                            profiles (full_name, email)
+                            students:student_id (full_name, email)
                         `)
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
                         .eq('question_type', questionType)
-                        .eq('session_id', settings.current_session)
-                        .eq('term_id', settings.current_term)
+                        .eq('session_id', (settings.current_session || '').trim())
+                        .eq('term_id', (settings.current_term || '').trim())
                         .order('score_percent', { ascending: false });
 
                     if (resData) {
@@ -234,8 +234,8 @@ const AdminResultDetail = () => {
                                             <tr key={res.id}>
                                                 <td style={{ fontWeight: '700', color: '#6B7280' }}>#{i + 1}</td>
                                                 <td className="rd-td-student">
-                                                    <span className="rd-student-name">{res.profiles?.full_name || 'Anonymous Student'}</span>
-                                                    <span className="rd-student-email">{res.profiles?.email || 'no-email'}</span>
+                                                    <span className="rd-student-name">{res.students?.full_name || 'Anonymous Student'}</span>
+                                                    <span className="rd-student-email">{res.students?.email || 'no-email'}</span>
                                                 </td>
                                                 <td>
                                                     <span className={`rd-score-pill ${Number(res.score_percent) >= 50 ? 'pass' : 'fail'}`}>
