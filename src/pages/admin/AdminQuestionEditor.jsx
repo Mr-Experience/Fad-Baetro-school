@@ -124,12 +124,26 @@ const AdminQuestionEditor = () => {
                         .maybeSingle();
 
                     if (config) {
+                        // 5. Fetch ACTIVE RECORD (New System)
+                        const { data: aeRecord } = await supabase
+                            .from('active_exams')
+                            .select('*')
+                            .eq('exam_config_id', config.id)
+                            .maybeSingle();
+
+                        // Convert UTC from DB to Local ISO for the datetime-local input
+                        const timeToUse = aeRecord?.visible_at || config.visible_at;
+                        const localVisibleAt = timeToUse
+                            ? new Date(new Date(timeToUse).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16)
+                            : '';
+
                         setConfigForm({
-                            is_active: config.is_active,
-                            visible_at: config.visible_at ? new Date(config.visible_at).toISOString().slice(0, 16) : '',
+                            is_active: aeRecord ? aeRecord.is_active : false,
+                            visible_at: localVisibleAt,
                             duration_minutes: config.duration_minutes || 60,
                             question_count: config.question_count || 0,
-                            selection_type: config.selection_type || 'random'
+                            selection_type: config.selection_type || 'random',
+                            active_exam_id: aeRecord?.id || null
                         });
                     }
                 }
@@ -238,18 +252,42 @@ const AdminQuestionEditor = () => {
                 session_id: activeSession,
                 term_id: activeTerm,
                 is_active: configForm.is_active,
-                visible_at: configForm.visible_at || null,
+                visible_at: configForm.visible_at ? new Date(configForm.visible_at).toISOString() : new Date().toISOString(),
                 duration_minutes: parseInt(configForm.duration_minutes),
                 question_count: parseInt(configForm.question_count),
                 selection_type: configForm.selection_type,
                 updated_at: new Date().toISOString()
             };
 
-            const { error } = await supabase
+            const { data: cfgData, error: cfgError } = await supabase
                 .from('exam_configs')
-                .upsert(payload, { onConflict: 'class_id,subject_id,question_type,session_id,term_id' });
+                .upsert(payload, { onConflict: 'class_id,subject_id,question_type,session_id,term_id' })
+                .select()
+                .single();
 
-            if (error) throw error;
+            if (cfgError) throw cfgError;
+
+            // 2. Manage ACTIVE_EXAMS Record
+            if (configForm.is_active) {
+                const aePayload = {
+                    exam_config_id: cfgData.id,
+                    visible_at: payload.visible_at,
+                    is_active: true,
+                    session_id: activeSession,
+                    term_id: activeTerm,
+                    updated_at: new Date().toISOString()
+                };
+                const { error: aeError } = await supabase
+                    .from('active_exams')
+                    .upsert(aePayload, { onConflict: 'exam_config_id' });
+                if (aeError) throw aeError;
+            } else {
+                // If toggled off, we deactivate the active_exams record or delete it
+                await supabase
+                    .from('active_exams')
+                    .delete()
+                    .eq('exam_config_id', cfgData.id);
+            }
             setIsConfigModalOpen(false);
             alert("Settings updated successfully!");
         } catch (err) {

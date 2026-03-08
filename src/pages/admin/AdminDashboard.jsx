@@ -220,8 +220,8 @@ const AdminDashboard = () => {
                                 <div className="ad-health-bar"><div className="ad-health-fill" style={{ width: '92%', background: '#3B82F6' }}></div></div>
                             </div>
                             <div className="ad-health-item">
-                                <span>Storage Utilization</span>
-                                <div className="ad-health-bar"><div className="ad-health-fill" style={{ width: '14%', background: '#9D245A' }}></div></div>
+                                <span>Storage Utilization ({((0.532 / 1000) * 100).toFixed(2)}%)</span>
+                                <div className="ad-health-bar"><div className="ad-health-fill" style={{ width: '1%', background: '#9D245A' }}></div></div>
                             </div>
                         </div>
                     </div>

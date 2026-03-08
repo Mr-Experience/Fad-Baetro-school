@@ -43,7 +43,7 @@ const ExamScreen = () => {
                 const { data: std, error: stdError } = await supabase
                     .from('students')
                     .select('*')
-                    .eq('email', user.email.toLowerCase())
+                    .eq('id', user.id)
                     .maybeSingle();
 
                 if (stdError || !std) {
@@ -77,13 +77,15 @@ const ExamScreen = () => {
                 let cfg = passedExamConfig;
                 if (!cfg) {
                     console.log("No exam config passed from ActiveExam, fetching from database...");
-                    const { data: activeConfigs, error: cfgError } = await supabase
-                        .from('exam_configs')
-                        .select('*, subjects(subject_name)')
-                        .eq('class_id', std.class_id)
-                        .eq('is_active', true);
+                    const { data: activeExams, error: cfgError } = await supabase
+                        .from('active_exams')
+                        .select('*, exam_configs!inner(*, subjects(subject_name))')
+                        .eq('exam_configs.class_id', std.class_id)
+                        .eq('is_active', true)
+                        .eq('session_id', curSession)
+                        .eq('term_id', curTerm);
 
-                    if (cfgError || !activeConfigs || activeConfigs.length === 0) {
+                    if (cfgError || !activeExams || activeExams.length === 0) {
                         setLoading(false);
                         navigate('/portal/student/no-exam');
                         return;
@@ -98,17 +100,23 @@ const ExamScreen = () => {
                         .eq('term_id', curTerm);
 
                     const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
-                    cfg = activeConfigs.find(c => {
-                        const notTaken = !takenKeys.has(`${c.subject_id}_${c.question_type}`);
-                        const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
+                    const availableAE = activeExams.find(ae => {
+                        const cfgInner = ae.exam_configs;
+                        const notTaken = !takenKeys.has(`${cfgInner.subject_id}_${cfgInner.question_type}`);
+                        const isTimeReady = !ae.visible_at || new Date(ae.visible_at) <= new Date();
                         return notTaken && isTimeReady;
                     });
 
-                    if (!cfg) {
+                    if (!availableAE) {
                         setLoading(false);
                         navigate('/portal/student/no-exam');
                         return;
                     }
+                    cfg = {
+                        ...availableAE.exam_configs,
+                        visible_at: availableAE.visible_at,
+                        active_exam_id: availableAE.id
+                    };
                 } else {
                     // If cfg passed from state, still check visibility time for security
                     const isTimeReady = !cfg.visible_at || new Date(cfg.visible_at) <= new Date();
@@ -384,7 +392,7 @@ const ExamScreen = () => {
                 <div className="nes-header-left">
                     <img src={logo} alt="Logo" className="portal-logo-img" />
                     <div>
-                        <h1 className="portal-school-name" style={{ margin: 0 }}>Fad Mastro Academy</h1>
+                        <h1 className="portal-school-name" style={{ margin: 0 }}>Fad Maestro Academy</h1>
                         <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>{activeConfig?.subjects?.subject_name} • {activeConfig?.question_type?.toUpperCase()}</span>
                     </div>
                 </div>

@@ -7,17 +7,17 @@ const AcademicsSection = () => {
         {
             icon: <Home size={40} strokeWidth={1.5} />,
             title: "Excellency",
-            description: "We offer our best to impact good knowledge to our students that beat other schools beyond imagination."
+            description: "We offer the best knowledge to our students, exceeding imaginations."
         },
         {
             icon: <GraduationCap size={40} strokeWidth={1.5} />,
             title: "Best Results",
-            description: "Our school has been know by its value. Our students always pass out with flying colors."
+            description: "Our students consistently graduate with flying colors and core values."
         },
         {
             icon: <Users size={40} strokeWidth={1.5} />,
             title: "Charity",
-            description: "We teach our students how the society work, giving them ability to posse good characters."
+            description: "We teach social responsibility and build characters for a better society."
         }
     ];
 

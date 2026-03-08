@@ -31,7 +31,7 @@ const ActiveExam = () => {
                 let { data: student, error: fetchError } = await supabase
                     .from('students')
                     .select('full_name, profile_image, image_url, class_id')
-                    .eq('email', user.email.toLowerCase())
+                    .eq('id', user.id)
                     .maybeSingle();
 
                 let candidateId = user.id;
@@ -64,7 +64,8 @@ const ActiveExam = () => {
                             .eq('question_type', 'candidate')
                             .eq('is_active', true)
                             .eq('session_id', curSession)
-                            .eq('term_id', curTerm);
+                            .eq('term_id', curTerm)
+                            .order('visible_at', { ascending: true });
 
                         if (!error && activeConfigs && activeConfigs.length > 0) {
                             const { data: results } = await supabase
@@ -126,13 +127,6 @@ const ActiveExam = () => {
                             } else if (allTaken) {
                                 navigate('/portal/candidate/submitted', { replace: true });
                                 return;
-                            } else {
-                                const nextPending = filteredConfigs.find(c => !takenExamIds.has(c.id) && !takenKeys.has(`${c.subject_id}_candidate`));
-                                if (nextPending) {
-                                    setActiveExam({ ...nextPending, isWaiting: true });
-                                    setLoading(false);
-                                    return;
-                                }
                             }
                         }
 
@@ -178,7 +172,7 @@ const ActiveExam = () => {
             <header className="portal-header-bar nes-header">
                 <div className="nes-header-left">
                     <img src={logo} alt="Logo" className="portal-logo-img" />
-                    <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                    <h1 className="portal-school-name">Fad Maestro Academy</h1>
                 </div>
                 <div className="nes-header-right">
                     <span className="nes-user-name">{candidateName}</span>
@@ -218,69 +212,58 @@ const ActiveExam = () => {
                     </ul>
 
                     {/* Start button */}
-                    {activeExam?.isWaiting ? (
-                        <div className="ae-waiting-msg">
-                            <p style={{ color: '#9D245A', fontWeight: '700', fontSize: '14px', marginTop: '20px' }}>
-                                The next entrance exam ({activeExam.subjects?.subject_name}) is scheduled for:
-                                <br />
-                                <span style={{ fontSize: '18px' }}>{new Date(activeExam.visible_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            </p>
-                            <p style={{ fontSize: '12px', color: '#6B7280' }}>Please wait here. This page will auto-refresh.</p>
-                        </div>
-                    ) : (
-                        <button
-                            className="login-btn ae-start-btn"
-                            onClick={async () => {
-                                if (!activeExam || !preloadedQuestions) return;
+                    <button
+                        className="login-btn ae-start-btn"
+                        onClick={async () => {
+                            if (!activeExam || !preloadedQuestions) return;
 
-                                // 1. Fetch Candidate ID
-                                const { data: { user } } = await supabase.auth.getUser();
-                                let candidateId = user.id;
+                            // 1. Fetch Candidate ID
+                            const { data: { user } } = await supabase.auth.getUser();
+                            let candidateId = user.id;
 
-                                const { data: profile } = await supabase
-                                    .from('students')
-                                    .select('id')
-                                    .eq('email', user.email.toLowerCase())
-                                    .maybeSingle();
+                            const { data: profile } = await supabase
+                                .from('students')
+                                .select('id')
+                                .eq('id', user.id)
+                                .maybeSingle();
 
-                                if (profile) {
-                                    candidateId = profile.id;
+                            if (profile) {
+                                candidateId = profile.id;
+                            }
+
+                            // 2. Record Attempt
+                            const startTime = new Date();
+                            const durationSec = (activeExam.duration_minutes || 60) * 60;
+                            const individualEndTime = new Date(startTime.getTime() + (durationSec * 1000));
+
+                            // Session End (Strict Cutoff)
+                            let finalEndTime = individualEndTime;
+                            if (activeExam.visible_at) {
+                                const scheduledStart = new Date(activeExam.visible_at).getTime();
+                                const classWindowEnd = new Date(scheduledStart + (durationSec * 1000));
+                                if (classWindowEnd < individualEndTime) {
+                                    finalEndTime = classWindowEnd;
                                 }
+                            }
 
-                                // 2. Record Attempt
-                                const startTime = new Date();
-                                const durationSec = (activeExam.duration_minutes || 60) * 60;
-                                const individualEndTime = new Date(startTime.getTime() + (durationSec * 1000));
+                            await supabase.from('exam_attempts').insert({
+                                student_id: candidateId,
+                                exam_id: activeExam.id,
+                                start_time: startTime.toISOString(),
+                                end_time: finalEndTime.toISOString(),
+                                session_id: sessionInfo.session,
+                                term_id: sessionInfo.term,
+                                status: 'started'
+                            });
 
-                                // Session End (Strict Cutoff)
-                                let finalEndTime = individualEndTime;
-                                if (activeExam.visible_at) {
-                                    const scheduledStart = new Date(activeExam.visible_at).getTime();
-                                    const classWindowEnd = new Date(scheduledStart + (durationSec * 1000));
-                                    if (classWindowEnd < individualEndTime) {
-                                        finalEndTime = classWindowEnd;
-                                    }
-                                }
-
-                                await supabase.from('exam_attempts').insert({
-                                    student_id: candidateId,
-                                    exam_id: activeExam.id,
-                                    start_time: startTime.toISOString(),
-                                    end_time: finalEndTime.toISOString(),
-                                    session_id: sessionInfo.session,
-                                    term_id: sessionInfo.term,
-                                    status: 'started'
-                                });
-
-                                navigate('/portal/candidate/exam', {
-                                    state: { examConfig: activeExam, preloadedQuestions, sessionInfo }
-                                });
-                            }}
-                            disabled={!activeExam || !preloadedQuestions}
-                        >
-                            {preloadedQuestions ? 'Start now' : 'Loading exam paper...'}
-                        </button>
-                    )}
+                            navigate('/portal/candidate/exam', {
+                                state: { examConfig: activeExam, preloadedQuestions, sessionInfo }
+                            });
+                        }}
+                        disabled={!activeExam || !preloadedQuestions}
+                    >
+                        {preloadedQuestions ? 'Start now' : 'Loading exam paper...'}
+                    </button>
                 </div>
             </main>
         </div>

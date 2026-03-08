@@ -43,29 +43,29 @@ const CandidateLogin = () => {
             let { data: identity } = await supabase
                 .from('students')
                 .select('id, class_id')
-                .eq('email', email.toLowerCase())
+                .eq('id', data.user.id)
                 .maybeSingle();
 
             if (!identity) {
                 const { data: cand } = await supabase
                     .from('candidates')
                     .select('id, class_id')
-                    .eq('email', email.toLowerCase())
+                    .eq('id', data.user.id)
                     .maybeSingle();
                 identity = cand;
             }
 
             // 3. Check for ACTIVE candidate exams
-            const { data: activeConfigs } = await supabase
-                .from('exam_configs')
-                .select('id, subject_id, visible_at')
-                .eq('question_type', 'candidate')
+            const { data: activeExams } = await supabase
+                .from('active_exams')
+                .select('*, exam_configs!inner(*)')
+                .eq('exam_configs.question_type', 'candidate')
                 .eq('is_active', true)
                 .eq('session_id', curSession)
                 .eq('term_id', curTerm);
 
-            if (activeConfigs && activeConfigs.length > 0) {
-                // Check if already taken (Step 3 & 11)
+            if (activeExams && activeExams.length > 0) {
+                // Check if already taken
                 const { data: results } = await supabase
                     .from('exam_results')
                     .select('exam_id, subject_id')
@@ -77,19 +77,30 @@ const CandidateLogin = () => {
                 const takenExamIds = new Set(results?.map(r => r.exam_id) || []);
                 const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
 
-                const availableExams = activeConfigs.filter(c => {
-                    const notTaken = !takenExamIds.has(c.id) && !takenSubjects.has(c.subject_id);
-                    const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
-                    return notTaken && isTimeReady;
+                const nowTime = new Date().getTime();
+                const readyExams = activeExams.filter(ae => {
+                    const cfg = ae.exam_configs;
+                    const notTaken = !takenExamIds.has(cfg.id) && !takenSubjects.has(cfg.subject_id);
+                    const examStartTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
+                    const examExpiryTime = examStartTime + (cfg.duration_minutes || 60) * 60 * 1000;
+
+                    const isReady = !ae.visible_at || nowTime >= examStartTime;
+                    const isNotExpired = !ae.visible_at || nowTime < examExpiryTime;
+                    return notTaken && isReady && isNotExpired;
                 });
 
-                if (availableExams.length > 0) {
+                if (readyExams.length > 0) {
                     navigate('/portal/candidate/active-exam');
                     return;
-                } else if (activeConfigs.length > 0) {
-                    // Redirect to Submitted Screen if they have completed (Step 11)
-                    navigate('/portal/candidate/submitted', { replace: true });
-                    return;
+                } else if (activeExams.length > 0) {
+                    const anyUntaken = activeExams.some(ae => {
+                        const cfg = ae.exam_configs;
+                        return !takenExamIds.has(cfg.id) && !takenSubjects.has(cfg.subject_id);
+                    });
+                    if (!anyUntaken) {
+                        navigate('/portal/candidate/submitted', { replace: true });
+                        return;
+                    }
                 }
             }
 
@@ -106,7 +117,7 @@ const CandidateLogin = () => {
                     alt="Logo"
                     className="portal-logo-img"
                 />
-                <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                <h1 className="portal-school-name">Fad Maestro Academy</h1>
             </header>
 
             <main className="portal-content">

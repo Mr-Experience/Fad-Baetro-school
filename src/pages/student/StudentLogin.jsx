@@ -32,7 +32,7 @@ const StudentLogin = () => {
             const { data: student } = await supabase
                 .from('students')
                 .select('id, class_id')
-                .eq('email', email.toLowerCase())
+                .eq('id', data.user.id)
                 .maybeSingle();
 
             if (!student) {
@@ -53,17 +53,16 @@ const StudentLogin = () => {
             const activeTerm = settings?.current_term || '';
 
             if (student.class_id) {
-                // 3. DETERMINE ACTIVE EXAM (Step 2)
-                const { data: activeConfigs } = await supabase
-                    .from('exam_configs')
-                    .select('id, subject_id, question_type, visible_at')
-                    .eq('class_id', student.class_id)
+                // 3. DETERMINE ACTIVE EXAM (via separate Active Table)
+                const { data: activeExams } = await supabase
+                    .from('active_exams')
+                    .select('*, exam_configs!inner(*)')
+                    .eq('exam_configs.class_id', student.class_id)
                     .eq('session_id', activeSession)
                     .eq('term_id', activeTerm)
                     .eq('is_active', true);
 
-                if (activeConfigs && activeConfigs.length > 0) {
-                    // 4. CHECK IF STUDENT ALREADY TOOK EXAM (Step 3 & 11)
+                if (activeExams && activeExams.length > 0) {
                     const { data: results } = await supabase
                         .from('exam_results')
                         .select('exam_id, subject_id, question_type')
@@ -74,19 +73,30 @@ const StudentLogin = () => {
                     const takenExamIds = new Set(results?.map(r => r.exam_id) || []);
                     const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
 
-                    const availableExams = activeConfigs.filter(c => {
-                        const notTaken = !takenExamIds.has(c.id) && !takenKeys.has(`${c.subject_id}_${c.question_type}`);
-                        const isTimeReady = !c.visible_at || new Date(c.visible_at) <= new Date();
-                        return notTaken && isTimeReady;
+                    const nowTime = new Date().getTime();
+                    const readyExams = activeExams.filter(ae => {
+                        const cfg = ae.exam_configs;
+                        const notTaken = !takenExamIds.has(cfg.id) && !takenKeys.has(`${cfg.subject_id}_${cfg.question_type}`);
+                        const examStartTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
+                        const examExpiryTime = examStartTime + (cfg.duration_minutes || 60) * 60 * 1000;
+
+                        const isReady = !ae.visible_at || nowTime >= examStartTime;
+                        const isNotExpired = !ae.visible_at || nowTime < examExpiryTime;
+                        return notTaken && isReady && isNotExpired;
                     });
 
-                    if (availableExams.length > 0) {
+                    if (readyExams.length > 0) {
                         navigate('/portal/student/active-exam');
                         return;
-                    } else if (activeConfigs.length > 0) {
-                        // If all active exams for this class are taken, REDIRECT TO SUBMITTED SCREEN (Step 11)
-                        navigate('/portal/student/submitted', { replace: true });
-                        return;
+                    } else if (activeExams.length > 0) {
+                        const anyUntaken = activeExams.some(ae => {
+                            const cfg = ae.exam_configs;
+                            return !takenExamIds.has(cfg.id) && !takenKeys.has(`${cfg.subject_id}_${cfg.question_type}`);
+                        });
+                        if (!anyUntaken) {
+                            navigate('/portal/student/submitted', { replace: true });
+                            return;
+                        }
                     }
                 }
             }
@@ -104,7 +114,7 @@ const StudentLogin = () => {
                     alt="Logo"
                     className="portal-logo-img"
                 />
-                <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                <h1 className="portal-school-name">Fad Maestro Academy</h1>
             </header>
 
             <main className="portal-content">

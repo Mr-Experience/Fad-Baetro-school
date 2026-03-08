@@ -124,7 +124,6 @@ const ExamSubmitted = () => {
                     <p className="nes-subtitle">
                         Great job, <strong>{name}</strong>!<br />
                         Your exam has been recorded successfully.
-                        {score !== null && <span> (Score: {score}%)</span>}
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px', width: '100%' }}>

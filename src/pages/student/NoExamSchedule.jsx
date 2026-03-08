@@ -10,6 +10,7 @@ const NoExamSchedule = () => {
     const [studentName, setStudentName] = useState('...');
     const [profileImage, setProfileImage] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isExpired, setIsExpired] = useState(false);
 
     useEffect(() => {
         let intervalId;
@@ -26,7 +27,7 @@ const NoExamSchedule = () => {
                 const { data: student, error: fetchError } = await supabase
                     .from('students')
                     .select('*')
-                    .eq('email', user.email.toLowerCase())
+                    .eq('id', user.id)
                     .maybeSingle();
 
                 if (fetchError) {
@@ -62,13 +63,15 @@ const NoExamSchedule = () => {
                             const curSession = sData?.current_session || '';
                             const curTerm = sData?.current_term || '';
 
-                            const { data: activeConfigs, error: examError } = await supabase
-                                .from('exam_configs')
-                                .select('*')
-                                .eq('class_id', student.class_id)
-                                .eq('is_active', true);
+                            const { data: activeExams, error: examError } = await supabase
+                                .from('active_exams')
+                                .select('*, exam_configs!inner(*)')
+                                .eq('exam_configs.class_id', student.class_id)
+                                .eq('is_active', true)
+                                .eq('session_id', curSession)
+                                .eq('term_id', curTerm);
 
-                            if (!examError && activeConfigs && activeConfigs.length > 0) {
+                            if (!examError && activeExams && activeExams.length > 0) {
                                 const { data: results } = await supabase
                                     .from('exam_results')
                                     .select('subject_id, question_type')
@@ -77,14 +80,15 @@ const NoExamSchedule = () => {
                                     .eq('term_id', curTerm);
 
                                 const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
-                                const availableExam = activeConfigs.find(c => {
-                                    const notTaken = !takenKeys.has(`${c.subject_id}_${c.question_type}`);
-                                    const examStartTime = c.visible_at ? new Date(c.visible_at).getTime() : 0;
-                                    const examExpiryTime = examStartTime + (c.duration_minutes || 60) * 60 * 1000;
+                                const availableExam = activeExams.find(ae => {
+                                    const cfg = ae.exam_configs;
+                                    const notTaken = !takenKeys.has(`${cfg.subject_id}_${cfg.question_type}`);
+                                    const examStartTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
+                                    const examExpiryTime = examStartTime + (cfg.duration_minutes || 60) * 60 * 1000;
                                     const now = Date.now();
 
-                                    const isTimeReady = !c.visible_at || now >= examStartTime;
-                                    const isNotExpired = !c.visible_at || now < examExpiryTime;
+                                    const isTimeReady = !ae.visible_at || now >= examStartTime;
+                                    const isNotExpired = !ae.visible_at || now < examExpiryTime;
 
                                     return notTaken && isTimeReady && isNotExpired;
                                 });
@@ -92,7 +96,19 @@ const NoExamSchedule = () => {
                                 if (availableExam) {
                                     navigate('/portal/student/active-exam');
                                     return;
+                                } else {
+                                    // Check if there are any exams that have actually expired
+                                    const anyExpired = activeExams.some(ae => {
+                                        const cfg = ae.exam_configs;
+                                        const now = Date.now();
+                                        const startTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
+                                        const expiryTime = startTime + (cfg.duration_minutes || 60) * 60 * 1000;
+                                        return now >= expiryTime;
+                                    });
+                                    setIsExpired(anyExpired);
                                 }
+                            } else {
+                                setIsExpired(false);
                             }
                             setLoading(false);
                         } catch (e) {
@@ -151,7 +167,7 @@ const NoExamSchedule = () => {
             <header className="portal-header-bar nes-header">
                 <div className="nes-header-left">
                     <img src={logo} alt="Logo" className="portal-logo-img" />
-                    <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                    <h1 className="portal-school-name">Fad Maestro Academy</h1>
                 </div>
                 <div className="nes-header-right">
                     <span className="nes-user-name">{studentName}</span>
@@ -181,9 +197,13 @@ const NoExamSchedule = () => {
                     </div>
 
                     {/* Text */}
-                    <h2 className="nes-title">No active exam schedule</h2>
+                    <h2 className="nes-title">
+                        {isExpired ? 'Exam Session Closed' : 'No active exam schedule'}
+                    </h2>
                     <p className="nes-subtitle">
-                        You do not have any exam scheduled at the moment
+                        {isExpired
+                            ? 'The scheduled time for your exam has passed. Contact admin if you missed it.'
+                            : 'You do not have any exam scheduled at the moment'}
                     </p>
 
                     {/* Logout button */}

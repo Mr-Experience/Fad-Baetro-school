@@ -31,7 +31,7 @@ const ActiveExam = () => {
                 const { data: student, error: fetchError } = await supabase
                     .from('students')
                     .select('*')
-                    .eq('email', user.email.toLowerCase())
+                    .eq('id', user.id)
                     .maybeSingle();
 
                 if (fetchError) {
@@ -65,15 +65,16 @@ const ActiveExam = () => {
                             const curTerm = sData?.current_term || '';
                             if (sData) setSessionInfo({ session: curSession, term: curTerm });
 
-                            const { data: activeConfigs, error } = await supabase
-                                .from('exam_configs')
-                                .select('*, subjects(subject_name)')
-                                .eq('class_id', student.class_id)
+                            const { data: activeExams, error } = await supabase
+                                .from('active_exams')
+                                .select('*, exam_configs!inner(*, subjects(subject_name))')
+                                .eq('exam_configs.class_id', student.class_id)
                                 .eq('is_active', true)
                                 .eq('session_id', curSession)
-                                .eq('term_id', curTerm);
+                                .eq('term_id', curTerm)
+                                .order('visible_at', { ascending: true });
 
-                            if (!error && activeConfigs && activeConfigs.length > 0) {
+                            if (!error && activeExams && activeExams.length > 0) {
                                 const { data: results } = await supabase
                                     .from('exam_results')
                                     .select('exam_id, subject_id, question_type')
@@ -82,13 +83,14 @@ const ActiveExam = () => {
                                     .eq('term_id', curTerm);
 
                                 const now = Date.now();
-                                const filteredConfigs = activeConfigs.filter(c => {
-                                    const examStartTime = c.visible_at ? new Date(c.visible_at).getTime() : 0;
-                                    const examExpiryTime = examStartTime + (c.duration_minutes || 60) * 60 * 1000;
-                                    return !c.visible_at || now < examExpiryTime;
+                                const filteredExams = activeExams.filter(ae => {
+                                    const cfg = ae.exam_configs;
+                                    const examStartTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
+                                    const examExpiryTime = examStartTime + (cfg.duration_minutes || 60) * 60 * 1000;
+                                    return !ae.visible_at || now < examExpiryTime;
                                 });
 
-                                if (filteredConfigs.length === 0) {
+                                if (filteredExams.length === 0) {
                                     navigate('/portal/student/no-exam', { replace: true });
                                     return;
                                 }
@@ -96,32 +98,42 @@ const ActiveExam = () => {
                                 const takenExamIds = new Set(results?.map(r => r.exam_id) || []);
                                 const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
 
-                                const availableExam = filteredConfigs.find(c => {
-                                    const notTaken = !takenExamIds.has(c.id) && !takenKeys.has(`${c.subject_id}_${c.question_type}`);
-                                    const isTimeReady = !c.visible_at || now >= new Date(c.visible_at).getTime();
+                                const availableAE = filteredExams.find(ae => {
+                                    const cfg = ae.exam_configs;
+                                    const notTaken = !takenExamIds.has(cfg.id) && !takenKeys.has(`${cfg.subject_id}_${cfg.question_type}`);
+                                    const isTimeReady = !ae.visible_at || now >= new Date(ae.visible_at).getTime();
                                     return notTaken && isTimeReady;
                                 });
 
-                                const allTaken = filteredConfigs.every(c => takenExamIds.has(c.id) || takenKeys.has(`${c.subject_id}_${c.question_type}`));
+                                const allTaken = filteredExams.every(ae => {
+                                    const cfg = ae.exam_configs;
+                                    return takenExamIds.has(cfg.id) || takenKeys.has(`${cfg.subject_id}_${cfg.question_type}`);
+                                });
 
-                                if (availableExam) {
-                                    setActiveExam(availableExam);
+                                if (availableAE) {
+                                    const combinedConfig = {
+                                        ...availableAE.exam_configs,
+                                        visible_at: availableAE.visible_at, // Use the scheduled visibility
+                                        is_active_ae: availableAE.is_active,
+                                        active_exam_id: availableAE.id
+                                    };
+                                    setActiveExam(combinedConfig);
 
                                     if (!preloadedQuestions) {
                                         supabase.from('questions')
                                             .select('*')
-                                            .eq('class_id', availableExam.class_id)
-                                            .eq('subject_id', availableExam.subject_id)
-                                            .eq('question_type', availableExam.question_type)
+                                            .eq('class_id', availableAE.exam_configs.class_id)
+                                            .eq('subject_id', availableAE.exam_configs.subject_id)
+                                            .eq('question_type', availableAE.exam_configs.question_type)
                                             .eq('session_id', curSession)
                                             .eq('term_id', curTerm)
                                             .then(({ data: qData }) => {
                                                 if (qData) {
                                                     let processed = [...qData];
-                                                    if (availableExam.selection_type === 'random') {
+                                                    if (availableAE.exam_configs.selection_type === 'random') {
                                                         processed = processed.sort(() => Math.random() - 0.5);
                                                     }
-                                                    const count = availableExam.question_count || processed.length;
+                                                    const count = availableAE.exam_configs.question_count || processed.length;
                                                     setPreloadedQuestions(processed.slice(0, count));
                                                 }
                                             }).catch(err => console.error(err));
@@ -130,21 +142,17 @@ const ActiveExam = () => {
                                     setLoading(false);
                                     return;
                                 } else if (allTaken) {
+                                    setLoading(false);
                                     navigate('/portal/student/submitted', { replace: true });
                                     return;
-                                } else {
-                                    const nextPending = filteredConfigs.find(c => !takenExamIds.has(c.id) && !takenKeys.has(`${c.subject_id}_${c.question_type}`));
-                                    if (nextPending) {
-                                        setActiveExam({ ...nextPending, isWaiting: true });
-                                        setLoading(false);
-                                        return;
-                                    }
                                 }
                             }
 
+                            setLoading(false);
                             navigate('/portal/student/no-exam');
                         } catch (err) {
                             console.error("fetchActive Error:", err);
+                            setLoading(false);
                         }
                     };
 
@@ -190,7 +198,7 @@ const ActiveExam = () => {
             <header className="portal-header-bar nes-header">
                 <div className="nes-header-left">
                     <img src={logo} alt="Logo" className="portal-logo-img" />
-                    <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                    <h1 className="portal-school-name">Fad Maestro Academy</h1>
                 </div>
                 <div className="nes-header-right">
                     <span className="nes-user-name">{studentName}</span>
@@ -236,62 +244,51 @@ const ActiveExam = () => {
                     </ul>
 
                     {/* Start button */}
-                    {activeExam?.isWaiting ? (
-                        <div className="ae-waiting-msg">
-                            <p style={{ color: '#9D245A', fontWeight: '700', fontSize: '14px', marginTop: '20px' }}>
-                                The next subject ({activeExam.subjects?.subject_name}) is scheduled for:
-                                <br />
-                                <span style={{ fontSize: '18px' }}>{new Date(activeExam.visible_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            </p>
-                            <p style={{ fontSize: '12px', color: '#6B7280' }}>Please wait here. This page will auto-refresh.</p>
-                        </div>
-                    ) : (
-                        <button
-                            className="login-btn ae-start-btn"
-                            onClick={async () => {
-                                if (!activeExam || !preloadedQuestions) return;
+                    <button
+                        className="login-btn ae-start-btn"
+                        onClick={async () => {
+                            if (!activeExam || !preloadedQuestions) return;
 
-                                // 1. Fetch Student from DB (to get ID)
-                                const { data: { user } } = await supabase.auth.getUser();
-                                const { data: std } = await supabase.from('students').select('id').eq('email', user.email).single();
+                            // 1. Fetch Student from DB (to get ID)
+                            const { data: { user } } = await supabase.auth.getUser();
+                            const { data: std } = await supabase.from('students').select('id').eq('id', user.id).single();
 
-                                if (std) {
-                                    // 2. Record Attempt (Step 5)
-                                    const startTime = new Date();
-                                    const durationSec = (activeExam.duration_minutes || 60) * 60;
-                                    const individualEndTime = new Date(startTime.getTime() + (durationSec * 1000));
+                            if (std) {
+                                // 2. Record Attempt (Step 5)
+                                const startTime = new Date();
+                                const durationSec = (activeExam.duration_minutes || 60) * 60;
+                                const individualEndTime = new Date(startTime.getTime() + (durationSec * 1000));
 
-                                    // Session End (Strict Cutoff)
-                                    let finalEndTime = individualEndTime;
-                                    if (activeExam.visible_at) {
-                                        const scheduledStart = new Date(activeExam.visible_at).getTime();
-                                        const classWindowEnd = new Date(scheduledStart + (durationSec * 1000));
-                                        // Use the class window end if it's earlier than individual time (strict cutoff)
-                                        if (classWindowEnd < individualEndTime) {
-                                            finalEndTime = classWindowEnd;
-                                        }
+                                // Session End (Strict Cutoff)
+                                let finalEndTime = individualEndTime;
+                                if (activeExam.visible_at) {
+                                    const scheduledStart = new Date(activeExam.visible_at).getTime();
+                                    const classWindowEnd = new Date(scheduledStart + (durationSec * 1000));
+                                    // Use the class window end if it's earlier than individual time (strict cutoff)
+                                    if (classWindowEnd < individualEndTime) {
+                                        finalEndTime = classWindowEnd;
                                     }
-
-                                    await supabase.from('exam_attempts').insert({
-                                        student_id: std.id,
-                                        exam_id: activeExam.id,
-                                        start_time: startTime.toISOString(),
-                                        end_time: finalEndTime.toISOString(),
-                                        session_id: sessionInfo.session,
-                                        term_id: sessionInfo.term,
-                                        status: 'started'
-                                    });
                                 }
 
-                                navigate('/portal/student/exam', {
-                                    state: { examConfig: activeExam, preloadedQuestions, sessionInfo }
+                                await supabase.from('exam_attempts').insert({
+                                    student_id: std.id,
+                                    exam_id: activeExam.id,
+                                    start_time: startTime.toISOString(),
+                                    end_time: finalEndTime.toISOString(),
+                                    session_id: sessionInfo.session,
+                                    term_id: sessionInfo.term,
+                                    status: 'started'
                                 });
-                            }}
-                            disabled={!activeExam || !preloadedQuestions}
-                        >
-                            {preloadedQuestions ? 'Start now' : 'Loading exam paper...'}
-                        </button>
-                    )}
+                            }
+
+                            navigate('/portal/student/exam', {
+                                state: { examConfig: activeExam, preloadedQuestions, sessionInfo }
+                            });
+                        }}
+                        disabled={!activeExam || !preloadedQuestions}
+                    >
+                        {preloadedQuestions ? 'Start now' : 'Loading exam paper...'}
+                    </button>
                 </div>
             </main>
         </div>

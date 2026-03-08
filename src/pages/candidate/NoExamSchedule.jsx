@@ -24,7 +24,7 @@ const NoExamSchedule = () => {
                 const { data: profile } = await supabase
                     .from('students')
                     .select('id, full_name, profile_image, image_url')
-                    .eq('email', user.email.toLowerCase())
+                    .eq('id', user.id)
                     .maybeSingle();
 
                 let candidateId = user.id;
@@ -48,13 +48,15 @@ const NoExamSchedule = () => {
                         const curSession = sData?.current_session || '';
                         const curTerm = sData?.current_term || '';
 
-                        const { data: activeConfigs } = await supabase
-                            .from('exam_configs')
-                            .select('*')
-                            .eq('question_type', 'candidate')
-                            .eq('is_active', true);
+                        const { data: activeExams } = await supabase
+                            .from('active_exams')
+                            .select('*, exam_configs!inner(*)')
+                            .eq('exam_configs.question_type', 'candidate')
+                            .eq('is_active', true)
+                            .eq('session_id', curSession)
+                            .eq('term_id', curTerm);
 
-                        if (activeConfigs && activeConfigs.length > 0) {
+                        if (activeExams && activeExams.length > 0) {
                             const { data: results } = await supabase
                                 .from('exam_results')
                                 .select('subject_id')
@@ -64,14 +66,15 @@ const NoExamSchedule = () => {
                                 .eq('question_type', 'candidate');
 
                             const takenSubjects = new Set(results?.map(r => r.subject_id) || []);
-                            const availableExam = activeConfigs.find(c => {
-                                const notTaken = !takenSubjects.has(c.subject_id);
-                                const examStartTime = c.visible_at ? new Date(c.visible_at).getTime() : 0;
-                                const examExpiryTime = examStartTime + (c.duration_minutes || 60) * 60 * 1000;
+                            const availableExam = activeExams.find(ae => {
+                                const cfg = ae.exam_configs;
+                                const notTaken = !takenSubjects.has(cfg.subject_id);
+                                const examStartTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
+                                const examExpiryTime = examStartTime + (cfg.duration_minutes || 60) * 60 * 1000;
                                 const now = Date.now();
 
-                                const isTimeReady = !c.visible_at || now >= examStartTime;
-                                const isNotExpired = !c.visible_at || now < examExpiryTime;
+                                const isTimeReady = !ae.visible_at || now >= examStartTime;
+                                const isNotExpired = !ae.visible_at || now < examExpiryTime;
 
                                 return notTaken && isTimeReady && isNotExpired;
                             });
@@ -131,7 +134,7 @@ const NoExamSchedule = () => {
             <header className="portal-header-bar nes-header">
                 <div className="nes-header-left">
                     <img src={logo} alt="Logo" className="portal-logo-img" />
-                    <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                    <h1 className="portal-school-name">Fad Maestro Academy</h1>
                 </div>
                 <div className="nes-header-right">
                     <span className="nes-user-name">{userName}</span>

@@ -137,7 +137,7 @@ const AdminLogin = () => {
                         alt="Logo"
                         className="portal-logo-img"
                     />
-                    <h1 className="portal-school-name">Fad Mastro Academy</h1>
+                    <h1 className="portal-school-name">Fad Maestro Academy</h1>
                 </header>
 
                 <main className="portal-content">
