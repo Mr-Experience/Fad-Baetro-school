@@ -25,7 +25,7 @@ const NoExamSchedule = () => {
             try {
                 // Fetch student profile from database - try multiple column names for compatibility
                 const { data: student, error: fetchError } = await supabase
-                    .from('students')
+                    .from('profiles')
                     .select('*')
                     .eq('id', user.id)
                     .maybeSingle();

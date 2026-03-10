@@ -41,7 +41,7 @@ const ExamScreen = () => {
 
                 // Fetch Student
                 const { data: std, error: stdError } = await supabase
-                    .from('students')
+                    .from('profiles')
                     .select('*')
                     .eq('id', user.id)
                     .maybeSingle();

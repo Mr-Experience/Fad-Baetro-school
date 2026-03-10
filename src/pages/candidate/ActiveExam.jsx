@@ -29,7 +29,7 @@ const ActiveExam = () => {
                 // 1. Fetch Candidate Identity
                 // Candidates are often in the students table with a specific class
                 let { data: student, error: fetchError } = await supabase
-                    .from('students')
+                    .from('profiles')
                     .select('full_name, profile_image, image_url, class_id')
                     .eq('id', user.id)
                     .maybeSingle();
@@ -230,7 +230,7 @@ const ActiveExam = () => {
                             let candidateId = user.id;
 
                             const { data: profile } = await supabase
-                                .from('students')
+                                .from('profiles')
                                 .select('id')
                                 .eq('id', user.id)
                                 .maybeSingle();

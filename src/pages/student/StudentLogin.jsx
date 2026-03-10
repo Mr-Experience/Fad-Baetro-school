@@ -11,6 +11,27 @@ const StudentLogin = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
+    // Check if already logged in
+    React.useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                // If a student is already logged in, send them to where they should be
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('id, role')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
+
+                if (profile && profile.role === 'student') {
+                    navigate('/portal/student/no-exam'); // Correct fallback
+                    return;
+                }
+            }
+        };
+        checkSession();
+    }, [navigate]);
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
@@ -30,9 +51,10 @@ const StudentLogin = () => {
         if (data.user) {
             // 1. Verify existence in students table (STRICT ROLE CHECK)
             const { data: student } = await supabase
-                .from('students')
+                .from('profiles')
                 .select('id, class_id')
                 .eq('id', data.user.id)
+                .eq('role', 'student')
                 .maybeSingle();
 
             if (!student) {

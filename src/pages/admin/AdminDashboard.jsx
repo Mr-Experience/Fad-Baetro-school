@@ -30,7 +30,7 @@ const AdminDashboard = () => {
                     { count: testResultCount },
                     { count: examResultCount }
                 ] = await Promise.all([
-                    supabase.from('students').select('*', { count: 'exact', head: true }),
+                    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
                     supabase.from('subjects').select('*', { count: 'exact', head: true }),
                     supabase.from('questions').select('*', { count: 'exact', head: true })
                         .eq('session_id', activeSession)

@@ -88,7 +88,8 @@ const AdminEvents = () => {
                     title: newTitle,
                     content: newContent,
                     image_url: imageUrl,
-                    event_date: postType === 'event' ? new Date(eventDate).toISOString() : null
+                    event_date: postType === 'event' ? new Date(eventDate).toISOString() : null,
+                    created_by: userId
                 });
 
             if (dbError) throw dbError;

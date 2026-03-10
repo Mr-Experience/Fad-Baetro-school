@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import './Hero.css';
+import defaultHero from '../assets/images/school_group_yellow.jpg';
 
 const Hero = () => {
-    // Initialize empty - images will be fetched from Supabase
-    const [images, setImages] = useState([]);
+    // Initialize with fallback image so it's not empty while loading or if DB is empty
+    const [images, setImages] = useState([defaultHero]);
     const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
@@ -19,6 +20,7 @@ const Hero = () => {
             if (!error && data && data.length > 0) {
                 setImages(data.map(img => img.image_url));
             }
+            // else leave it with the defaultHero
         };
 
         fetchHeroImages();

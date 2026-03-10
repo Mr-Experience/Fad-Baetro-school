@@ -31,7 +31,7 @@ const InquirySection = () => {
                 <div className="inquiry-card-container">
                     <div className="inquiry-card">
                         <div className="inquiry-icon-wrapper">
-                            <Users size={48} color="#1a365d" />
+                            <Users size={40} color="#1a365d" />
                         </div>
                         <h3 className="inquiry-card-title">Parent Support</h3>
                         <p className="inquiry-card-text">Let us know how we can help you</p>

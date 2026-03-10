@@ -20,7 +20,7 @@ const ExamSubmitted = () => {
                 if (!user) return;
 
                 const { data: std } = await supabase
-                    .from('students')
+                    .from('profiles')
                     .select('id, profile_image, class_id')
                     .eq('email', user.email.toLowerCase())
                     .maybeSingle();

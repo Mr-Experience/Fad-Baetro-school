@@ -79,7 +79,7 @@ const AdminResultDetail = () => {
                 if (classId && subjectId) {
                     // Total students in class
                     const { count } = await supabase
-                        .from('students')
+                        .from('profiles')
                         .select('*', { count: 'exact', head: true })
                         .eq('class_id', classId);
                     setTotalStudents(count || 0);

@@ -156,24 +156,30 @@
     color: #64748b;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 800px) {
     .footer-grid {
-        text-align: center;
-        gap: 50px;
+        text-align: left;
+        grid-template-columns: 1fr;
+        gap: 40px;
     }
 
     .footer-logo-group,
-    .footer-socials,
+    .footer-socials {
+        justify-content: flex-start;
+    }
+
     .contact-item {
-        justify-content: center;
+        justify-content: flex-start;
+        text-align: left;
     }
 
     .footer-heading::after {
-        left: 50%;
-        transform: translateX(-50%);
+        left: 0;
+        transform: none;
     }
 
     .footer-description {
-        margin: 0 auto;
+        margin: 0;
+        max-width: 100%;
     }
 }

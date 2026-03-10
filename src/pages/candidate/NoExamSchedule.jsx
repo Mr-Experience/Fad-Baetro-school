@@ -22,7 +22,7 @@ const NoExamSchedule = () => {
                 }
 
                 const { data: profile } = await supabase
-                    .from('students')
+                    .from('profiles')
                     .select('id, full_name, profile_image, image_url')
                     .eq('id', user.id)
                     .maybeSingle();

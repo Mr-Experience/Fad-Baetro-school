@@ -259,18 +259,35 @@ const AdminQuestionEditor = () => {
                 updated_at: new Date().toISOString()
             };
 
+            // We try to upsert specifically with session/term if available
+            // If the DB constraint is broader, this might fail, so we catch and retry if needed
             const { data: cfgData, error: cfgError } = await supabase
                 .from('exam_configs')
-                .upsert(payload, { onConflict: 'class_id,subject_id,question_type,session_id,term_id' })
+                .upsert(payload, {
+                    onConflict: 'class_id,subject_id,question_type,session_id,term_id'
+                })
                 .select()
                 .single();
 
-            if (cfgError) throw cfgError;
+            let finalCfgData = cfgData;
+            if (cfgError) {
+                if (cfgError.message.includes('unique constraint') || cfgError.code === '42P10') {
+                    const { data: fallbackData, error: fallbackError } = await supabase
+                        .from('exam_configs')
+                        .upsert(payload, { onConflict: 'class_id,subject_id,question_type' })
+                        .select()
+                        .single();
+                    if (fallbackError) throw fallbackError;
+                    finalCfgData = fallbackData;
+                } else {
+                    throw cfgError;
+                }
+            }
 
             // 2. Manage ACTIVE_EXAMS Record
             if (configForm.is_active) {
                 const aePayload = {
-                    exam_config_id: cfgData.id,
+                    exam_config_id: finalCfgData.id,
                     visible_at: payload.visible_at,
                     is_active: true,
                     session_id: activeSession,
@@ -286,7 +303,7 @@ const AdminQuestionEditor = () => {
                 await supabase
                     .from('active_exams')
                     .delete()
-                    .eq('exam_config_id', cfgData.id);
+                    .eq('exam_config_id', finalCfgData.id);
             }
             setIsConfigModalOpen(false);
             alert("Settings updated successfully!");

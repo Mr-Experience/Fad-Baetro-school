@@ -56,25 +56,17 @@ const AdminCandidates = () => {
                 return;
             }
 
-            // 1. Update Profile role to 'student'
+            // 1. Update Profile to be a student
             const { error: profileError } = await supabase
                 .from('profiles')
-                .update({ role: 'student' })
+                .update({
+                    role: 'student',
+                    class_id: candidate.class_id,
+                    phone_number: candidate.phone_number
+                })
                 .eq('id', candidate.id);
 
             if (profileError) throw profileError;
-
-            // 2. Create Student Record (Keep same email)
-            const { data: newStudent, error: studentError } = await supabase.from('students').insert({
-                id: candidate.id,
-                full_name: candidate.full_name,
-                email: candidate.email,
-                phone_number: candidate.phone_number,
-                class_id: candidate.class_id,
-                role: 'student'
-            }).select().single();
-
-            if (studentError) throw studentError;
 
             // 3. Mark candidate as converted and clear status
             const { error: candidateUpdateError } = await supabase.from('candidates').update({

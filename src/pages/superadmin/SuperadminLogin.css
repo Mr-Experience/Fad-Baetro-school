@@ -114,11 +114,16 @@
 @media (max-width: 640px) {
     .sal-header {
         padding: 10px 16px;
-        justify-content: center;
+        justify-content: flex-start;
     }
 
     .sal-header-left {
         gap: 8px;
+    }
+
+    .sal-main {
+        padding: 24px 16px;
+        align-items: center;
     }
 
     .sal-card {

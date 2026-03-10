@@ -29,7 +29,7 @@ const ActiveExam = () => {
             try {
                 // 1. Fetch Student Identity & Class
                 const { data: student, error: fetchError } = await supabase
-                    .from('students')
+                    .from('profiles')
                     .select('*')
                     .eq('id', user.id)
                     .maybeSingle();
@@ -254,7 +254,7 @@ const ActiveExam = () => {
 
                             // 1. Fetch Student from DB (to get ID)
                             const { data: { user } } = await supabase.auth.getUser();
-                            const { data: std } = await supabase.from('students').select('id').eq('id', user.id).single();
+                            const { data: std } = await supabase.from('profiles').select('id').eq('id', user.id).single();
 
                             if (std) {
                                 // 2. Record Attempt (Step 5)

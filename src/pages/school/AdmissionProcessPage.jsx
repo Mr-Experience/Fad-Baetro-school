@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
-import { UserPlus, FormInput, CheckCircle, Smartphone, Globe, ClipboardCheck } from 'lucide-react';
+import { UserPlus, FormInput, CheckCircle, Smartphone, Globe, ClipboardCheck, Users, CreditCard, BookmarkCheck } from 'lucide-react';
 import './AdmissionProcessPage.css';
 
 const AdmissionProcessPage = () => {
@@ -40,6 +40,21 @@ const AdmissionProcessPage = () => {
             icon: <CheckCircle className="step-icon" />,
             title: "Submission & Confirmation",
             description: "Submit the form. You will receive a confirmation email with the completed form for your records."
+        },
+        {
+            icon: <Users className="step-icon" />,
+            title: "Placement Interview",
+            description: "Qualified candidates will be invited for a brief physical or online interview with our academic board."
+        },
+        {
+            icon: <CreditCard className="step-icon" />,
+            title: "Fee Payment",
+            description: "Once admission is granted, proceed to make the required fee payments through our secured portal."
+        },
+        {
+            icon: <BookmarkCheck className="step-icon" />,
+            title: "Final Admission Letter",
+            description: "Download and print your official admission letter and registration package to finalize the enrollment."
         }
     ];
 

@@ -15,8 +15,9 @@ const NewsSection = () => {
                 const { data, error } = await supabase
                     .from('system_posts')
                     .select('*')
+                    .eq('type', 'news')
                     .order('created_at', { ascending: false })
-                    .limit(4);
+                    .limit(3);
 
                 if (!error && data) {
                     setNewsItems(data.map(item => ({

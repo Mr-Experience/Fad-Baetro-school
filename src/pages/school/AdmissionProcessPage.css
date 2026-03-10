@@ -55,9 +55,21 @@
 
 .process-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(clamp(280px, 30vw, 360px), 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: clamp(20px, 3vw, 40px);
     margin-bottom: clamp(60px, 10vw, 100px);
+}
+
+@media (max-width: 1024px) {
+    .process-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .process-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .process-card {

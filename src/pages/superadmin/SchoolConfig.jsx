@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import '../student/NoExamSchedule.css'; // Reusing some base header styles if needed
+import '../student/NoExamSchedule.css';
 import './SchoolConfig.css';
 import logoFallback from '../../assets/logo.jpg';
 import LoadingOverlay from '../../components/LoadingOverlay';
@@ -11,47 +11,40 @@ const SchoolConfig = () => {
     const [currentSession, setCurrentSession] = useState('2024/2025');
     const [currentTerm, setCurrentTerm] = useState('First Term');
 
-    // Header display values
     const [activeSession, setActiveSession] = useState('2024/2025');
     const [activeTerm, setActiveTerm] = useState('First Term');
 
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState('');
+    const [toast, setToast] = useState('');
     const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchUserData = async () => {
             setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
-
             if (user) {
                 const { data: profileData } = await supabase
                     .from('profiles')
                     .select('*')
                     .eq('id', user.id)
                     .single();
-
-                if (profileData) {
-                    setProfile(profileData);
-                }
+                if (profileData) setProfile(profileData);
             }
             await fetchSettings();
         };
-
         fetchUserData();
     }, []);
 
     const fetchSettings = async () => {
         setLoading(true);
         try {
-            const { data, fetchError } = await supabase
+            const { data } = await supabase
                 .from('system_settings')
                 .select('*')
                 .eq('id', 1)
                 .single();
-
             if (data) {
                 setCurrentSession(data.current_session);
                 setCurrentTerm(data.current_term);
@@ -59,7 +52,7 @@ const SchoolConfig = () => {
                 setActiveTerm(data.current_term);
             }
         } catch (err) {
-            console.error("Error fetching settings:", err);
+            console.error('Error fetching settings:', err);
         } finally {
             setLoading(false);
         }
@@ -67,9 +60,8 @@ const SchoolConfig = () => {
 
     const handleSave = async () => {
         setSaving(true);
-        setMessage('');
+        setToast('');
         setError('');
-
         try {
             const { error: saveError } = await supabase
                 .from('system_settings')
@@ -79,14 +71,11 @@ const SchoolConfig = () => {
                     current_term: currentTerm,
                     updated_at: new Date().toISOString()
                 });
-
             if (saveError) throw saveError;
-
-            setMessage('Updated successfully!');
             setActiveSession(currentSession);
             setActiveTerm(currentTerm);
-
-            setTimeout(() => setMessage(''), 3000);
+            setToast('Settings updated successfully!');
+            setTimeout(() => setToast(''), 3000);
         } catch (err) {
             setError(err.message || 'Failed to save settings');
         } finally {
@@ -98,7 +87,17 @@ const SchoolConfig = () => {
         <div className="sc-container">
             <LoadingOverlay isVisible={loading || saving} />
 
-            {/* Exactly as per Image Header */}
+            {/* Floating toast — rendered in fixed position so card layout never shifts */}
+            {toast && (
+                <div className="sc-toast">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    {toast}
+                </div>
+            )}
+
+            {/* Header */}
             <header className="sc-header">
                 <div className="sc-header-left">
                     <img
@@ -116,12 +115,9 @@ const SchoolConfig = () => {
                             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                             <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
                         </svg>
-                        <span>Current Session: {activeSession} {activeTerm} Session</span>
+                        <span className="sc-badge-text">Current Session: {activeSession} {activeTerm}</span>
                     </div>
-
-                    <span className="sc-user-name">
-                        {profile?.full_name || 'Super Admin'}
-                    </span>
+                    <span className="sc-user-name">{profile?.full_name || 'Super Admin'}</span>
                     <div className="sc-avatar">
                         <img
                             src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.full_name || 'Super Admin')}&background=D1D5DB&color=333`}
@@ -131,7 +127,7 @@ const SchoolConfig = () => {
                 </div>
             </header>
 
-            {/* Main Content Area */}
+            {/* Main — vertically and horizontally centers the card */}
             <main className="sc-main">
                 <div className="sc-card">
                     <div className="sc-icon-circle">
@@ -143,7 +139,6 @@ const SchoolConfig = () => {
                         Set the current session and term details which will control the data content of the admin and student
                     </p>
 
-                    {message && <div className="sc-alert sc-alert-success">{message}</div>}
                     {error && <div className="sc-alert sc-alert-error">{error}</div>}
 
                     <div className="sc-form">
@@ -191,25 +186,6 @@ const SchoolConfig = () => {
                             disabled={loading || saving}
                         >
                             {saving ? 'Saving...' : 'Save Changes'}
-                        </button>
-
-                        <button
-                            className="sc-reset-btn"
-                            onClick={fetchSettings}
-                            disabled={loading || saving}
-                            style={{
-                                background: 'transparent',
-                                border: '1.5px solid #D1D5DB',
-                                color: '#6B7280',
-                                marginTop: '10px',
-                                height: '48px',
-                                borderRadius: '10px',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Discard Changes
                         </button>
                     </div>
                 </div>

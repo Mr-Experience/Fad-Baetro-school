@@ -29,7 +29,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
                 // Determine if we need to check the 'students' table or 'profiles' table
                 if (requiredRole === 'student') {
                     const { data: student, error: studentError } = await supabase
-                        .from('students')
+                        .from('profiles')
                         .select('id')
                         .eq('email', session.user.email.toLowerCase())
                         .maybeSingle();

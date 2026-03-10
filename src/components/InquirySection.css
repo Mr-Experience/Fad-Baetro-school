@@ -35,17 +35,17 @@
 }
 
 .inquiry-title {
-    font-size: clamp(28px, 4vw, 42px);
+    font-size: clamp(26px, 3.5vw, 38px);
     font-weight: 800;
     color: #0f172a;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     letter-spacing: -0.5px;
 }
 
 .inquiry-subtitle {
-    font-size: clamp(15px, 1.2vw, 17px);
+    font-size: clamp(14px, 1.1vw, 16px);
     color: #64748b;
-    max-width: 650px;
+    max-width: 600px;
     margin: 0 auto;
     line-height: 1.6;
 }
@@ -75,11 +75,11 @@
 }
 
 .inquiry-icon-wrapper {
-    margin-bottom: 25px;
-    width: 80px;
-    height: 80px;
+    margin-bottom: 20px;
+    width: 72px;
+    height: 72px;
     background-color: #f1f5f9;
-    border-radius: 20px;
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -92,16 +92,16 @@
 }
 
 .inquiry-card-title {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
     color: #0f172a;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .inquiry-card-text {
-    font-size: 16px;
+    font-size: 15px;
     color: #64748b;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
     line-height: 1.5;
 }
 

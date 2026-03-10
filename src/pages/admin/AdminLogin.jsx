@@ -18,51 +18,26 @@ const AdminLogin = () => {
 
     const navigateTo = '/portal/admin';
 
-    // Check if already logged in
+    // Check for existing session on load
     useEffect(() => {
-        let isChecking = true;
-        const checkExistingSession = async () => {
-            try {
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                // If already logged in as admin, redirect to dashboard
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
 
-                if (sessionError) throw sessionError;
-
-                if (session) {
-                    const { data: profile, error: profileError } = await supabase
-                        .from('profiles')
-                        .select('role')
-                        .eq('id', session.user.id)
-                        .single();
-
-                    if (!profileError && profile && profile.role === 'admin') {
-                        if (isChecking) {
-                            const from = location.state?.from?.pathname || location.state?.from || navigateTo;
-                            const search = location.state?.from?.search || '';
-                            navigate(from + search, { replace: true });
-                        }
-                        return; // Don't set checkingSession to false, let the redirect happen
-                    } else if (profile && profile.role === 'super_admin') {
-                        // Redirect them to super admin side if they are already logged in as super admin
-                        if (isChecking) navigate('/portal/superadmin/config', { replace: true });
-                        return;
-                    } else if (profile && profile.role !== 'admin') {
-                        // If they are logged in as a wrong role on the login page, log them out.
-                        await supabase.auth.signOut();
-                    }
+                if (profile && (profile.role === 'admin' || profile.role === 'super_admin')) {
+                    navigate(navigateTo, { replace: true });
+                    return;
                 }
-            } catch (err) {
-                console.error("Error checking existing session:", err);
             }
-
-            if (isChecking) {
-                setCheckingSession(false);
-            }
+            setCheckingSession(false);
         };
-        checkExistingSession();
-
-        return () => {
-            isChecking = false;
-        };
+        checkSession();
     }, [navigate]);
 
     const handleLogin = async (e) => {
@@ -89,18 +64,38 @@ const AdminLogin = () => {
                 setLoginStatus('verifying');
 
                 // Fetch profile to verify role
-                const { data: profile, error: profileError } = await supabase
+                let { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('role')
                     .eq('id', data.user.id)
-                    .single();
+                    .maybeSingle();
 
-                if (profileError || !profile) {
-                    await supabase.auth.signOut();
-                    throw new Error('Unauthorized: Admin access required.');
+                // 2b. Auto-heal the admin profile if it got dropped during SQL migration
+                if (!profile) {
+                    const authRole = data.user.user_metadata?.role;
+                    const email = data.user.email?.toLowerCase() || '';
+
+                    // Logic to identify an admin: metadata check or email keyword
+                    if (authRole === 'admin' || email.includes('admin')) {
+                        const { error: insertError } = await supabase.from('profiles').insert({
+                            id: data.user.id,
+                            email: email,
+                            full_name: data.user.user_metadata?.full_name || 'Administrator',
+                            role: 'admin'
+                        });
+
+                        if (!insertError) {
+                            profile = { role: 'admin' };
+                        }
+                    }
                 }
 
-                if (profile.role === 'super_admin') {
+                if (!profile) {
+                    await supabase.auth.signOut();
+                    throw new Error('Unauthorized: No admin profile found. Contact Super Admin.');
+                }
+
+                if (profile.role === 'super_admin' || profile.role === 'super-admin') {
                     await supabase.auth.signOut();
                     throw new Error('Super Admins must log in through the Super Admin portal (/portal/superadmin).');
                 } else if (profile.role !== 'admin') {

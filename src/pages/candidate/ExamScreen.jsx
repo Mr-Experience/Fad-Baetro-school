@@ -36,7 +36,7 @@ const ExamScreen = () => {
 
                 // Fetch Candidate Identity
                 const { data: std } = await supabase
-                    .from('students')
+                    .from('profiles')
                     .select('*')
                     .eq('email', user.email.toLowerCase())
                     .maybeSingle();

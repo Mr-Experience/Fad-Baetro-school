@@ -92,6 +92,7 @@
 .nes-logout-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     background-color: #8B1A2A;
     color: #fff;
@@ -111,16 +112,17 @@
         padding: 10px 16px;
         height: auto;
         gap: 10px;
-        text-align: center;
+        align-items: flex-start;
+        text-align: left;
     }
 
     .nes-header-left {
-        justify-content: center;
+        justify-content: flex-start;
         width: 100%;
     }
 
     .nes-header-right {
-        justify-content: center;
+        justify-content: flex-start;
         width: 100%;
         border-top: 1px solid rgba(0, 0, 0, 0.05);
         padding-top: 8px;

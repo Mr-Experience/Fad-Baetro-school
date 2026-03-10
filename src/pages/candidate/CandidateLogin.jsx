@@ -12,6 +12,27 @@ const CandidateLogin = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
+    // Check if already logged in
+    React.useEffect(() => {
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                // If a candidate is already logged in, send them to their dashboard
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('id, role')
+                    .eq('id', session.user.id)
+                    .maybeSingle();
+
+                if (profile && profile.role === 'candidate') {
+                    navigate('/portal/candidate/no-exam'); // Correct fallback
+                    return;
+                }
+            }
+        };
+        checkSession();
+    }, [navigate]);
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
@@ -39,20 +60,18 @@ const CandidateLogin = () => {
             const curSession = settings?.current_session || '';
             const curTerm = settings?.current_term || '';
 
-            // 2. Fetch identity (Check students first, then candidates)
+            // 2. Fetch identity and check role
             let { data: identity } = await supabase
-                .from('students')
-                .select('id, class_id')
+                .from('profiles')
+                .select('id, class_id, role')
                 .eq('id', data.user.id)
                 .maybeSingle();
 
-            if (!identity) {
-                const { data: cand } = await supabase
-                    .from('candidates')
-                    .select('id, class_id')
-                    .eq('id', data.user.id)
-                    .maybeSingle();
-                identity = cand;
+            if (!identity || identity.role !== 'candidate') {
+                await supabase.auth.signOut();
+                setError('Unauthorized: This portal is for candidates only.');
+                setLoading(false);
+                return;
             }
 
             // 3. Check for ACTIVE candidate exams

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../../supabaseClient';
 import './AdminStudents.css';
 
@@ -45,11 +46,12 @@ const AdminStudents = () => {
         setLoading(true);
         try {
             const { data, error } = await supabase
-                .from('students')
+                .from('profiles')
                 .select(`
                     *,
                     classes (class_name)
                 `)
+                .eq('role', 'student')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -69,7 +71,11 @@ const AdminStudents = () => {
             if (!formData.class_id) throw new Error("Please select a class.");
             if (formData.password?.length < 6) throw new Error("Password must be at least 6 characters.");
 
-            // 1. Upload Profile Image
+            // 1. Check if email already exists in locally fetched list
+            const emailExists = students.some(s => s.email.toLowerCase() === formData.email.trim().toLowerCase());
+            if (emailExists) throw new Error("A student with this email already exists.");
+
+            // 1b. Upload Profile Image
             let profileImageUrl = null;
             if (formData.profile_image) {
                 const file = formData.profile_image;
@@ -78,27 +84,33 @@ const AdminStudents = () => {
                 const filePath = `avatars/${fileName}`;
 
                 const { error: uploadError } = await supabase.storage
-                    .from('profile image')
+                    .from('Profile Image')
                     .upload(filePath, file);
 
                 if (uploadError) {
                     if (uploadError.message.includes('Bucket not found')) {
-                        throw new Error("Storage bucket 'profile image' not found. Please check the Bucket ID in Supabase.");
+                        throw new Error("Storage bucket 'Profile Image' not found. Please check the Bucket ID in Supabase.");
                     }
                     throw uploadError;
                 }
 
                 const { data: { publicUrl } } = supabase.storage
-                    .from('profile image')
+                    .from('Profile Image')
                     .getPublicUrl(filePath);
 
                 profileImageUrl = publicUrl;
             }
 
             // 2. Create Auth User
-            // Note: If email confirmation is OFF in Supabase, this might sign the admin out.
-            // However, this is the standard way to create users from the client side.
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            // We use a temporary non-persisting client to create the student account
+            // This prevents Supabase from signing out the Admin and signing in the new Student.
+            const tempSupabase = createClient(
+                import.meta.env.VITE_SUPABASE_URL,
+                import.meta.env.VITE_SUPABASE_ANON_KEY,
+                { auth: { persistSession: false } }
+            );
+
+            const { data: authData, error: authError } = await tempSupabase.auth.signUp({
                 email: formData.email.trim().toLowerCase(),
                 password: formData.password,
                 options: {
@@ -114,29 +126,18 @@ const AdminStudents = () => {
 
             if (!newUserId) throw new Error("Could not create user account.");
 
-            // 3. Create Profile (Public Profile)
-            const { error: profileError } = await supabase.from('profiles').upsert({
-                id: newUserId,
-                full_name: formData.full_name.trim(),
-                email: formData.email.trim().toLowerCase(),
-                role: 'student',
-                avatar_url: profileImageUrl
-            });
-
-            if (profileError) throw profileError;
-
-            // 4. Create Student Record (Application Data)
-            const { data: inserted, error: studentError } = await supabase.from('students').insert({
+            // 3. Create Profile (Now handles all student application data as well)
+            const { data: inserted, error: profileError } = await supabase.from('profiles').insert({
                 id: newUserId, // Link to Auth User ID
                 full_name: formData.full_name.trim(),
                 email: formData.email.trim().toLowerCase(),
+                role: 'student',
+                avatar_url: profileImageUrl,
                 phone_number: formData.phone_number.trim(),
-                class_id: formData.class_id,
-                profile_image: profileImageUrl,
-                role: 'student'
+                class_id: formData.class_id || null
             }).select().single();
 
-            if (studentError) throw studentError;
+            if (profileError) throw profileError;
 
             // Optimistic update
             const selectedClass = classes.find(c => c.id === formData.class_id);
@@ -146,7 +147,7 @@ const AdminStudents = () => {
                 email: formData.email.trim().toLowerCase(),
                 phone_number: formData.phone_number.trim(),
                 class_id: formData.class_id,
-                profile_image: profileImageUrl,
+                avatar_url: profileImageUrl,
                 role: 'student',
                 created_at: new Date().toISOString(),
                 classes: { class_name: selectedClass?.class_name || '' }
@@ -172,7 +173,7 @@ const AdminStudents = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this student?')) return;
 
-        const { error } = await supabase.from('students').delete().eq('id', id);
+        const { error } = await supabase.from('profiles').delete().eq('id', id);
         if (!error) {
             fetchStudents();
         } else {

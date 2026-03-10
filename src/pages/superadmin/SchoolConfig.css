@@ -1,4 +1,4 @@
-/* SchoolConfig.css - Exact UI from image reference */
+/* SchoolConfig.css */
 
 .sc-container {
     min-height: 100vh;
@@ -8,14 +8,15 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* Header Styles */
+/* ─── Header ─────────────────────────────────────────── */
 .sc-header {
-    background: #ffffff !important;
+    background: #ffffff;
     padding: 12px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
 }
 
 .sc-header-left {
@@ -33,27 +34,28 @@
 .sc-header-right {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
 }
 
-/* Specific Badge style from image */
 .sc-session-badge {
     background: #FFF0F6;
     border-left: 3px solid #9D245A;
-    padding: 8px 16px;
+    padding: 8px 14px;
     border-radius: 4px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     font-size: 13px;
     color: #9D245A;
     font-weight: 500;
+    white-space: nowrap;
 }
 
 .sc-user-name {
     font-size: 14px;
     font-weight: 500;
     color: #1F2937;
+    white-space: nowrap;
 }
 
 .sc-avatar {
@@ -62,6 +64,7 @@
     border-radius: 50%;
     overflow: hidden;
     background: #D1D5DB;
+    flex-shrink: 0;
 }
 
 .sc-avatar img {
@@ -70,28 +73,33 @@
     object-fit: cover;
 }
 
-/* Main content area */
+/* ─── Main ───────────────────────────────────────────── */
+/* flex: 1 fills the remaining height, padding gives breathing room above/below the card */
 .sc-main {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: 40px 16px;
+    /* 16px side padding so card never touches screen edges */
 }
 
+/* ─── Card — hugs its content ─────────────────────────── */
 .sc-card {
     background: #ffffff;
     width: 100%;
     max-width: 480px;
-    border-radius: 8px;
+    border-radius: 12px;
     padding: 48px 40px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.10), 0 2px 6px -1px rgba(0, 0, 0, 0.06);
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* height is purely driven by content — no fixed / min-height */
 }
 
+/* ─── Icon ───────────────────────────────────────────── */
 .sc-icon-circle {
     width: 72px;
     height: 72px;
@@ -101,9 +109,9 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 24px;
+    flex-shrink: 0;
 }
 
-/* Info 'i' icon style */
 .sc-info-icon {
     width: 24px;
     height: 24px;
@@ -119,26 +127,28 @@
     font-size: 16px;
 }
 
+/* ─── Typography ──────────────────────────────────────── */
 .sc-title {
     font-size: 24px;
     font-weight: 600;
     color: #000;
-    margin-bottom: 12px;
+    margin: 0 0 12px;
 }
 
 .sc-subtitle {
     font-size: 14px;
     color: #6B7280;
-    line-height: 1.5;
-    margin-bottom: 32px;
-    max-width: 380px;
+    line-height: 1.6;
+    margin: 0 0 28px;
+    max-width: 360px;
 }
 
+/* ─── Form ───────────────────────────────────────────── */
 .sc-form {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
 }
 
 .sc-select-wrap {
@@ -149,7 +159,7 @@
 .sc-select {
     width: 100%;
     height: 48px;
-    padding: 0 16px;
+    padding: 0 40px 0 16px;
     border: 1.5px solid #D1D5DB;
     border-radius: 10px;
     font-size: 14px;
@@ -167,7 +177,7 @@
 
 .sc-select-arrow {
     position: absolute;
-    right: 16px;
+    right: 14px;
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
@@ -175,95 +185,145 @@
 }
 
 .sc-save-btn {
-    margin-top: 16px;
+    margin-top: 8px;
     height: 48px;
     background-color: #9D245A;
     color: #fff;
     border: none;
     border-radius: 10px;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, opacity 0.2s;
+    width: 100%;
 }
 
-.sc-save-btn:hover {
+.sc-save-btn:hover:not(:disabled) {
     background-color: #7B1848;
 }
 
 .sc-save-btn:disabled {
-    opacity: 0.7;
+    opacity: 0.65;
     cursor: not-allowed;
 }
 
+/* ─── Inline error alert (only error; success is a toast) ─ */
 .sc-alert {
     width: 100%;
-    padding: 10px;
+    padding: 10px 14px;
     font-size: 13px;
-    border-radius: 6px;
-    margin-bottom: 15px;
-}
-
-.sc-alert-success {
-    background: #E1F7E7;
-    color: #1E7E34;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    text-align: left;
 }
 
 .sc-alert-error {
     background: #FDECEA;
     color: #C0392B;
+    border: 1px solid #f5c2bd;
 }
 
+/* ─── Floating success toast ──────────────────────────── */
+.sc-toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+    background: #16a34a;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    animation: sc-toast-in 0.3s ease;
+}
+
+@keyframes sc-toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
 @media (max-width: 640px) {
     .sc-header {
         padding: 12px 16px;
         flex-direction: column;
-        gap: 12px;
-        height: auto;
+        align-items: flex-start;
+        gap: 10px;
     }
 
     .sc-header-left {
         width: 100%;
-        justify-content: center;
     }
 
     .sc-header-right {
         width: 100%;
-        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
         padding-top: 8px;
         border-top: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .sc-session-badge {
-        font-size: 11px;
+        font-size: 12px;
         padding: 6px 10px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .sc-badge-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sc-user-name {
+        display: none;
     }
 
     .sc-brand-name {
-        font-size: 16px;
+        font-size: 17px;
+    }
+
+    /* Card: 16px breathing room from screen edges, 24px from header */
+    .sc-main {
+        padding: 24px 16px;
+        align-items: center;
     }
 
     .sc-card {
-        padding: 32px 20px;
+        padding: 36px 24px;
     }
 
     .sc-title {
         font-size: 20px;
     }
 
-    .sc-user-name {
-        display: none;
+    .sc-toast {
+        bottom: 16px;
+        right: 16px;
+        left: 16px;
+        justify-content: center;
     }
 }
 
 @media (max-width: 400px) {
-    .sc-session-badge span {
-        display: none;
-        /* Only show icon on very narrow screens */
+    .sc-session-badge svg {
+        flex-shrink: 0;
     }
 
-    .sc-session-badge::after {
-        content: attr(data-session);
-        /* If I had a data attribute, but I'll just hide text for now */
+    .sc-card {
+        padding: 28px 16px;
     }
 }
