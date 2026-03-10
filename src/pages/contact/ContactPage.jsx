@@ -3,6 +3,7 @@ import { Phone, Mail } from 'lucide-react';
 import Header from '../../components/Header';
 // ToastContext removed
 import { supabase } from '../../supabaseClient';
+import emailjs from '@emailjs/browser';
 import './ContactPage.css';
 
 const ContactPage = () => {
@@ -28,32 +29,25 @@ const ContactPage = () => {
         setLoading(true);
 
         try {
-            // 1. Save to Supabase for Record Keeping
-            const { error } = await supabase
-                .from('contact_messages')
-                .insert([
-                    {
-                        name: formData.name,
-                        phone: formData.phone,
-                        email: formData.email.toLowerCase().trim(),
-                        subject: formData.subject,
-                        message: formData.message
-                    }
-                ]);
+            // Send via EmailJS
+            const templateParams = {
+                from_name: formData.name,
+                from_email: formData.email,
+                to_email: 'danielolajireolamilekan2020@gmail.com',
+                phone: formData.phone,
+                subject: formData.subject,
+                message: formData.message,
+                to_name: 'Fad Maestro Admin'
+            };
 
-            if (error) throw error;
+            await emailjs.send(
+                import.meta.env.VITE_EMAILJS_SERVICE_ID,
+                import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+                templateParams,
+                import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+            );
 
-            // 2. Trigger fallback email client (Optional, but good for direct response)
-            const emailBody = `Name: ${formData.name}\nPhone: ${formData.phone}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`;
-            const mailtoUrl = `mailto:fadmaestro2017@gmail.com?subject=${encodeURIComponent(formData.subject || 'New Contact Form Message')}&body=${encodeURIComponent(emailBody)}`;
-
-            // Show success and clear
             alert('Your message has been sent successfully! We will get back to you shortly.');
-
-            // Only open mail client if user confirms they want to send a direct copy
-            if (window.confirm('Would you also like to open your email client to send a direct copy?')) {
-                window.location.href = mailtoUrl;
-            }
 
             setFormData({
                 name: '',
@@ -64,8 +58,8 @@ const ContactPage = () => {
             });
 
         } catch (err) {
-            console.error("Contact form error:", err);
-            alert('Failed to send message: ' + err.message);
+            console.error("Email delivery error:", err);
+            alert('Failed to send message: ' + (err.text || err.message || 'Unknown error'));
         } finally {
             setLoading(false);
         }
@@ -114,7 +108,7 @@ const ContactPage = () => {
                                 </div>
                                 <div className="method-details">
                                     <h4>Email Us</h4>
-                                    <p>fadmaestro2017@gmail.com</p>
+                                    <p>danielolajireolamilekan2020@gmail.com</p>
                                 </div>
                             </div>
                         </div>

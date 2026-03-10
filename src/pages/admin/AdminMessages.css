@@ -1,0 +1,233 @@
+.admin-messages-container {
+    padding: 24px;
+    height: calc(100vh - 80px); /* Adjust based on header height */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: #f8fafc;
+}
+
+.messages-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-title h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.refresh-btn {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    background: #f1f5f9;
+}
+
+.messages-layout {
+    display: flex;
+    gap: 24px;
+    flex: 1;
+    min-height: 0; /* Important for inner scroll */
+}
+
+/* List Panel */
+.messages-list-panel {
+    width: 350px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+    color: #64748b;
+    gap: 12px;
+}
+
+.loading-state {
+    padding: 20px;
+    text-align: center;
+    color: #64748b;
+}
+
+.message-item {
+    padding: 16px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.message-item:hover {
+    background: #f8fafc;
+}
+
+.message-item.active {
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+}
+
+.message-item-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.msg-candidate {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 15px;
+}
+
+.msg-date {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.msg-subject {
+    font-size: 14px;
+    font-weight: 500;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.msg-preview {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* Detail Panel */
+.message-detail-panel {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.no-selection-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+}
+
+.message-detail-content {
+    padding: 32px;
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.detail-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.delete-icon-btn {
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    background: #fef2f2;
+    color: #ef4444;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-icon-btn:hover {
+    background: #fee2e2;
+}
+
+.sender-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #475569;
+}
+
+.info-item a {
+    color: #3b82f6;
+    text-decoration: none;
+}
+
+.message-body-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.message-body-container label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+}
+
+.message-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #1e293b;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 900px) {
+    .messages-layout {
+        flex-direction: column;
+    }
+    .messages-list-panel {
+        width: 100%;
+        max-height: 300px;
+    }
+}
