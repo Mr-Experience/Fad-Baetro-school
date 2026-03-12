@@ -30,7 +30,7 @@ const VisionPage = () => {
                     <span className="about-kicker">Our Purpose</span>
                     <h1 className="about-title">Vision &<br />Mission</h1>
                     <p className="about-description">
-                        Guided by clear principles to transform our nation by producing upright leaders of the future through high quality and sound education.
+                        Nurturing generations of academically excellent and self-reliant youth, dedicated to the values of integrity and moral uprightness.
                     </p>
                 </div>
 
@@ -41,65 +41,57 @@ const VisionPage = () => {
                 </div>
             </section>
 
-            {/* Philosophy Section */}
+            {/* Consolidated Vision & Mission Section */}
             <section id="content-section" className="about-section">
                 <div className="section-box">
                     <div className="section-header">
-                        <span className="section-subtitle">Core Values</span>
+                        <span className="section-subtitle">Our Foundation</span>
                         <div className="separator-container">
                             <div className="separator-line"></div>
-                            <span className="separator-text">OF</span>
+                            <span className="separator-text">VISION & MISSION</span>
                             <div className="separator-line"></div>
                         </div>
-                        <h2 className="section-title">The Philosophy</h2>
+                        <h2 className="section-title">A Legacy of Excellence</h2>
                     </div>
-                    <div className="section-content">
-                        <p>
-                            The school is committed to providing the highest academic standard, cultivating sound leadership skills and vision, as well as enriching lives through spiritual development. This aims at raising upright future leaders through the ideals and values of practical morality and excellence.
-                        </p>
-                        <p>
-                            Consequently, the school has zero tolerance for any act of indiscipline. In Fad Maestro School, there is no room for students to display affluence; the idea aims at giving a sense of equality to all students, fostering an environment where merit and character are the true measures of success.
-                        </p>
-                    </div>
-                </div>
-            </section>
 
-            {/* Vision Statement */}
-            <section className="about-section white-bg">
-                <div className="section-box">
-                    <div className="section-header">
-                        <span className="section-subtitle">Our Goal</span>
-                        <div className="separator-container">
-                            <div className="separator-line"></div>
-                            <span className="separator-text">OF</span>
-                            <div className="separator-line"></div>
+                    <div className="section-content consolidated-content">
+                        {/* Vision Block */}
+                        <div className="vision-mission-block">
+                            <h3 className="block-label">Our Vision</h3>
+                            <p className="primary-statement">
+                                "To be an outstanding institution which is an embodiment of excellence, moral uprightness and integrity."
+                            </p>
+                            <div className="statement-details">
+                                <p>
+                                    Fad Maestro is an institution that strives for excellence and prominence, not just in name but in terms of academic content and moral input. We aim to reflect this in our overall product—the pupils and students. 
+                                </p>
+                                <p>
+                                    To be an <strong>embodiment</strong> means to nurture our students to be a representation or typical example of quality. Achieving this goal requires the cooperation of parents, students, teachers, and the entire school community. When students cooperate by being punctual, hardworking, and diligent in their assignments, our vision to make them symbols of integrity is actualized.
+                                </p>
+                            </div>
                         </div>
-                        <h2 className="section-title">Vision Statement</h2>
-                    </div>
-                    <div className="section-content" style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: '1.2rem', fontWeight: '600', color: '#333' }}>
-                            "To transform our nation by producing upright leaders of the future through high quality and sound education."
-                        </p>
-                    </div>
-                </div>
-            </section>
 
-            {/* Mission Statement */}
-            <section className="about-section">
-                <div className="section-box">
-                    <div className="section-header">
-                        <span className="section-subtitle">Our Promise</span>
-                        <div className="separator-container">
-                            <div className="separator-line"></div>
-                            <span className="separator-text">OF</span>
-                            <div className="separator-line"></div>
+                        {/* Mission Block */}
+                        <div className="vision-mission-block">
+                            <h3 className="block-label">Our Mission</h3>
+                            <p className="primary-statement">
+                                "It is to build generations of academically excellent and reliant youth, nurtured to uphold values and integrity."
+                            </p>
+                            <div className="statement-details">
+                                <p>
+                                    When we speak of <strong>generations</strong>, we look at the multiplying effect of our handling of children. We desire that our products excel academically and morally, becoming signposts of integrity. They are expected to be self-reliant in their choice of career, creative, "fountains of ideas," and creators of wealth.
+                                </p>
+                                <p>
+                                    <strong>Integrity</strong> is at the core of everything we do. Our students' "Yes" should be "Yes", even in the face of caution or punishment. They must be truthful in all things—not cheats, deviants, or social burdens, but socially productive leaders at the top of their careers.
+                                </p>
+                            </div>
                         </div>
-                        <h2 className="section-title">Mission Statement</h2>
-                    </div>
-                    <div className="section-content" style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: '1.2rem', fontWeight: '600', color: '#333' }}>
-                            "To produce students who are academically well-grounded, morally upright and adequately equipped as future leaders."
-                        </p>
+
+                        <div className="final-summary-note">
+                            <p>
+                                Ultimately, our mission and vision is to see every product of Fad Maestro Schools at the peak of their academic, career, and social potential.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </section>

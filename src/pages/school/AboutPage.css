@@ -331,3 +331,108 @@
         transform: translateX(-50%) translateY(-5px);
     }
 }
+
+/* =========================================
+   Consolidated Vision & Mission Styles
+   ========================================= */
+.vision-mission-block {
+    margin-bottom: 50px;
+    padding-bottom: 40px;
+    border-bottom: 2px dashed #eee;
+}
+
+.vision-mission-block:last-of-type {
+    border-bottom: none;
+    margin-bottom: 30px;
+}
+
+.block-label {
+    font-size: 0.9rem;
+    color: var(--about-secondary-pink);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    display: inline-block;
+    border-bottom: 2px solid var(--about-secondary-pink);
+    padding-bottom: 5px;
+}
+
+.primary-statement {
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    color: #333 !important;
+    line-height: 1.4 !important;
+    margin-bottom: 25px !important;
+    text-align: left !important;
+    font-family: 'Outfit', sans-serif;
+}
+
+.statement-details p {
+    font-size: 1.05rem !important;
+    line-height: 1.8 !important;
+    color: #555 !important;
+    margin-bottom: 1.5rem !important;
+    text-align: justify !important;
+}
+
+.final-summary-note {
+    background-color: #f8f9fa;
+    padding: 30px;
+    border-radius: 12px;
+    border-left: 5px solid #0088cc;
+}
+
+.final-summary-note p {
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    color: #444 !important;
+    text-align: center !important;
+    margin-bottom: 0 !important;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .primary-statement {
+        font-size: 1.3rem !important;
+        text-align: center !important;
+    }
+
+    .vision-mission-block {
+        margin-bottom: 30px;
+        padding-bottom: 30px;
+    }
+
+    .block-label {
+        margin: 0 auto 15px;
+        display: table;
+    }
+
+    .statement-details p {
+        text-align: center !important;
+        font-size: 1rem !important;
+    }
+
+    .final-summary-note {
+        padding: 20px;
+    }
+
+    .final-summary-note p {
+        font-size: 1rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .primary-statement {
+        font-size: 1.15rem !important;
+    }
+
+    .section-box {
+        padding: 25px 15px;
+    }
+
+    .vision-mission-block {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+    }
+}
