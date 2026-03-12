@@ -67,4 +67,47 @@
     font-weight: 600;
     height: 40px;
     border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.ae-start-btn:hover {
+    background-color: #7B1848;
+}
+
+/* Responsiveness */
+@media (max-width: 640px) {
+    .ae-card {
+        padding: 24px 20px;
+        min-width: 90%;
+        margin: 0 16px;
+    }
+
+    .ae-subject {
+        font-size: 18px;
+        margin-bottom: 16px;
+    }
+
+    .ae-instructions-heading {
+        font-size: 12px;
+    }
+
+    .ae-instructions-list li {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ae-card {
+        padding: 20px 16px;
+    }
+    
+    .ae-icon-wrap {
+        width: 48px;
+        height: 48px;
+    }
+
+    .ae-subject {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
 }

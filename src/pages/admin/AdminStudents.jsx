@@ -5,10 +5,9 @@ import { supabase } from '../../supabaseClient';
 import './AdminStudents.css';
 
 const AdminStudents = () => {
-    const { userId } = useOutletContext();
-    const [students, setStudents] = useState([]);
-    const [classes, setClasses] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { classes, studentsCache, setStudentsCache } = useOutletContext();
+    const [students, setStudents] = useState(studentsCache || []);
+    const [loading, setLoading] = useState(!studentsCache);
     const [filterClass, setFilterClass] = useState('all');
 
     // Modal state
@@ -34,16 +33,10 @@ const AdminStudents = () => {
 
     useEffect(() => {
         fetchStudents();
-        fetchClasses();
     }, []);
 
-    const fetchClasses = async () => {
-        const { data } = await supabase.from('classes').select('*').order('class_name');
-        if (data) setClasses(data);
-    };
-
     const fetchStudents = async () => {
-        setLoading(true);
+        if (!studentsCache) setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('profiles')
@@ -55,7 +48,10 @@ const AdminStudents = () => {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            if (data) setStudents(data);
+            if (data) {
+                setStudents(data);
+                setStudentsCache(data);
+            }
         } catch (err) {
             console.error("Error fetching students:", err);
         } finally {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import '../student/NoExamSchedule.css';
 import './SchoolConfig.css';
@@ -8,10 +9,10 @@ import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SchoolConfig = () => {
     const navigate = useNavigate();
-    const [currentSession, setCurrentSession] = useState('2024/2025');
+    const [currentSession, setCurrentSession] = useState('2025/2026');
     const [currentTerm, setCurrentTerm] = useState('First Term');
 
-    const [activeSession, setActiveSession] = useState('2024/2025');
+    const [activeSession, setActiveSession] = useState('2025/2026');
     const [activeTerm, setActiveTerm] = useState('First Term');
 
     const [profile, setProfile] = useState(null);
@@ -22,7 +23,9 @@ const SchoolConfig = () => {
 
     useEffect(() => {
         const fetchUserData = async () => {
-            setLoading(true);
+            // Only show initial loader if we have absolutely nothing
+            if (!profile) setLoading(true);
+            
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { data: profileData } = await supabase
@@ -38,7 +41,8 @@ const SchoolConfig = () => {
     }, []);
 
     const fetchSettings = async () => {
-        setLoading(true);
+        // If we already have some data, fetch the rest silently in the background
+        if (!activeSession) setLoading(true);
         try {
             const { data } = await supabase
                 .from('system_settings')
@@ -127,6 +131,13 @@ const SchoolConfig = () => {
                 </div>
             </header>
 
+            <div className="sc-action-bar">
+                <button className="sc-register-btn" onClick={() => navigate('/portal/superadmin/register')}>
+                    <UserPlus size={18} />
+                    Register New Admin
+                </button>
+            </div>
+
             {/* Main — vertically and horizontally centers the card */}
             <main className="sc-main">
                 <div className="sc-card">
@@ -134,7 +145,7 @@ const SchoolConfig = () => {
                         <div className="sc-info-icon">i</div>
                     </div>
 
-                    <h2 className="sc-title">Set The Current Session</h2>
+                    <h2 className="sc-title">Set The Current Session (Latest)</h2>
                     <p className="sc-subtitle">
                         Set the current session and term details which will control the data content of the admin and student
                     </p>
@@ -149,11 +160,14 @@ const SchoolConfig = () => {
                                 onChange={(e) => setCurrentSession(e.target.value)}
                                 disabled={loading || saving}
                             >
-                                <option value="2022/2023">Session 2022/2023</option>
-                                <option value="2023/2024">Session 2023/2024</option>
-                                <option value="2024/2025">Session 2024/2025</option>
                                 <option value="2025/2026">Session 2025/2026</option>
                                 <option value="2026/2027">Session 2026/2027</option>
+                                <option value="2027/2028">Session 2027/2028</option>
+                                <option value="2028/2029">Session 2028/2029</option>
+                                <option value="2029/2030">Session 2029/2030</option>
+                                <option value="2030/2031">Session 2030/2031</option>
+                                <option value="2031/2032">Session 2031/2032</option>
+                                <option value="2032/2033">Session 2032/2033</option>
                             </select>
                             <div className="sc-select-arrow">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">

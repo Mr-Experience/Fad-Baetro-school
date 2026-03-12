@@ -58,7 +58,7 @@ const Footer = () => {
                         <ul className="footer-links">
                             <li><Link to="/portal/student">Student Login</Link></li>
                             <li><Link to="/portal/admin/login">Admin Login</Link></li>
-                            <li><Link to="/portal/candidate">Candidate Login</Link></li>
+                            <li><Link to="/portal/superadmin">Super Admin Access</Link></li>
                         </ul>
                     </div>
 

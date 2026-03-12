@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { checkAndPromoteStudent } from '../../utils/promotionService';
 import '../auth/PortalLogin.css';
 import './NoExamSchedule.css';
 import './ExamScreen.css';
@@ -349,6 +350,11 @@ const ExamScreen = () => {
 
             // Clear progress
             localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);
+            
+            // --- PROMOTION CHECK (Triggered by EXAM type only) ---
+            if (activeConfig.question_type === 'exam') {
+                await checkAndPromoteStudent(student.id, student.class_id, sessionInfo.session, sessionInfo.term);
+            }
 
             // Redirect
             navigate('/portal/student/submitted', {

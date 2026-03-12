@@ -5,7 +5,7 @@ import './AdminQuestions.css';
 
 const AdminQuestions = () => {
     const navigate = useNavigate();
-    const { classes, activeSession, activeTerm } = useOutletContext();
+    const { classes, activeSession, activeTerm, subjectsCache, setSubjectsCache } = useOutletContext();
 
     const [subjects, setSubjects] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
@@ -24,15 +24,26 @@ const AdminQuestions = () => {
                 setQuestionSummary([]);
                 return;
             }
+
+            // Check cache
+            if (subjectsCache[selectedClassId]) {
+                setSubjects(subjectsCache[selectedClassId]);
+                return;
+            }
+
             const { data } = await supabase
                 .from('subjects')
                 .select('id, subject_name')
                 .eq('class_id', selectedClassId)
                 .order('subject_name');
-            if (data) setSubjects(data);
+
+            if (data) {
+                setSubjects(data);
+                setSubjectsCache(prev => ({ ...prev, [selectedClassId]: data }));
+            }
         };
         fetchSubjects();
-    }, [selectedClassId]);
+    }, [selectedClassId, subjectsCache]);
 
     // Fetch Question Summary
     useEffect(() => {

@@ -5,9 +5,9 @@ import LoadingOverlay from '../../components/LoadingOverlay';
 import './AdminEvents.css';
 
 const AdminEvents = () => {
-    const { userId } = useOutletContext();
-    const [posts, setPosts] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { userId, eventsCache, setEventsCache } = useOutletContext();
+    const [posts, setPosts] = useState(eventsCache || []);
+    const [loading, setLoading] = useState(!eventsCache);
     const [saving, setSaving] = useState(false);
 
     // Modal state
@@ -23,7 +23,7 @@ const AdminEvents = () => {
     }, []);
 
     const fetchPosts = async () => {
-        setLoading(true);
+        if (!eventsCache) setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('system_posts')
@@ -36,7 +36,9 @@ const AdminEvents = () => {
                     console.error("Error fetching posts:", error);
                 }
             } else {
-                setPosts(data || []);
+                const fetchedPosts = data || [];
+                setPosts(fetchedPosts);
+                setEventsCache(fetchedPosts);
             }
         } catch (err) {
             console.error("Fetch error:", err);

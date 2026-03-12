@@ -5,9 +5,9 @@ import { CheckCircle } from 'lucide-react';
 import './AdminResults.css';
 
 const AdminResults = () => {
-    const { classes, activeSession, activeTerm } = useOutletContext();
-    const [subjects, setSubjects] = useState([]);
+    const { classes, activeSession, activeTerm, subjectsCache, setSubjectsCache } = useOutletContext();
     const [selectedClassId, setSelectedClassId] = useState('');
+    const [subjects, setSubjects] = useState([]);
     const [selectedSubjectId, setSelectedSubjectId] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -24,15 +24,26 @@ const AdminResults = () => {
                 setResultsSummary([]);
                 return;
             }
+
+            // Check cache
+            if (subjectsCache[selectedClassId]) {
+                setSubjects(subjectsCache[selectedClassId]);
+                return;
+            }
+
             const { data } = await supabase
                 .from('subjects')
                 .select('id, subject_name')
                 .eq('class_id', selectedClassId)
                 .order('subject_name');
-            if (data) setSubjects(data);
+
+            if (data) {
+                setSubjects(data);
+                setSubjectsCache(prev => ({ ...prev, [selectedClassId]: data }));
+            }
         };
         fetchSubjects();
-    }, [selectedClassId]);
+    }, [selectedClassId, subjectsCache]);
 
     // Fetch Summary when class/subject changes
     useEffect(() => {

@@ -17,6 +17,14 @@ const AdminLayout = () => {
     const [activeSession, setActiveSession] = useState('');
     const [activeTerm, setActiveTerm] = useState('');
 
+    // Dashboard Stats Cache (to prevent flicker)
+    const [dashboardStats, setDashboardStats] = useState(null);
+    const [studentsCache, setStudentsCache] = useState(null);
+    const [subjectsCache, setSubjectsCache] = useState({}); // { classId: [subjects] }
+    const [eventsCache, setEventsCache] = useState(null);
+    const [candidatesCache, setCandidatesCache] = useState(null);
+    const [infoCache, setInfoCache] = useState(null);
+
     // Classes cache
     const [classes, setClasses] = useState([]);
     const [classesLoading, setClassesLoading] = useState(true);
@@ -72,6 +80,7 @@ const AdminLayout = () => {
             case 'results': return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>;
             case 'events': return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>;
             case 'admission': return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8l2 2 4-4" /></svg>;
+            case 'book': return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>;
             default: return null;
         }
     };
@@ -79,6 +88,7 @@ const AdminLayout = () => {
     const navItems = [
         { label: 'Dashboard', path: '/portal/admin', icon: 'grid' },
         { label: 'Students', path: '/portal/admin/students', icon: 'users' },
+        { label: 'Subjects', path: '/portal/admin/subjects', icon: 'book' },
         { label: 'Questions', path: '/portal/admin/questions', icon: 'questions' },
         { label: 'Results', path: '/portal/admin/results', icon: 'results' },
         { label: 'Candidates', path: '/portal/admin/candidates', icon: 'admission' },
@@ -92,16 +102,55 @@ const AdminLayout = () => {
         navigate('/portal/admin/login');
     };
 
+    const handleNavClick = (path) => {
+        if (location.pathname !== path) {
+            navigate(path);
+        }
+    };
+
+    // Memoize context to prevent unnecessary child re-renders
+    const contextValue = React.useMemo(() => ({
+        userName,
+        setUserName,
+        userInitial,
+        setUserInitial,
+        avatarUrl,
+        setAvatarUrl,
+        profileLoading,
+        userId,
+        classes,
+        classesLoading,
+        activeSession,
+        activeTerm,
+        dashboardStats,
+        setDashboardStats,
+        studentsCache,
+        setStudentsCache,
+        subjectsCache,
+        setSubjectsCache,
+        eventsCache,
+        setEventsCache,
+        candidatesCache,
+        setCandidatesCache,
+        infoCache,
+        setInfoCache
+    }), [
+        userName, userInitial, avatarUrl, profileLoading, userId, 
+        classes, classesLoading, activeSession, activeTerm, 
+        dashboardStats, studentsCache, subjectsCache, eventsCache, 
+        candidatesCache, infoCache
+    ]);
+
     return (
         <div className="ad-container">
-            {/* Sidebar remains mounted across admin route changes */}
+            {/* Sidebar remains mounted across admin route changes (Desktop) */}
             <aside className="ad-sidebar">
                 <nav className="ad-nav">
                     {navItems.map(item => (
                         <div
                             key={item.path}
                             className={`ad-nav-item ${location.pathname === item.path ? 'active' : ''}`}
-                            onClick={() => navigate(item.path)}
+                            onClick={() => handleNavClick(item.path)}
                         >
                             <div className="ad-nav-icon">{renderIcon(item.icon)}</div>
                             <span>{item.label}</span>
@@ -122,6 +171,20 @@ const AdminLayout = () => {
                 </div>
             </aside>
 
+            {/* Mobile Bottom Navigation */}
+            <nav className="ad-mobile-nav">
+                {navItems.filter(item => ['Dashboard', 'Students', 'Results', 'Profile'].includes(item.label)).map(item => (
+                    <div
+                        key={item.path}
+                        className={`ad-mn-item ${location.pathname === item.path ? 'active' : ''}`}
+                        onClick={() => handleNavClick(item.path)}
+                    >
+                        <div className="ad-mn-icon">{renderIcon(item.icon)}</div>
+                        <span>{item.label}</span>
+                    </div>
+                ))}
+            </nav>
+
             {/* Main Area */}
             <main className="ad-main">
                 {/* Header remains mounted across admin route changes */}
@@ -135,20 +198,7 @@ const AdminLayout = () => {
                 />
 
                 {/* Individual pages render here - sharing profile context to prevent re-fetching */}
-                <Outlet context={{
-                    userName,
-                    setUserName,
-                    userInitial,
-                    setUserInitial,
-                    avatarUrl,
-                    setAvatarUrl,
-                    profileLoading,
-                    userId,
-                    classes,
-                    classesLoading,
-                    activeSession,
-                    activeTerm
-                }} />
+                <Outlet context={contextValue} />
             </main>
         </div>
     );

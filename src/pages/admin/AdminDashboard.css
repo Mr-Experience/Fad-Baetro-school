@@ -189,12 +189,30 @@
 }
 
 @media (max-width: 480px) {
+    .ad-banner {
+        padding: 0 16px;
+        height: 160px;
+    }
+
+    .ad-banner-content h1 {
+        font-size: 20px;
+    }
+
+    .ad-banner-content p {
+        font-size: 13px;
+    }
+
     .ad-stats-grid {
         grid-template-columns: 1fr;
     }
 
     .ad-stat-number {
         font-size: 20px;
+    }
+
+    .ad-content-grid {
+        padding: 0 16px;
+        margin-top: -40px;
     }
 }
 

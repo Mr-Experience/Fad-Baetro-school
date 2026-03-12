@@ -178,10 +178,11 @@
 
 .qe-option.is-correct .qe-radio::after {
     content: '';
-    width: 10px;
-    height: 10px;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     background-color: #9D245A;
+    transform: scale(0.5);
 }
 
 .qe-option-text {
@@ -217,6 +218,8 @@
     padding: 32px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     animation: slideUp 0.3s ease-out;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 @keyframes slideUp {
@@ -379,7 +382,7 @@
     }
 
     .qe-content-card {
-        padding: 20px;
+        padding: 24px 20px;
     }
 }
 
@@ -399,6 +402,8 @@
     .qe-add-new-btn {
         flex: 1;
         text-align: center;
+        padding: 10px 16px;
+        font-size: 13px;
     }
 
     .qe-options-grid {
@@ -406,7 +411,8 @@
     }
 
     .qe-modal {
-        padding: 20px;
+        padding: 24px 16px;
+        width: 90%;
     }
 }
 
@@ -419,6 +425,10 @@
     .qe-q-actions {
         width: 100%;
         justify-content: flex-end;
+    }
+    
+    .qe-q-card {
+        padding: 16px;
     }
 }
 

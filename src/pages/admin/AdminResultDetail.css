@@ -295,6 +295,14 @@
 }
 
 @media (max-width: 640px) {
+    .rd-container {
+        padding: 16px;
+    }
+
+    .rd-content-card {
+        padding: 24px 20px;
+    }
+
     .rd-header {
         flex-direction: column;
         align-items: flex-start;
@@ -303,14 +311,24 @@
 
     .rd-header-actions {
         width: 100%;
-        justify-content: flex-start;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rd-action-btn {
+        width: 100%;
+        justify-content: center;
     }
 
     .rd-stats-row {
         grid-template-columns: 1fr;
     }
 
-    .rd-content-card {
-        padding: 20px;
+    .rd-student-email {
+        display: none;
+    }
+
+    .rd-title {
+        font-size: 18px;
     }
 }

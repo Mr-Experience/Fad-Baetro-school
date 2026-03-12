@@ -171,3 +171,30 @@
     text-align: center;
     color: #64748B;
 }
+
+/* Responsiveness */
+@media (max-width: 768px) {
+    .ac-container {
+        padding: 16px;
+    }
+
+    .ac-card {
+        padding: 24px 16px;
+    }
+
+    .ac-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .ac-controls {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ac-dropdown {
+        width: 100%;
+    }
+}

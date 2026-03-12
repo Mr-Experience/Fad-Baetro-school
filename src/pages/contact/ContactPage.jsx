@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Phone, Mail } from 'lucide-react';
 import Header from '../../components/Header';
 // ToastContext removed
-import { supabase } from '../../supabaseClient';
 import emailjs from '@emailjs/browser';
 import './ContactPage.css';
 

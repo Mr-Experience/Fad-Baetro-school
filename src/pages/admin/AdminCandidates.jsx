@@ -5,24 +5,17 @@ import { UserCheck, Trash2 } from 'lucide-react';
 import './AdminCandidates.css';
 
 const AdminCandidates = () => {
-    const { userId } = useOutletContext();
-    const [candidates, setCandidates] = useState([]);
-    const [classes, setClasses] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { classes, candidatesCache, setCandidatesCache } = useOutletContext();
+    const [candidates, setCandidates] = useState(candidatesCache || []);
+    const [loading, setLoading] = useState(!candidatesCache);
     const [filterStatus, setFilterStatus] = useState('all');
 
     useEffect(() => {
         fetchCandidates();
-        fetchClasses();
     }, []);
 
-    const fetchClasses = async () => {
-        const { data } = await supabase.from('classes').select('*');
-        if (data) setClasses(data);
-    };
-
     const fetchCandidates = async () => {
-        setLoading(true);
+        if (!candidatesCache) setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('candidates')
@@ -33,7 +26,10 @@ const AdminCandidates = () => {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            if (data) setCandidates(data);
+            if (data) {
+                setCandidates(data);
+                setCandidatesCache(data);
+            }
         } catch (err) {
             console.error("Error fetching candidates:", err);
         } finally {

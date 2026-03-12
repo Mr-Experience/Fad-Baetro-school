@@ -88,9 +88,9 @@
 .sc-card {
     background: #ffffff;
     width: 100%;
-    max-width: 480px;
+    max-width: 540px;
     border-radius: 12px;
-    padding: 48px 40px;
+    padding: 32px 40px;
     box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.10), 0 2px 6px -1px rgba(0, 0, 0, 0.06);
     text-align: center;
     display: flex;
@@ -207,6 +207,41 @@
     cursor: not-allowed;
 }
 
+/* ─── Action Bar ───────────────────────────────────────── */
+.sc-action-bar {
+    margin-top: 24px;
+    padding: 0 24px;
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.sc-register-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #9D245A;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(157, 36, 90, 0.2);
+}
+
+.sc-register-btn:hover {
+    background-color: #7B1848;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(157, 36, 90, 0.3);
+}
+
+.sc-register-btn:active {
+    transform: translateY(0);
+}
+
 /* ─── Inline error alert (only error; success is a toast) ─ */
 .sc-alert {
     width: 100%;
@@ -258,63 +293,49 @@
 @media (max-width: 640px) {
     .sc-header {
         padding: 12px 16px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
     }
 
-    .sc-header-left {
+    .sc-action-bar {
+        padding: 0 16px;
+        margin-top: 16px;
+        justify-content: center;
+    }
+
+    .sc-register-btn {
         width: 100%;
+        justify-content: center;
     }
 
     .sc-header-right {
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 10px;
-        padding-top: 8px;
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
-    }
-
-    .sc-session-badge {
-        font-size: 12px;
-        padding: 6px 10px;
-        flex: 1;
-        min-width: 0;
-    }
-
-    .sc-badge-text {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .sc-user-name {
         display: none;
     }
 
-    .sc-brand-name {
-        font-size: 17px;
-    }
-
-    /* Card: 16px breathing room from screen edges, 24px from header */
     .sc-main {
-        padding: 24px 16px;
-        align-items: center;
+        padding: 16px;
     }
 
     .sc-card {
-        padding: 36px 24px;
+        padding: 32px 20px;
+        max-width: 100%;
     }
 
     .sc-title {
-        font-size: 20px;
+        font-size: 18px;
     }
 
-    .sc-toast {
-        bottom: 16px;
-        right: 16px;
-        left: 16px;
-        justify-content: center;
+    .sc-subtitle {
+        font-size: 12px;
+        margin-bottom: 20px;
+    }
+
+    .sc-select {
+        height: 44px;
+        font-size: 13px;
+    }
+
+    .sc-save-btn {
+        height: 44px;
+        font-size: 14px;
     }
 }
 

@@ -11,6 +11,7 @@ import FAQPage from './pages/school/FAQPage';
 import NewsPage from './pages/media/NewsPage';
 import SuperadminLogin from './pages/superadmin/SuperadminLogin';
 import SchoolConfig from './pages/superadmin/SchoolConfig';
+import RegisterAdmin from './pages/superadmin/RegisterAdmin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminStudents from './pages/admin/AdminStudents';
 import AdminQuestions from './pages/admin/AdminQuestions';
@@ -21,7 +22,10 @@ import AdminEvents from './pages/admin/AdminEvents';
 import AdminInfo from './pages/admin/AdminInfo';
 import AdminProfile from './pages/admin/AdminProfile';
 import AdminCandidates from './pages/admin/AdminCandidates';
+import AdminSubjects from './pages/admin/AdminSubjects';
 import AdminLogin from './pages/admin/AdminLogin';
+import AdminForgotPassword from './pages/admin/AdminForgotPassword';
+import AdminResetPassword from './pages/admin/AdminResetPassword';
 import CandidateLogin from './pages/candidate/CandidateLogin';
 import CandidateSignup from './pages/candidate/CandidateSignup';
 import CandidateNoExam from './pages/candidate/NoExamSchedule';
@@ -61,10 +65,13 @@ function App() {
                 {/* Protected Superadmin Routes */}
                 <Route element={<ProtectedRoute requiredRole="super_admin" />}>
                     <Route path="/portal/superadmin/config" element={<SchoolConfig />} />
+                    <Route path="/portal/superadmin/register" element={<RegisterAdmin />} />
                 </Route>
 
                 {/* Admin Pages */}
                 <Route path="/portal/admin/login" element={<AdminLogin />} />
+                <Route path="/portal/admin/forgot-password" element={<AdminForgotPassword />} />
+                <Route path="/portal/admin/reset-password" element={<AdminResetPassword />} />
 
                 {/* Protected Admin Routes */}
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
@@ -74,6 +81,7 @@ function App() {
                     <Route element={<AdminLayout />}>
                         <Route path="/portal/admin" element={<AdminDashboard />} />
                         <Route path="/portal/admin/students" element={<AdminStudents />} />
+                        <Route path="/portal/admin/subjects" element={<AdminSubjects />} />
                         <Route path="/portal/admin/candidates" element={<AdminCandidates />} />
                         <Route path="/portal/admin/questions" element={<AdminQuestions />} />
                         <Route path="/portal/admin/results" element={<AdminResults />} />

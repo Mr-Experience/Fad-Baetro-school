@@ -75,7 +75,14 @@ const AdminProfile = () => {
         if (error) {
             setPwMsg({ type: 'error', text: 'Failed to change password. ' + error.message });
         } else {
-            setPwMsg({ type: 'success', text: 'Password changed successfully!' });
+            // GLOBAL LOGOUT: Force logout from all devices
+            await supabase.auth.signOut({ scope: 'global' });
+            setPwMsg({ type: 'success', text: 'Password changed successfully! You have been logged out of all devices. Redirecting...' });
+            
+            setTimeout(() => {
+                navigate('/portal/admin/login');
+            }, 3000);
+            
             setNewPassword('');
             setConfirmPassword('');
         }

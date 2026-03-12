@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import '../auth/PortalLogin.css';
 import { supabase } from '../../supabaseClient';
 import logoFallback from '../../assets/logo.jpg';
@@ -157,7 +157,7 @@ const AdminLogin = () => {
                                 />
                             </div>
 
-                            <div className="form-group">
+                            <div className="form-group" style={{ marginBottom: '8px' }}>
                                 <label className="form-label">Password*</label>
                                 <input
                                     type="password"
@@ -168,6 +168,7 @@ const AdminLogin = () => {
                                     className="form-input"
                                     required
                                 />
+                                <Link to="/portal/admin/forgot-password" className="forgot-password-link">Forgotten password</Link>
                             </div>
 
                             <button type="submit" className="login-btn" disabled={loading}>

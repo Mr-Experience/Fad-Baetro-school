@@ -5,12 +5,15 @@ import { supabase } from '../../supabaseClient';
 
 const AdminInfo = () => {
     const navigate = useNavigate();
-    const { userName, userInitial, avatarUrl, profileLoading, userId } = useOutletContext();
+    const { userName, userInitial, avatarUrl, profileLoading, userId, infoCache, setInfoCache } = useOutletContext();
 
     // Content
-    const [heroImages, setHeroImages] = useState([]);
-    const [mediaItems, setMediaItems] = useState([]);
-    const [loading, setLoading] = useState({ hero: false, media: false });
+    const [heroImages, setHeroImages] = useState(infoCache?.hero || []);
+    const [mediaItems, setMediaItems] = useState(infoCache?.media || []);
+    const [loading, setLoading] = useState({ 
+        hero: !infoCache?.hero, 
+        media: !infoCache?.media 
+    });
 
     // Media upload modal
     const [showMediaModal, setShowMediaModal] = useState(false);
@@ -36,21 +39,29 @@ const AdminInfo = () => {
     }, []);
 
     const fetchHeroImages = async () => {
-        setLoading(prev => ({ ...prev, hero: true }));
+        if (!infoCache?.hero) setLoading(prev => ({ ...prev, hero: true }));
         const { data, error } = await supabase
             .from('hero_images')
             .select('*')
             .order('display_order', { ascending: true });
-        if (!error && data) setHeroImages(data);
+        
+        if (!error && data) {
+            setHeroImages(data);
+            setInfoCache(prev => ({ ...prev, hero: data }));
+        }
         setLoading(prev => ({ ...prev, hero: false }));
     };
 
     const fetchMediaItems = async () => {
-        setLoading(prev => ({ ...prev, media: true }));
+        if (!infoCache?.media) setLoading(prev => ({ ...prev, media: true }));
         const { data, error } = await supabase
             .from('media_items')
             .select('*');
-        if (!error && data) setMediaItems(data);
+        
+        if (!error && data) {
+            setMediaItems(data);
+            setInfoCache(prev => ({ ...prev, media: data }));
+        }
         setLoading(prev => ({ ...prev, media: false }));
     };
 

@@ -1,0 +1,256 @@
+/* AdminSubjects.css */
+.as-container {
+    padding: 32px;
+    background-color: #F8FAFC;
+    min-height: calc(100vh - 80px);
+}
+
+.as-white-screen {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.as-header {
+    margin-bottom: 25px;
+}
+
+.as-header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1f2937;
+    margin: 0;
+}
+
+.as-header p {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 5px;
+}
+
+.as-content-grid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 30px;
+}
+
+.as-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f3f4f6;
+    overflow: hidden;
+}
+
+.as-card-header {
+    padding: 20px;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.as-card-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #374151;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.as-class-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.as-class-item {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+}
+
+.as-class-item:hover {
+    background: #f9fafb;
+}
+
+.as-class-item.active {
+    background: #fff1f2;
+    border-left-color: #9D245A;
+}
+
+.as-class-name {
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.as-class-item.active .as-class-name {
+    color: #9D245A;
+}
+
+.as-subject-view {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.as-add-form {
+    display: flex;
+    gap: 12px;
+    background: #f9fafb;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.as-input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.as-input:focus {
+    border-color: #9D245A;
+}
+
+.as-add-btn {
+    padding: 10px 20px;
+    background: #9D245A;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.as-add-btn:hover {
+    background: #831d4b;
+}
+
+.as-subjects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.as-subject-card {
+    background: #ffffff;
+    border: 1px solid #f3f4f6;
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s;
+}
+
+.as-subject-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.as-subject-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.as-subject-icon {
+    width: 32px;
+    height: 32px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9D245A;
+}
+
+.as-subject-name {
+    font-weight: 600;
+    color: #374151;
+    font-size: 15px;
+}
+
+.as-delete-btn {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.as-delete-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.as-empty {
+    padding: 60px;
+    text-align: center;
+    color: #9ca3af;
+}
+
+.as-empty-icon {
+    margin-bottom: 15px;
+}
+
+/* Responsiveness */
+@media (max-width: 1024px) {
+    .as-content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .as-card {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .as-container {
+        padding: 16px;
+    }
+
+    .as-white-screen {
+        padding: 24px 16px;
+    }
+
+    .as-header h1 {
+        font-size: 20px;
+    }
+
+    .as-add-form {
+        flex-direction: column;
+    }
+
+    .as-add-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .as-subjects-grid {
+        grid-template-columns: 1fr;
+    }
+}

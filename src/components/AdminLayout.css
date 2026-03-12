@@ -7,7 +7,7 @@
     font-family: 'Inter', sans-serif;
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling (Desktop) */
 .ad-sidebar {
     width: 68px;
     background-color: #fff;
@@ -35,6 +35,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    border-top: 1px solid #F1F5F9;
+    padding-top: 16px;
 }
 
 .ad-nav-item {
@@ -80,21 +82,59 @@
 
 .ad-nav-item.logout {
     color: #EF4444;
-    transition: color 0.2s;
 }
 
-.ad-nav-item.logout:hover {
-    color: #DC2626;
+/* Mobile Bottom Nav (Hidden on Desktop) */
+.ad-mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: #fff;
+    border-top: 1px solid #E2E8F0;
+    z-index: 999;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 10px;
 }
 
-/* Main Content Styling */
+.ad-mn-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: #64748B;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.ad-mn-item.active {
+    color: var(--primary-600);
+}
+
 .ad-main {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow-y: scroll;
     background-color: #FDF2F8;
-    /* Light pink background from image */
     min-width: 0;
-    /* Prevent overflow issues */
+    padding-bottom: 0;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+    .ad-sidebar {
+        display: none;
+    }
+
+    .ad-mobile-nav {
+        display: flex;
+    }
+
+    .ad-main {
+        padding-bottom: 74px; /* Space for mobile nav */
+    }
 }

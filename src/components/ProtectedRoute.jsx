@@ -4,26 +4,20 @@ import { supabase } from '../supabaseClient';
 import LoadingOverlay from './LoadingOverlay';
 
 const ProtectedRoute = ({ requiredRole = 'admin' }) => {
+    // Start as null only on first mount
     const [isAuthenticated, setIsAuthenticated] = useState(null);
+    const [hasCheckedOnce, setHasCheckedOnce] = useState(false);
     const location = useLocation();
 
     useEffect(() => {
-        let isChecking = true;
-        let authTimeout; // Timeout for debouncing "not logged in" state
-
-        const setAuthStatus = (status) => {
-            if (isChecking) setIsAuthenticated(status);
-        };
+        let isMounted = true;
+        let authSubscription = null;
 
         const verifyAccess = async (session) => {
             if (!session) {
-                authTimeout = setTimeout(() => {
-                    setAuthStatus(false);
-                }, 50); // Reduced delay to prevent loading hang
+                if (isMounted) setIsAuthenticated(false);
                 return;
             }
-
-            if (authTimeout) clearTimeout(authTimeout);
 
             try {
                 // Determine if we need to check the 'students' table or 'profiles' table
@@ -34,74 +28,52 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
                         .eq('email', session.user.email.toLowerCase())
                         .maybeSingle();
 
-                    if (studentError || !student) {
-                        console.warn("User is not a student. Denying entry.");
-                        setAuthStatus(false);
-                    } else {
-                        setAuthStatus(true);
-                    }
+                    if (isMounted) setIsAuthenticated(!(studentError || !student));
                     return;
                 }
 
-                // Default check for 'admin' or 'super_admin' in profiles table
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error(`Timeout checking ${requiredRole} role`)), 10000)
-                );
-
-                const fetchProfilePromise = supabase
+                const { data: profile, error } = await supabase
                     .from('profiles')
                     .select('role')
                     .eq('id', session.user.id)
                     .single();
 
-                const { data: profile, error } = await Promise.race([fetchProfilePromise, timeoutPromise]);
-
-                if (error) {
-                    console.error("Error fetching profile role:", error);
-                    setAuthStatus(false);
+                if (error || !profile) {
+                    // On error, if we were already authenticated, don't kick user out immediately
+                    // This handles transient network issues
+                    if (!isAuthenticated) {
+                        if (isMounted) setIsAuthenticated(false);
+                    }
                     return;
                 }
 
-                if (profile) {
-                    if (requiredRole === 'super_admin' && profile.role === 'super_admin') {
-                        setAuthStatus(true);
-                    } else if (requiredRole === 'admin' && (profile.role === 'admin' || profile.role === 'super_admin')) {
-                        setAuthStatus(true);
-                    } else if (requiredRole === 'candidate' && profile.role === 'candidate') {
-                        setAuthStatus(true);
-                    } else if (requiredRole === 'student' && profile.role === 'student') {
-                        // Allow students if they have the role in profiles
-                        setAuthStatus(true);
-                    } else {
-                        console.warn(`User role '${profile.role}' does not match required role '${requiredRole}'. Denying entry.`);
-                        setAuthStatus(false);
-                    }
-                } else {
-                    setAuthStatus(false);
+                let isMatch = false;
+                if (requiredRole === 'super_admin' && (profile.role === 'super_admin' || profile.role === 'super-admin')) {
+                    isMatch = true;
+                } else if (requiredRole === 'admin' && (profile.role === 'admin' || profile.role === 'super_admin' || profile.role === 'super-admin')) {
+                    isMatch = true;
+                } else if (requiredRole === 'candidate' && profile.role === 'candidate') {
+                    isMatch = true;
+                } else if (requiredRole === 'student' && profile.role === 'student') {
+                    isMatch = true;
                 }
+
+                if (isMounted) setIsAuthenticated(isMatch);
             } catch (err) {
                 console.error("Auth verification error:", err);
-                setAuthStatus(false);
+                // Sticky behavior: don't flip to false on generic catch errors if already true
+                if (!isAuthenticated && isMounted) setIsAuthenticated(false);
+            } finally {
+                if (isMounted) setHasCheckedOnce(true);
             }
         };
 
         const initAuth = async () => {
             try {
-                // First attempt
-                let { data: { session }, error } = await supabase.auth.getSession();
-
-                // If no session, wait a bit and try again (tab sync race condition)
-                if (!session && !error) {
-                    await new Promise(resolve => setTimeout(resolve, 50)); // reduced from 800ms
-                    const secondCheck = await supabase.auth.getSession();
-                    session = secondCheck.data.session;
-                }
-
-                if (error) throw error;
+                const { data: { session } } = await supabase.auth.getSession();
                 await verifyAccess(session);
             } catch (err) {
-                console.error("Session error:", err);
-                setAuthStatus(false);
+                if (isMounted) setIsAuthenticated(false);
             }
         };
 
@@ -109,25 +81,25 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                if (authTimeout) clearTimeout(authTimeout);
                 await verifyAccess(session);
             } else if (event === 'SIGNED_OUT') {
-                setAuthStatus(false);
+                if (isMounted) setIsAuthenticated(false);
             }
         });
+        authSubscription = subscription;
 
         return () => {
-            isChecking = false;
-            if (authTimeout) clearTimeout(authTimeout);
-            subscription.unsubscribe();
+            isMounted = false;
+            if (authSubscription) authSubscription.unsubscribe();
         };
-    }, [requiredRole]);
+    }, [requiredRole]); // Stays stable unless the route's fundamental role requirement changes
 
-    if (isAuthenticated === null) {
+    // Only show the blocking overlay on the very first check
+    if (isAuthenticated === null && !hasCheckedOnce) {
         return <LoadingOverlay isVisible={true} />;
     }
 
-    if (!isAuthenticated) {
+    if (isAuthenticated === false) {
         // Redirect logic
         let redirectPath = "/portal/admin/login";
         if (requiredRole === 'super_admin') redirectPath = "/portal/superadmin";
@@ -137,6 +109,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
         return <Navigate to={redirectPath} state={{ from: location }} replace />;
     }
 
+    // Default to rendering children (sticky)
     return <Outlet />;
 };
 

@@ -5,9 +5,9 @@ import { Users, UserCheck, BookOpen, BarChart3, Clock, ArrowRight } from 'lucide
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
-    const { activeSession, activeTerm } = useOutletContext();
+    const { activeSession, activeTerm, dashboardStats, setDashboardStats } = useOutletContext();
     const navigate = useNavigate();
-    const [stats, setStats] = useState({
+    const [stats, setStats] = useState(dashboardStats || {
         students: 0,
         subjects: 0,
         questions: 0,
@@ -15,12 +15,14 @@ const AdminDashboard = () => {
         examResults: 0
     });
     const [recentSubmissions, setRecentSubmissions] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!dashboardStats);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (!activeSession) return;
-            setLoading(true);
+            // Only show loader if we have NO cached data at all
+            if (!dashboardStats) setLoading(true);
+
             try {
                 // Fetch Metrics (Session Filtered where applicable)
                 const [
@@ -45,13 +47,16 @@ const AdminDashboard = () => {
                         .eq('question_type', 'exam')
                 ]);
 
-                setStats({
+                const newStats = {
                     students: studentCount || 0,
                     subjects: subjectCount || 0,
                     questions: questionCount || 0,
                     testResults: testResultCount || 0,
                     examResults: examResultCount || 0
-                });
+                };
+
+                setStats(newStats);
+                setDashboardStats(newStats); // Save to Layout context cache
 
                 // Fetch Recent Submissions
                 const { data: recent } = await supabase

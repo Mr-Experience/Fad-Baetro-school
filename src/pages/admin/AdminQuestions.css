@@ -224,7 +224,31 @@
     box-shadow: 0 0 0 2px #fff, 0 0 8px #10B981;
 }
 
+/* Responsiveness */
 @media (max-width: 900px) {
+    .aq-main-wrap {
+        padding: 16px;
+    }
+
+    .aq-content-card {
+        padding: 24px 20px;
+    }
+
+    .aq-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 20px;
+    }
+
+    .aq-filters {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .aq-select-wrapper {
+        width: 100%;
+    }
+
     .aq-subject-row {
         flex-direction: column;
         align-items: flex-start;
@@ -236,9 +260,20 @@
         justify-content: flex-start;
         overflow-x: auto;
         padding-bottom: 10px;
+        gap: 12px;
     }
 
     .aq-subject-name {
         width: auto;
+    }
+
+    .aq-box {
+        width: 160px;
+        height: 90px;
+        flex-shrink: 0;
+    }
+
+    .aq-box-count {
+        font-size: 20px;
     }
 }
