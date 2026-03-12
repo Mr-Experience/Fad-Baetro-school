@@ -15,62 +15,45 @@ const AdminResults = () => {
     // Results summary state
     const [resultsSummary, setResultsSummary] = useState([]);
 
-    // Fetch Subjects when class changes
+    // Combined Fetch for Subjects and Summary (Optimization)
     useEffect(() => {
-        const fetchSubjects = async () => {
+        const loadPageData = async () => {
             if (!selectedClassId) {
                 setSubjects([]);
-                setSelectedSubjectId('');
                 setResultsSummary([]);
                 return;
             }
 
-            // Check cache
-            if (subjectsCache[selectedClassId]) {
-                setSubjects(subjectsCache[selectedClassId]);
-                return;
-            }
-
-            const { data } = await supabase
-                .from('subjects')
-                .select('id, subject_name')
-                .eq('class_id', selectedClassId)
-                .order('subject_name');
-
-            if (data) {
-                setSubjects(data);
-                setSubjectsCache(prev => ({ ...prev, [selectedClassId]: data }));
-            }
-        };
-        fetchSubjects();
-    }, [selectedClassId, subjectsCache]);
-
-    // Fetch Summary when class/subject changes
-    useEffect(() => {
-        const fetchSummary = async () => {
-            if (!selectedClassId || subjects.length === 0) return;
             setLoading(true);
-
             try {
-                let query = supabase
-                    .from('exam_results')
-                    .select('id, subject_id, question_type')
-                    .eq('class_id', selectedClassId)
-                    .eq('session_id', (activeSession || '').trim())
-                    .eq('term_id', (activeTerm || '').trim());
+                // 1. Fetch Subjects and Results in Parallel
+                const [subjectsRes, resultsRes] = await Promise.all([
+                    subjectsCache[selectedClassId] 
+                        ? Promise.resolve({ data: subjectsCache[selectedClassId] }) 
+                        : supabase.from('subjects').select('id, subject_name').eq('class_id', selectedClassId).order('subject_name'),
+                    supabase.from('exam_results')
+                        .select('id, subject_id, question_type')
+                        .eq('class_id', selectedClassId)
+                        .eq('session_id', (activeSession || '').trim())
+                        .eq('term_id', (activeTerm || '').trim())
+                        .is('subject_id', selectedSubjectId || null) // Optional filter if specific subject selected
+                ]);
 
-                if (selectedSubjectId) {
-                    query = query.eq('subject_id', selectedSubjectId);
+                // Update subjects and cache
+                const fetchedSubjects = subjectsRes.data || [];
+                setSubjects(fetchedSubjects);
+                if (!subjectsCache[selectedClassId] && fetchedSubjects.length > 0) {
+                    setSubjectsCache(prev => ({ ...prev, [selectedClassId]: fetchedSubjects }));
                 }
 
-                const { data: allResults } = await query;
-
+                // Process Summary
+                const allResults = resultsRes.data || [];
                 const relevantSubjects = selectedSubjectId
-                    ? subjects.filter(s => s.id === selectedSubjectId)
-                    : subjects;
+                    ? fetchedSubjects.filter(s => s.id === selectedSubjectId)
+                    : fetchedSubjects;
 
                 const summary = relevantSubjects.map(sub => {
-                    const subResults = allResults?.filter(r => r.subject_id === sub.id) || [];
+                    const subResults = allResults.filter(r => r.subject_id === sub.id);
                     return {
                         id: sub.id,
                         name: sub.subject_name,
@@ -82,14 +65,16 @@ const AdminResults = () => {
 
                 setResultsSummary(summary);
             } catch (err) {
-                console.error("Error fetching summary:", err);
+                console.error("Result fetch error:", err);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchSummary();
-    }, [selectedClassId, selectedSubjectId, subjects]);
+        if (activeSession !== null && activeTerm !== null) {
+            loadPageData();
+        }
+    }, [selectedClassId, selectedSubjectId, activeSession, activeTerm]);
 
     const handleViewDetails = (subject, type) => {
         navigate(`/portal/admin/results/detail?classId=${selectedClassId}&subjectId=${subject.id}&className=${classes.find(c => c.id === selectedClassId)?.class_name}&subjectName=${subject.name}&type=${type}`);

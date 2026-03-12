@@ -287,17 +287,23 @@ const ExamScreen = () => {
         setIsSubmitting(true);
 
         try {
-            // Calculate Score
+            // Robust Score Calculation
             let correctCount = 0;
-            const totalQ = questions.length || 1;
-            questions.forEach(q => {
-                const studentAns = answers[q.id];
-                if (studentAns && studentAns.toUpperCase() === q.correct_answer?.toUpperCase()) {
+            const examQuestions = questions || [];
+            const totalQ = examQuestions.length || 1;
+            
+            examQuestions.forEach(q => {
+                // Ensure we compare trimmed, upper-cased strings for accuracy
+                const studentAns = (answers[q.id] || '').toString().trim().toUpperCase();
+                const correctAns = (q.correct_answer || q.correct_option || '').toString().trim().toUpperCase();
+                
+                if (studentAns && studentAns === correctAns) {
                     correctCount++;
                 }
             });
 
-            const scorePercent = ((correctCount / totalQ) * 100).toFixed(1);
+            const scorePercentFloat = (correctCount / totalQ) * 100;
+            const scorePercent = scorePercentFloat.toFixed(1);
 
             // Fetch class and subject names (Optimistic/Silently)
             let className = '';
@@ -456,11 +462,12 @@ const ExamScreen = () => {
                         </button>
                         {currentQuestionIdx === questions.length - 1 ? (
                             <button
-                                className="es-next-btn es-finish-stub"
-                                style={{ background: '#9ca3af', cursor: 'default' }}
-                                disabled={true}
+                                className="es-next-btn es-finish-btn"
+                                style={{ background: '#16a34a' }}
+                                onClick={() => handleSubmit(false)}
+                                disabled={isSubmitting}
                             >
-                                Last Question
+                                {isSubmitting ? 'Submitting...' : 'Finish & Submit'}
                             </button>
                         ) : (
                             <button

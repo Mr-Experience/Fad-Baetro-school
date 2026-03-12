@@ -7,21 +7,21 @@ const TestimonialsSection = () => {
     const testimonials = [
         {
             id: 1,
-            text: "My friend spoke so well about Fad Maestro. Being a teacher for over 27 years, I was curious and brought my son here. His performance gives me an assurance that you are really doing a good job here.",
-            name: "Prof. Fidelis Allen",
-            role: "Parent, Fad Maestro PH"
+            text: "The nurturing environment at Fad Maestro is unparalleled. I watched my daughter transform from a shy toddler into a confident primary pupil who reads with such clarity and poise. It's truly a second home for our children.",
+            name: "Mrs. O. Adeyemi",
+            role: "Parent, Primary 4"
         },
         {
             id: 2,
-            text: "Fad Maestro helped a great deal in shaping my life and giving me a good career path Truly Fad Maestro Nursery & Primary School is committed to raising exceptional Leaders.",
-            name: "Eichie Peniel Alumni",
-            role: "Alumni"
+            text: "As an educator, I'm very particular about foundations. My son's transition from nursery to primary here was seamless. The depth of the curriculum and the dedication of the teachers in these formative years is what sets Fad Maestro apart.",
+            name: "Prof. Fidelis Allen",
+            role: "Parent & Academic"
         },
         {
             id: 3,
-            text: "As a Civil Engineering undergraduate, my student life and academic performance in the university is great because of the firm foundation given to me in Fad Maestro.",
-            name: "Akinseye Segun",
-            role: "Alumni"
+            text: "The moral seeds sown in me during my years at Fad Maestro Primary are what guide my decisions today as a medical student. They don't just teach subjects; they build character and integrity from the very first day of school.",
+            name: "Peniel Eichie",
+            role: "Alumni, Medical Student"
         }
     ];
 

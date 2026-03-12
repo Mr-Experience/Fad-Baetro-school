@@ -21,16 +21,10 @@ const WelcomeSection = () => {
 
                     <div className="welcome-text">
                         <p>
-                            Fad Maestro Nursery & Primary School was founded with a vision to provide
-                            world-class education that nurtures the unique potential of every child.
-                            Our commitment to excellence, character development, and academic
-                            rigour is well known globally.
+                            Fad Maestro Nursery & Primary School was founded with a vision to provide world-class education that nurtures the unique potential of every child. Our commitment to excellence, character development, and academic rigour is well known globally.
                         </p>
                         <p>
-                            We started our journey with a focus on holistic development,
-                            ensuring our pupils are well-prepared for the challenges of the future.
-                            Over time, we have grown into a dedicated community of learners,
-                            celebrating progress in our students' states of growth and character.
+                            We started our journey with a focus on holistic development, ensuring our pupils are well-prepared for the challenges of the future. Over time, we have grown into a dedicated community of learners, celebrating progress in our students' stages of growth and character development.
                         </p>
                     </div>
 

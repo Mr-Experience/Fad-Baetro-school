@@ -49,13 +49,14 @@ const StudentLogin = () => {
         }
 
         if (data.user) {
-            // 1. Verify existence in students table (STRICT ROLE CHECK)
-            const { data: student } = await supabase
-                .from('profiles')
-                .select('id, class_id')
-                .eq('id', data.user.id)
-                .eq('role', 'student')
-                .maybeSingle();
+            // FETCH ALL CONTEXT IN PARALLEL FOR SPEED
+            const [profileRes, settingsRes] = await Promise.all([
+                supabase.from('profiles').select('id, class_id').eq('id', data.user.id).eq('role', 'student').maybeSingle(),
+                supabase.from('system_settings').select('current_session, current_term').eq('id', 1).single()
+            ]);
+
+            const student = profileRes.data;
+            const settings = settingsRes.data;
 
             if (!student) {
                 await supabase.auth.signOut();
@@ -64,27 +65,19 @@ const StudentLogin = () => {
                 return;
             }
 
-            // 2. FETCH GLOBAL SESSION CONTEXT (Step 1)
-            const { data: settings } = await supabase
-                .from('system_settings')
-                .select('current_session, current_term')
-                .eq('id', 1)
-                .single();
-
-            const activeSession = settings?.current_session || '';
-            const activeTerm = settings?.current_term || '';
+            const activeSession = (settings?.current_session || '').trim();
+            const activeTerm = (settings?.current_term || '').trim();
 
             if (student.class_id) {
-                // 3. DETERMINE ACTIVE EXAM (via separate Active Table)
                 const { data: activeExams } = await supabase
                     .from('active_exams')
                     .select('*, exam_configs!inner(*)')
                     .eq('exam_configs.class_id', student.class_id)
-                    .eq('session_id', activeSession)
-                    .eq('term_id', activeTerm)
                     .eq('is_active', true);
+                    
+                const sessionExams = activeExams?.filter(ae => ae.session_id === activeSession && ae.term_id === activeTerm) || [];
 
-                if (activeExams && activeExams.length > 0) {
+                if (sessionExams.length > 0) {
                     const { data: results } = await supabase
                         .from('exam_results')
                         .select('exam_id, subject_id, question_type')
@@ -96,7 +89,7 @@ const StudentLogin = () => {
                     const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
 
                     const nowTime = new Date().getTime();
-                    const readyExams = activeExams.filter(ae => {
+                    const readyExams = sessionExams.filter(ae => {
                         const cfg = ae.exam_configs;
                         const notTaken = !takenExamIds.has(cfg.id) && !takenKeys.has(`${cfg.subject_id}_${cfg.question_type}`);
                         const examStartTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
@@ -110,8 +103,8 @@ const StudentLogin = () => {
                     if (readyExams.length > 0) {
                         navigate('/portal/student/active-exam');
                         return;
-                    } else if (activeExams.length > 0) {
-                        const anyUntaken = activeExams.some(ae => {
+                    } else if (sessionExams.length > 0) {
+                        const anyUntaken = sessionExams.some(ae => {
                             const cfg = ae.exam_configs;
                             return !takenExamIds.has(cfg.id) && !takenKeys.has(`${cfg.subject_id}_${cfg.question_type}`);
                         });

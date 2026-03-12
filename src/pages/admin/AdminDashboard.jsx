@@ -19,18 +19,20 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
-            if (!activeSession) return;
+            // Prevent fetching only if settings are truly null/undefined (not just empty string)
+            if (activeSession === null || activeTerm === null) return;
             // Only show loader if we have NO cached data at all
             if (!dashboardStats) setLoading(true);
 
             try {
-                // Fetch Metrics (Session Filtered where applicable)
+                // Fetch Metrics and Recent Submissions in PARALLEL
                 const [
                     { count: studentCount },
                     { count: subjectCount },
                     { count: questionCount },
                     { count: testResultCount },
-                    { count: examResultCount }
+                    { count: examResultCount },
+                    recentRes
                 ] = await Promise.all([
                     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'student'),
                     supabase.from('subjects').select('*', { count: 'exact', head: true }),
@@ -44,7 +46,11 @@ const AdminDashboard = () => {
                     supabase.from('exam_results').select('*', { count: 'exact', head: true })
                         .eq('session_id', (activeSession || '').trim())
                         .eq('term_id', (activeTerm || '').trim())
-                        .eq('question_type', 'exam')
+                        .eq('question_type', 'exam'),
+                    supabase.from('exam_results')
+                        .select('*, profiles(full_name), subjects(subject_name)')
+                        .order('submitted_at', { ascending: false })
+                        .limit(5)
                 ]);
 
                 const newStats = {
@@ -56,16 +62,8 @@ const AdminDashboard = () => {
                 };
 
                 setStats(newStats);
-                setDashboardStats(newStats); // Save to Layout context cache
-
-                // Fetch Recent Submissions
-                const { data: recent } = await supabase
-                    .from('exam_results')
-                    .select('*, profiles(full_name), subjects(subject_name)')
-                    .order('submitted_at', { ascending: false })
-                    .limit(5);
-
-                if (recent) setRecentSubmissions(recent);
+                setDashboardStats(newStats);
+                if (recentRes.data) setRecentSubmissions(recentRes.data);
 
             } catch (err) {
                 console.error("Dashboard metric error:", err);

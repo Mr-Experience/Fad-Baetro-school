@@ -105,6 +105,7 @@ const AdminLogin = () => {
 
                 // Final transition to intended page or dashboard
                 setShowOverlay(true);
+                localStorage.setItem('admin_session_start', new Date().toISOString());
                 const from = location.state?.from?.pathname || location.state?.from || navigateTo;
                 const search = location.state?.from?.search || '';
 

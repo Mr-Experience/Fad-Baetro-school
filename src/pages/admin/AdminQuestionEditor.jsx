@@ -107,8 +107,8 @@ const AdminQuestionEditor = () => {
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
                         .eq('question_type', questionType)
-                        .eq('session_id', settings.current_session)
-                        .eq('term_id', settings.current_term)
+                        .eq('session_id', (settings.current_session || '').trim())
+                        .eq('term_id', (settings.current_term || '').trim())
                         .order('created_at', { ascending: true });
                     if (data) setQuestions(data);
 
@@ -119,8 +119,8 @@ const AdminQuestionEditor = () => {
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
                         .eq('question_type', questionType)
-                        .eq('session_id', settings.current_session)
-                        .eq('term_id', settings.current_term)
+                        .eq('session_id', (settings.current_session || '').trim())
+                        .eq('term_id', (settings.current_term || '').trim())
                         .maybeSingle();
 
                     if (config) {
@@ -384,7 +384,7 @@ const AdminQuestionEditor = () => {
                                     </div>
                                     <div className="qe-options-container">
                                         {['A', 'B', 'C', 'D'].map(opt => (
-                                            <div key={opt} className={`qe-option ${q.correct_answer === opt ? 'is-correct' : ''}`}>
+                                            <div key={opt} className={`qe-option ${(q.correct_answer || '').toString().trim().toUpperCase() === opt.toUpperCase() ? 'is-correct' : ''}`}>
                                                 <div className="qe-radio"></div>
                                                 <span className="qe-option-text">{opt === 'A' ? q.option_a : opt === 'B' ? q.option_b : opt === 'C' ? q.option_c : q.option_d}</span>
                                             </div>

@@ -14,8 +14,8 @@ const AdminLayout = () => {
     const [userInitial, setUserInitial] = useState('A');
     const [avatarUrl, setAvatarUrl] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
-    const [activeSession, setActiveSession] = useState('');
-    const [activeTerm, setActiveTerm] = useState('');
+    const [activeSession, setActiveSession] = useState(null);
+    const [activeTerm, setActiveTerm] = useState(null);
 
     // Dashboard Stats Cache (to prevent flicker)
     const [dashboardStats, setDashboardStats] = useState(null);
@@ -29,46 +29,84 @@ const AdminLayout = () => {
     const [classes, setClasses] = useState([]);
     const [classesLoading, setClassesLoading] = useState(true);
 
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate('/portal/admin/login');
+    };
+
     useEffect(() => {
         const fetchInitialData = async () => {
             const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
                 setUserId(user.id);
-                // Fetch Profile
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('full_name, avatar_url, role')
-                    .eq('id', user.id)
-                    .single();
+                
+                // Parallel fetch for speed
+                const [profileRes, settingsRes, classesRes] = await Promise.all([
+                    supabase.from('profiles').select('full_name, avatar_url, role').eq('id', user.id).maybeSingle(),
+                    supabase.from('system_settings').select('current_session, current_term, admin_reset_signal').eq('id', 1).single(),
+                    supabase.from('classes').select('id, class_name').order('class_name')
+                ]);
 
-                if (!profileError && profile) {
+                // Handle Profile
+                const profile = profileRes.data;
+                if (!profile && !profileRes.error) {
+                    handleLogout();
+                    return;
+                }
+                if (profile) {
                     setUserName(profile.full_name || user.email?.split('@')[0]);
                     setUserInitial((profile.full_name || 'A').charAt(0).toUpperCase());
                     setAvatarUrl(profile.avatar_url);
                 }
 
-                // Fetch System Settings (Session/Term)
-                const { data: settings } = await supabase
-                    .from('system_settings')
-                    .select('current_session, current_term')
-                    .eq('id', 1)
-                    .single();
-
+                // Handle Settings
+                const settings = settingsRes.data;
                 if (settings) {
                     setActiveSession((settings.current_session || '').trim());
                     setActiveTerm((settings.current_term || '').trim());
+
+                    const resetSignal = settings.admin_reset_signal;
+                    const sessionStart = localStorage.getItem('admin_session_start');
+                    if (resetSignal && sessionStart && new Date(resetSignal) > new Date(sessionStart)) {
+                        handleLogout();
+                        return;
+                    }
                 }
 
-                // Fetch Classes (Global Cache)
-                const { data: cls } = await supabase.from('classes').select('id, class_name').order('class_name');
-                if (cls) setClasses(cls);
+                // Handle Classes
+                if (classesRes.data) setClasses(classesRes.data);
+                
                 setClassesLoading(false);
+                setProfileLoading(false);
+            } else {
+                navigate('/portal/admin/login');
             }
-            setProfileLoading(false);
         };
         fetchInitialData();
     }, []);
+
+    // Proactive check on navigation to ensure account still exists
+    useEffect(() => {
+        const verifySession = async () => {
+            if (!userId) return;
+            
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', userId)
+                .maybeSingle();
+                
+            if (!profile) {
+                console.warn("Session verification failed: Account deleted.");
+                handleLogout();
+            }
+        };
+        
+        if (location.pathname !== '/portal/admin/login') {
+            verifySession();
+        }
+    }, [location.pathname, userId]);
 
     const renderIcon = (type) => {
         switch (type) {
@@ -97,10 +135,6 @@ const AdminLayout = () => {
         { label: 'Profile', path: '/portal/admin/profile', icon: 'user' }
     ];
 
-    const handleLogout = async () => {
-        await supabase.auth.signOut();
-        navigate('/portal/admin/login');
-    };
 
     const handleNavClick = (path) => {
         if (location.pathname !== path) {

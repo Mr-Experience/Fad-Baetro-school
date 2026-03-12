@@ -36,21 +36,18 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
                     .from('profiles')
                     .select('role')
                     .eq('id', session.user.id)
-                    .single();
+                    .maybeSingle();
 
-                if (error || !profile) {
-                    // On error, if we were already authenticated, don't kick user out immediately
-                    // This handles transient network issues
-                    if (!isAuthenticated) {
-                        if (isMounted) setIsAuthenticated(false);
-                    }
+                if (!profile) {
+                    // No profile found = account likely deleted
+                    if (isMounted) setIsAuthenticated(false);
                     return;
                 }
 
                 let isMatch = false;
                 if (requiredRole === 'super_admin' && (profile.role === 'super_admin' || profile.role === 'super-admin')) {
                     isMatch = true;
-                } else if (requiredRole === 'admin' && (profile.role === 'admin' || profile.role === 'super_admin' || profile.role === 'super-admin')) {
+                } else if (requiredRole === 'admin' && profile.role === 'admin') {
                     isMatch = true;
                 } else if (requiredRole === 'candidate' && profile.role === 'candidate') {
                     isMatch = true;

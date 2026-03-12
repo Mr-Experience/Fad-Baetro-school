@@ -299,11 +299,16 @@
         padding: 0 16px;
         margin-top: 16px;
         justify-content: center;
+        gap: 12px;
     }
 
     .sc-register-btn {
         width: 100%;
         justify-content: center;
+    }
+
+    .sc-settings-btn {
+        margin-right: 0 !important;
     }
 
     .sc-header-right {
@@ -348,3 +353,144 @@
         padding: 28px 16px;
     }
 }
+
+/* ─── Settings Button & Admin List Modal ─────────────── */
+.sc-settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    color: #6B7280;
+    transition: all 0.2s;
+    margin-right: 24px;
+    flex-shrink: 0;
+}
+
+.sc-settings-btn:hover {
+    border-color: #9D245A;
+    color: #9D245A;
+    background: #FFF0F6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.sc-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    padding: 20px;
+}
+
+.sc-modal {
+    background: #fff;
+    width: 100%;
+    max-width: 440px;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    animation: sc-modal-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sc-modal-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sc-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #F3F4F6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sc-modal-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.sc-close-btn {
+    background: none;
+    border: none;
+    color: #9CA3AF;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.sc-close-btn:hover {
+    background: #F3F4F6;
+    color: #1F2937;
+}
+
+.sc-modal-body {
+    padding: 8px 0;
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.sc-admin-item {
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.2s;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.sc-admin-item:last-child {
+    border-bottom: none;
+}
+
+.sc-admin-item:hover {
+    background: #FDF2F7;
+}
+
+.sc-admin-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1F2937;
+}
+
+.sc-delete-btn {
+    background: none;
+    border: none;
+    color: #EF4444;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.sc-delete-btn:hover {
+    background: #FEF2F2;
+    transform: scale(1.1);
+}
+
+.sc-modal-empty {
+    padding: 40px 24px;
+    text-align: center;
+    color: #9CA3AF;
+    font-size: 14px;
+}

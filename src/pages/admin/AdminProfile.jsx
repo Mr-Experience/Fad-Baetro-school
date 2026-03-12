@@ -30,8 +30,7 @@ const AdminProfile = () => {
 
     const [avatarLoading, setAvatarLoading] = useState(false);
     const fileInputRef = useRef(null);
-
-    const userRole = 'Admin'; // Or get from context if needed
+    const userRole = 'Admin';
 
     // Save full name
     const handleSaveName = async () => {

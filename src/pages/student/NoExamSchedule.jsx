@@ -55,23 +55,16 @@ const NoExamSchedule = () => {
 
                     const checkExamStatus = async () => {
                         try {
-                            const { data: sData } = await supabase
-                                .from('system_settings')
-                                .select('current_session, current_term')
-                                .maybeSingle();
+                            const [settingsRes, examsRes] = await Promise.all([
+                                supabase.from('system_settings').select('current_session, current_term').maybeSingle(),
+                                supabase.from('active_exams').select('*, exam_configs!inner(*)').eq('exam_configs.class_id', student.class_id).eq('is_active', true)
+                            ]);
 
-                            const curSession = (sData?.current_session || '').trim();
-                            const curTerm = (sData?.current_term || '').trim();
+                            const curSession = (settingsRes.data?.current_session || '').trim();
+                            const curTerm = (settingsRes.data?.current_term || '').trim();
+                            const activeExams = examsRes.data?.filter(ae => ae.session_id === curSession && ae.term_id === curTerm) || [];
 
-                            const { data: activeExams, error: examError } = await supabase
-                                .from('active_exams')
-                                .select('*, exam_configs!inner(*)')
-                                .eq('exam_configs.class_id', student.class_id)
-                                .eq('is_active', true)
-                                .eq('session_id', curSession)
-                                .eq('term_id', curTerm);
-
-                            if (!examError && activeExams && activeExams.length > 0) {
+                            if (activeExams.length > 0) {
                                 const { data: results } = await supabase
                                     .from('exam_results')
                                     .select('subject_id, question_type')
@@ -98,7 +91,6 @@ const NoExamSchedule = () => {
                                     navigate('/portal/student/active-exam');
                                     return;
                                 } else {
-                                    // Check if there are any exams that have actually expired
                                     const anyExpired = activeExams.some(ae => {
                                         const cfg = ae.exam_configs;
                                         const now = Date.now();

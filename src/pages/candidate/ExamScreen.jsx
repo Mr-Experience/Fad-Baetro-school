@@ -257,8 +257,10 @@ const ExamScreen = () => {
             let correctCount = 0;
             const totalQ = questions.length || 1;
             questions.forEach(q => {
-                const studentAns = answers[q.id];
-                if (studentAns && studentAns.toUpperCase() === q.correct_answer?.toUpperCase()) {
+                const studentAns = (answers[q.id] || '').toString().trim().toUpperCase();
+                const correctAns = (q.correct_answer || q.correct_option || '').toString().trim().toUpperCase();
+                
+                if (studentAns && studentAns === correctAns) {
                     correctCount++;
                 }
             });

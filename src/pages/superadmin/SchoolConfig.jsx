@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Settings, Trash2, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import '../student/NoExamSchedule.css';
 import './SchoolConfig.css';
@@ -20,6 +20,9 @@ const SchoolConfig = () => {
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState('');
     const [error, setError] = useState('');
+    const [showAdminList, setShowAdminList] = useState(false);
+    const [admins, setAdmins] = useState([]);
+    const [fetchingAdmins, setFetchingAdmins] = useState(false);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -87,6 +90,105 @@ const SchoolConfig = () => {
         }
     };
 
+    const handleForceLogout = async () => {
+        if (!window.confirm("CRITICAL ACTION: This will log out EVERY administrator currently logged into the portal. They will need to log in again. Continue?")) {
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const { error: resetError } = await supabase
+                .from('system_settings')
+                .update({ 
+                    admin_reset_signal: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', 1);
+
+            if (resetError) throw resetError;
+
+            setToast('Global logout signal sent successfully!');
+            setTimeout(() => setToast(''), 3000);
+        } catch (err) {
+            console.error('Error sending reset signal:', err);
+            setError('Failed to send logout signal. If this persists, the database column might be missing.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const fetchAdmins = async () => {
+        setFetchingAdmins(true);
+        try {
+            const { data, error: fetchError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('role', 'admin')
+                .order('full_name');
+
+            if (fetchError) throw fetchError;
+            setAdmins(data || []);
+        } catch (err) {
+            console.error('Error fetching admins:', err);
+            setError('Failed to load administrators');
+        } finally {
+            setFetchingAdmins(false);
+        }
+    };
+
+    const handleDeleteAdmin = async (adminId, adminName) => {
+        if (adminId === profile?.id) {
+            alert("You cannot delete your own account.");
+            return;
+        }
+
+        if (!window.confirm(`Are you sure you want to delete ${adminName}'s account? This will remove their administrative access.`)) {
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const { error: deleteError } = await supabase
+                .from('profiles')
+                .delete()
+                .eq('id', adminId);
+
+            if (deleteError) throw deleteError;
+
+            setAdmins(prev => prev.filter(a => a.id !== adminId));
+            setToast(`Deleted ${adminName} successfully`);
+            setTimeout(() => setToast(''), 3000);
+        } catch (err) {
+            console.error('Error deleting admin:', err);
+            setError(err.message || 'Failed to delete admin');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleOpenAdminList = () => {
+        setShowAdminList(true);
+        fetchAdmins();
+    };
+
+    // Generate session options dynamically to ensure they never "end"
+    const sessionOptions = React.useMemo(() => {
+        const startYear = 2024;
+        const currentYear = new Date().getFullYear();
+        // Ensure selected year is parsed correctly
+        const selectedStartYear = parseInt(currentSession?.split('/')[0]) || currentYear;
+        
+        // Show at least 10 years into the future, or 2 years beyond selected session 
+        // if we're in the Third Term to allow for the next academic year.
+        const maxYear = Math.max(currentYear + 10, selectedStartYear + (currentTerm === 'Third Term' ? 2 : 1));
+        
+        const options = [];
+        for (let y = startYear; y <= maxYear; y++) {
+            options.push(`${y}/${y + 1}`);
+        }
+        return options;
+    }, [currentSession, currentTerm]);
+
     return (
         <div className="sc-container">
             <LoadingOverlay isVisible={loading || saving} />
@@ -132,11 +234,54 @@ const SchoolConfig = () => {
             </header>
 
             <div className="sc-action-bar">
+                <button 
+                    className="sc-settings-btn" 
+                    onClick={handleOpenAdminList}
+                    title="Manage Administrators"
+                >
+                    <Settings size={20} />
+                </button>
                 <button className="sc-register-btn" onClick={() => navigate('/portal/superadmin/register')}>
                     <UserPlus size={18} />
                     Register New Admin
                 </button>
             </div>
+
+            {/* Admin List Modal */}
+            {showAdminList && (
+                <div className="sc-modal-overlay" onClick={() => setShowAdminList(false)}>
+                    <div className="sc-modal" onClick={e => e.stopPropagation()}>
+                        <div className="sc-modal-header">
+                            <h3 className="sc-modal-title">Manage Administrators</h3>
+                            <button className="sc-close-btn" onClick={() => setShowAdminList(false)}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="sc-modal-body">
+                            {fetchingAdmins ? (
+                                <div className="sc-modal-empty">Loading administrators...</div>
+                            ) : admins.length === 0 ? (
+                                <div className="sc-modal-empty">No administrators found.</div>
+                            ) : (
+                                admins.map(admin => (
+                                    <div key={admin.id} className="sc-admin-item">
+                                        <span className="sc-admin-name">{admin.full_name}</span>
+                                        {admin.id !== profile?.id && (
+                                            <button 
+                                                className="sc-delete-btn"
+                                                onClick={() => handleDeleteAdmin(admin.id, admin.full_name)}
+                                                title="Delete Admin"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main — vertically and horizontally centers the card */}
             <main className="sc-main">
@@ -160,14 +305,9 @@ const SchoolConfig = () => {
                                 onChange={(e) => setCurrentSession(e.target.value)}
                                 disabled={loading || saving}
                             >
-                                <option value="2025/2026">Session 2025/2026</option>
-                                <option value="2026/2027">Session 2026/2027</option>
-                                <option value="2027/2028">Session 2027/2028</option>
-                                <option value="2028/2029">Session 2028/2029</option>
-                                <option value="2029/2030">Session 2029/2030</option>
-                                <option value="2030/2031">Session 2030/2031</option>
-                                <option value="2031/2032">Session 2031/2032</option>
-                                <option value="2032/2033">Session 2032/2033</option>
+                                {sessionOptions.map(session => (
+                                    <option key={session} value={session}>Session {session}</option>
+                                ))}
                             </select>
                             <div className="sc-select-arrow">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -200,6 +340,29 @@ const SchoolConfig = () => {
                             disabled={loading || saving}
                         >
                             {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                    </div>
+
+                    <div className="sc-danger-zone" style={{ marginTop: '32px', width: '100%', borderTop: '1px solid #fee2e2', paddingTop: '24px' }}>
+                        <h3 style={{ fontSize: '14px', color: '#991B1B', marginBottom: '8px', fontWeight: '700' }}>Danger Zone</h3>
+                        <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px' }}>Terminate all active administrator sessions immediately.</p>
+                        <button
+                            className="sc-reset-btn"
+                            onClick={handleForceLogout}
+                            disabled={loading || saving}
+                            style={{ 
+                                width: '100%', 
+                                padding: '12px', 
+                                backgroundColor: '#FEF2F2', 
+                                border: '1.5px solid #FCA5A5', 
+                                color: '#B91C1C', 
+                                borderRadius: '10px', 
+                                fontSize: '14px', 
+                                fontWeight: '600', 
+                                cursor: 'pointer' 
+                            }}
+                        >
+                            {saving ? 'Processing...' : 'Force Global Admin Logout'}
                         </button>
                     </div>
                 </div>

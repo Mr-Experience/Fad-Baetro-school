@@ -99,8 +99,8 @@ const AdminResultDetail = () => {
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
                         .eq('question_type', questionType)
-                        .eq('session_id', (settings.current_session || '').trim())
-                        .eq('term_id', (settings.current_term || '').trim())
+                        .eq('session_id', (activeSession || '').trim())
+                        .eq('term_id', (activeTerm || '').trim())
                         .order('score_percent', { ascending: false });
 
                     if (resData) {

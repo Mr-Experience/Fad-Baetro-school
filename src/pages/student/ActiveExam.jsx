@@ -12,6 +12,7 @@ const ActiveExam = () => {
     const [profileImage, setProfileImage] = useState(null);
     const [activeExam, setActiveExam] = useState(null);
     const [preloadedQuestions, setPreloadedQuestions] = useState(null);
+    const [preloadedExamId, setPreloadedExamId] = useState(null); // Track which exam is preloaded
     const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
     const [loading, setLoading] = useState(true);
 
@@ -121,7 +122,10 @@ const ActiveExam = () => {
                                     };
                                     setActiveExam(combinedConfig);
 
-                                    if (!preloadedQuestions) {
+                                    if (!preloadedQuestions || preloadedExamId !== availableAE.id) {
+                                        setPreloadedQuestions(null); // Clear old ones while fetching
+                                        setPreloadedExamId(availableAE.id);
+                                        
                                         supabase.from('questions')
                                             .select('*')
                                             .eq('class_id', availableAE.exam_configs.class_id)
@@ -136,9 +140,12 @@ const ActiveExam = () => {
                                                         processed = processed.sort(() => Math.random() - 0.5);
                                                     }
                                                     const count = availableAE.exam_configs.question_count || processed.length;
-                                                    setPreloadedQuestions(processed.slice(0, count));
+                                                    setPreloadedQuestions(processed.slice(0, count === 0 ? processed.length : count));
                                                 }
-                                            }).catch(err => console.error(err));
+                                            }).catch(err => {
+                                                console.error("Question Preload Error:", err);
+                                                setPreloadedQuestions([]); // Prevent stuck loading
+                                            });
                                     }
 
                                     setLoading(false);
@@ -290,7 +297,9 @@ const ActiveExam = () => {
                         }}
                         disabled={!activeExam || !preloadedQuestions}
                     >
-                        {preloadedQuestions ? 'Start now' : 'Loading exam paper...'}
+                        {preloadedQuestions ? (
+                            preloadedQuestions.length > 0 ? 'Start now' : 'No Questions Found'
+                        ) : 'Loading exam paper...'}
                     </button>
                 </div>
             </main>

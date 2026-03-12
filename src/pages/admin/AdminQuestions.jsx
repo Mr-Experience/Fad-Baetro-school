@@ -51,21 +51,20 @@ const AdminQuestions = () => {
             if (!selectedClassId || subjects.length === 0) return;
             setLoading(true);
             try {
-                // 2. Fetch counts per category (Filtered by Session/Term)
                 const { data: qData } = await supabase
                     .from('questions')
                     .select('subject_id, question_type')
                     .eq('class_id', selectedClassId)
-                    .eq('session_id', activeSession)
-                    .eq('term_id', activeTerm);
+                    .eq('session_id', (activeSession || '').trim())
+                    .eq('term_id', (activeTerm || '').trim());
 
                 // 3. Fetch activation status
                 const { data: cData } = await supabase
                     .from('exam_configs')
                     .select('subject_id, question_type, is_active')
                     .eq('class_id', selectedClassId)
-                    .eq('session_id', activeSession)
-                    .eq('term_id', activeTerm);
+                    .eq('session_id', (activeSession || '').trim())
+                    .eq('term_id', (activeTerm || '').trim());
 
                 const relevantSubjects = selectedSubjectId
                     ? subjects.filter(s => s.id === selectedSubjectId)
@@ -100,7 +99,7 @@ const AdminQuestions = () => {
             }
         };
         fetchSummary();
-    }, [selectedClassId, selectedSubjectId, subjects]);
+    }, [selectedClassId, selectedSubjectId, subjects, activeSession, activeTerm]);
 
     const handleOpenEditor = (subject, type) => {
         const className = classes.find(c => c.id === selectedClassId)?.class_name || 'Class';
