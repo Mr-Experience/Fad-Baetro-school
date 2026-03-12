@@ -74,6 +74,20 @@ const CandidateLogin = () => {
                 return;
             }
 
+            // Check if candidate is DEACTIVATED
+            const { data: candidateData } = await supabase
+                .from('candidates')
+                .select('status')
+                .eq('id', identity.id)
+                .maybeSingle();
+
+            if (candidateData?.status === 'deactivated') {
+                await supabase.auth.signOut();
+                setError('Your candidate portal access has been deactivated. Please contact the administrator.');
+                setLoading(false);
+                return;
+            }
+
             // 3. Check for ACTIVE candidate exams
             const { data: activeExams } = await supabase
                 .from('active_exams')

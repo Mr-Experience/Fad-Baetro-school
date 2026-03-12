@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import { UserCheck, Trash2 } from 'lucide-react';
+import { UserX, Trash2 } from 'lucide-react';
 import './AdminCandidates.css';
 
 const AdminCandidates = () => {
@@ -42,42 +42,29 @@ const AdminCandidates = () => {
         if (!error) fetchCandidates();
     };
 
-    const handleConvertToStudent = async (candidate) => {
-        if (!window.confirm(`Are you sure you want to promote and start the class for ${candidate.full_name}?`)) return;
+    const handleDeactivateCandidate = async (candidate) => {
+        if (!window.confirm(`Are you sure you want to deactivate candidate portal access for ${candidate.full_name}? They will no longer be able to login to the admission portal.`)) return;
 
         try {
-            // Check if already converted
-            if (candidate.converted_to_student) {
-                alert("Already converted.");
+            // Check if already deactivated
+            if (candidate.status === 'deactivated') {
+                alert("Already deactivated.");
                 return;
             }
 
-            // 1. Update Profile to be a student
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .update({
-                    role: 'student',
-                    class_id: candidate.class_id,
-                    phone_number: candidate.phone_number
-                })
+            // Update candidate status to 'deactivated'
+            const { error: candidateUpdateError } = await supabase
+                .from('candidates')
+                .update({ status: 'deactivated' })
                 .eq('id', candidate.id);
-
-            if (profileError) throw profileError;
-
-            // 3. Mark candidate as converted and clear status
-            const { error: candidateUpdateError } = await supabase.from('candidates').update({
-                converted_to_student: true,
-                student_id: candidate.id,
-                status: 'approved'
-            }).eq('id', candidate.id);
 
             if (candidateUpdateError) throw candidateUpdateError;
 
-            alert(`${candidate.full_name} has been moved to the student portal successfully! They can now login with their ${candidate.email} account.`);
+            alert(`${candidate.full_name}'s candidate portal access has been deactivated successfully. You can now add them manually to the student list.`);
             fetchCandidates();
         } catch (err) {
-            console.error("Conversion error:", err);
-            alert("Error converting candidate: " + err.message);
+            console.error("Deactivation error:", err);
+            alert("Error deactivating candidate: " + err.message);
         }
     };
 
@@ -135,16 +122,16 @@ const AdminCandidates = () => {
                                         <td>{new Date(c.created_at).toLocaleDateString()}</td>
                                         <td>
                                             <div className="ac-actions">
-                                                {!c.converted_to_student ? (
+                                                {c.status !== 'deactivated' ? (
                                                     <button
-                                                        className="ac-action-btn promote"
-                                                        title="Promote and Start Class"
-                                                        onClick={() => handleConvertToStudent(c)}
+                                                        className="ac-action-btn deactivate"
+                                                        title="Deactivate Portal Access"
+                                                        onClick={() => handleDeactivateCandidate(c)}
                                                     >
-                                                        <UserCheck size={18} />
+                                                        <UserX size={18} />
                                                     </button>
                                                 ) : (
-                                                    <span className="ac-converted-label">Converted</span>
+                                                    <span className="ac-deactivated-label">Deactivated</span>
                                                 )}
                                                 <button className="ac-action-btn delete" title="Delete">
                                                     <Trash2 size={16} />

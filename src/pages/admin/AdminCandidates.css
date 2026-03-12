@@ -103,7 +103,7 @@
     color: #065F46;
 }
 
-.ac-status-badge.rejected {
+.ac-status-badge.rejected, .ac-status-badge.deactivated {
     background: #FEE2E2;
     color: #991B1B;
 }
@@ -124,18 +124,18 @@
     transition: all 0.2s;
 }
 
-.ac-action-btn.promote {
-    background-color: #ECFDF5;
-    color: #059669;
+.ac-action-btn.deactivate {
+    background-color: #FEF2F2;
+    color: #EF4444;
     padding: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #A7F3D0;
+    border: 1px solid #FEE2E2;
 }
 
-.ac-action-btn.promote:hover {
-    background-color: #D1FAE5;
+.ac-action-btn.deactivate:hover {
+    background-color: #FEE2E2;
     transform: scale(1.1);
 }
 
@@ -153,17 +153,20 @@
     transform: scale(1.1);
 }
 
-.ac-converted-label {
-    font-size: 12px;
-    color: #10B981;
+.ac-deactivated-label {
+    font-size: 11px;
+    color: #EF4444;
     font-weight: 700;
     display: flex;
     align-items: center;
     gap: 4px;
+    background: #FEF2F2;
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
-.ac-converted-label::before {
-    content: '✓';
+.ac-deactivated-label::before {
+    content: '✕';
 }
 
 .ac-empty-state {
