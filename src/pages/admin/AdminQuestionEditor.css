@@ -38,6 +38,27 @@
     margin-bottom: 40px;
 }
 
+.qe-back-btn {
+    background: none;
+    border: 1px solid #E5E7EB;
+    color: #1E293B;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.qe-back-btn:hover {
+    background-color: #F8FAFC;
+    border-color: #D1D5DB;
+    color: #9D245A;
+    transform: translateX(-2px);
+}
+
 .qe-title {
     font-size: 20px;
     font-weight: 600;

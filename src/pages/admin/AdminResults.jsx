@@ -30,41 +30,76 @@ const AdminResults = () => {
     // 2. Fetch/Load Results Summary (Stability First)
     useEffect(() => {
         const loadPageData = async () => {
-            // Need a valid class and subjects for that class to proceed
-            const currentSubjects = subjectsCache?.[selectedClassId] || [];
-            if (!selectedClassId || currentSubjects.length === 0) return;
+            if (!selectedClassId) return;
 
-            // Only show loader if we don't have cached data for this specific class
+            // Optional Loader: Only show if we don't have ANY cache for this class
             const isSilent = !!resultsSummaryCache?.[selectedClassId];
             if (!isSilent) setLoading(true);
 
             try {
+                // Normalize Session/Term keys to prevent invisible data due to case/whitespace
                 const sessionKey = (activeSession || '').trim();
                 const termKey = (activeTerm || '').trim();
 
-                // Fetch all result counts for this class/session/term in one go
+                // Fetch all result counts for this class/session/term
                 const { data: resultsData, error } = await supabase.from('exam_results')
-                    .select('id, subject_id, question_type')
+                    .select('id, subject_id, question_type, subject_name')
                     .eq('class_id', selectedClassId)
                     .eq('session_id', sessionKey)
                     .eq('term_id', termKey);
 
                 if (error) throw error;
 
+                // subjectsCache is { classId: [subjects] }
+                const currentSubjects = subjectsCache?.[selectedClassId] || [];
+                
                 // Map results to the subjects structure
-                const summary = currentSubjects.map(sub => {
-                    const subResults = resultsData?.filter(r => r.subject_id === sub.id) || [];
-                    return {
-                        id: sub.id,
-                        name: sub.subject_name,
-                        testCount: subResults.filter(r => r.question_type === 'test').length,
-                        examCount: subResults.filter(r => r.question_type === 'exam').length,
-                        candidateCount: subResults.filter(r => r.question_type === 'candidate').length
-                    };
-                });
+                // Logic: If subjects are missing for this class, we synthesize a list from the results themselves
+                // so the admin can always see that people TOOK the exam even if curriculum is missing.
+                let mappedSummary = [];
+
+                if (currentSubjects.length > 0) {
+                    mappedSummary = currentSubjects.map(sub => {
+                        const subResults = resultsData?.filter(r => r.subject_id === sub.id) || [];
+                        return {
+                            id: sub.id,
+                            name: sub.subject_name,
+                            testCount: subResults.filter(r => r.question_type === 'test').length,
+                            examCount: subResults.filter(r => r.question_type === 'exam').length,
+                            candidateCount: subResults.filter(r => r.question_type === 'candidate').length
+                        };
+                    });
+
+                    // Add any results that DON'T match a known subject (orphaned results)
+                    const knownIds = new Set(currentSubjects.map(s => s.id));
+                    const orphaned = resultsData?.filter(r => !knownIds.has(r.subject_id)) || [];
+                    
+                    if (orphaned.length > 0) {
+                        const orphanedGroups = {};
+                        orphaned.forEach(r => {
+                            const key = r.subject_id || 'unknown';
+                            if (!orphanedGroups[key]) orphanedGroups[key] = { id: key, name: r.subject_name || 'Generic Result', testCount: 0, examCount: 0, candidateCount: 0 };
+                            if (r.question_type === 'test') orphanedGroups[key].testCount++;
+                            else if (r.question_type === 'exam') orphanedGroups[key].examCount++;
+                            else if (r.question_type === 'candidate') orphanedGroups[key].candidateCount++;
+                        });
+                        mappedSummary = [...mappedSummary, ...Object.values(orphanedGroups)];
+                    }
+                } else {
+                    // No subjects in cache for this class? Synthesize from results so admin sees something!
+                    const groups = {};
+                    resultsData?.forEach(r => {
+                        const key = r.subject_id || 'unknown';
+                        if (!groups[key]) groups[key] = { id: key, name: r.subject_name || 'Generic Result', testCount: 0, examCount: 0, candidateCount: 0 };
+                        if (r.question_type === 'test') groups[key].testCount++;
+                        else if (r.question_type === 'exam') groups[key].examCount++;
+                        else if (r.question_type === 'candidate') groups[key].candidateCount++;
+                    });
+                    mappedSummary = Object.values(groups);
+                }
 
                 // Update global sync cache
-                setResultsSummaryCache(prev => ({ ...prev, [selectedClassId]: summary }));
+                setResultsSummaryCache(prev => ({ ...prev, [selectedClassId]: mappedSummary }));
             } catch (err) {
                 console.error("Result Registry Sync Error:", err);
             } finally {
@@ -72,7 +107,6 @@ const AdminResults = () => {
             }
         };
 
-        // Trigger load whenever class, session, or basic subject cache changes
         if (activeSession && activeTerm) {
             loadPageData();
         }

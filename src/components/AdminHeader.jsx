@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { LogOut } from 'lucide-react';
 import logoFallback from '../assets/logo.jpg';
 import './AdminHeader.css';
 
-const AdminHeader = ({ profileLoading, userName, userRole, userInitial, avatarUrl, activeSession, activeTerm }) => {
+const AdminHeader = ({ profileLoading, userName, userRole, userInitial, avatarUrl, activeSession, activeTerm, onLogout }) => {
     // Format role for display
     const displayRole = userRole?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '...';
 
@@ -47,6 +48,11 @@ const AdminHeader = ({ profileLoading, userName, userRole, userInitial, avatarUr
                             )}
                         </div>
                     </div>
+                    {onLogout && (
+                        <button className="ad-logout-btn" onClick={onLogout} title="Logout">
+                            <LogOut size={18} />
+                        </button>
+                    )}
                 </div>
             </div>
         </header>

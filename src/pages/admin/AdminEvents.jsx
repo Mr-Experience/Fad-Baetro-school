@@ -132,7 +132,8 @@ const AdminEvents = () => {
 
     return (
         <div className="ae-container">
-            <LoadingOverlay isVisible={loading || saving} />
+            <LoadingOverlay isVisible={saving} />
+            {loading && posts.length === 0 && <div className="ae-silent-loader">Syncing News...</div>}
 
             <div className="ae-content-card">
                 <div className="ae-header">

@@ -102,7 +102,7 @@ const NoExamSchedule = () => {
                 };
 
                 checkStatus();
-                intervalId = setInterval(checkStatus, 1500);
+                intervalId = setInterval(checkStatus, 3000);
 
             } catch (error) {
                 console.error("Error in getCandidate:", error);

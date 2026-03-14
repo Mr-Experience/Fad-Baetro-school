@@ -1,14 +1,28 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { createClient as supabaseCreateClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nvbsgzintqxsjcptujld.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YnNnemludHF4c2pjcHR1amxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTczNDYsImV4cCI6MjA4OTA3MzM0Nn0.Zc1uHjqD4AIzYQ5pPHyU4dIDPPq2jUnw_TzLNhcZHMI';
 
+// --- AUTH SESSION ISOLATION LOGIC ---
+// This prevents logging in as Super Admin from kicking you out of the Admin portal (and vice versa)
+const getPortalStorageKey = () => {
+    const path = window.location.pathname;
+    if (path.includes('/portal/superadmin')) return 'fad_superadmin_auth_token';
+    if (path.includes('/portal/admin')) return 'fad_admin_auth_token';
+    if (path.includes('/portal/student')) return 'fad_student_auth_token';
+    if (path.includes('/portal/candidate')) return 'fad_candidate_auth_token';
+    return 'fad_default_auth_token';
+};
+
+// Global singleton client (Context-Aware)
 export const supabase = createBrowserClient(
     supabaseUrl,
     supabaseAnonKey,
     {
         auth: {
-            storage: window.sessionStorage,
+            storage: window.localStorage,
+            storageKey: getPortalStorageKey(), // Dynamically isolate sessions
             autoRefreshToken: true,
             persistSession: true,
             detectSessionInUrl: true
@@ -16,5 +30,15 @@ export const supabase = createBrowserClient(
     }
 );
 
-// For compatibility with any code using createClient()
-export const createClient = () => supabase;
+// Properly export createClient to allow NEW instances (for user creation without logout)
+export const createClient = (url, key, options) => {
+    // If options.auth.storageKey is not provided, use a default to avoid conflicts
+    const finalOptions = {
+        ...options,
+        auth: {
+            ...options?.auth,
+            storageKey: options?.auth?.storageKey || 'temp-isolated-key'
+        }
+    };
+    return supabaseCreateClient(url || supabaseUrl, key || supabaseAnonKey, finalOptions);
+};

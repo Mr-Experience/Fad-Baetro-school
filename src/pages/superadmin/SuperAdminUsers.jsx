@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { createClient, supabase } from '../../supabaseClient';
 import AdminHeader from '../../components/AdminHeader';
+import { LogOut } from 'lucide-react';
 import '../admin/AdminQuestionEditor.css';
 import './SuperAdminUsers.css'; // New CSS for specific tweaks
+import './SchoolConfig.css'; 
 
 const SuperAdminUsers = () => {
     const navigate = useNavigate();
@@ -19,13 +21,16 @@ const SuperAdminUsers = () => {
 
     // Page state
     const [selectedRole, setSelectedRole] = useState('student');
-    const [allUsers, setAllUsers] = useState({
-        student: [],
-        candidate: [],
-        admin: [],
-        super_admin: []
+    const [allUsers, setAllUsers] = useState(() => {
+        const cached = sessionStorage.getItem('fad_all_users_cache');
+        return cached ? JSON.parse(cached) : {
+            student: [],
+            candidate: [],
+            admin: [],
+            super_admin: []
+        };
     });
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!sessionStorage.getItem('fad_all_users_cache'));
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [classes, setClasses] = useState([]);
@@ -111,6 +116,7 @@ const SuperAdminUsers = () => {
             });
 
             setAllUsers(newData);
+            sessionStorage.setItem('fad_all_users_cache', JSON.stringify(newData));
         } catch (err) {
             console.error("Omni-Fetch Error:", err);
             if (!isSilent) setFetchError(err.message || "Failed to load system data. Check connection.");
@@ -160,7 +166,8 @@ const SuperAdminUsers = () => {
                     auth: { 
                         persistSession: false,
                         autoRefreshToken: false,
-                        detectSessionInUrl: false
+                        detectSessionInUrl: false,
+                        storageKey: 'temp-auth-storage-' + Date.now() // Absolute isolation
                     } 
                 }
             );
@@ -226,12 +233,42 @@ const SuperAdminUsers = () => {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            setLoading(true);
+            await supabase.auth.signOut();
+            // Surgical Clear: Only remove superadmin-related cache
+            sessionStorage.removeItem('fad_superadmin_profile');
+            sessionStorage.removeItem('fad_system_settings');
+            sessionStorage.removeItem('fad_all_users_cache');
+            
+            // Clear verification cache
+            localStorage.removeItem('fad_mastro_verified_role_super_admin');
+            
+            window.location.href = '/portal/superadmin';
+        } catch (err) {
+            window.location.href = '/portal/superadmin';
+        }
+    };
+
     const handleDeleteUser = async (id, name) => {
-        if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
+        const isSelf = id === (await supabase.auth.getUser()).data.user?.id;
+        
+        const confirmMsg = isSelf 
+            ? "WARNING: You are about to delete your own Super Admin account. You will be logged out immediately and lose all access. Proceed?"
+            : `Are you sure you want to delete ${name}?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
         try {
             const { error } = await supabase.from('profiles').delete().eq('id', id);
             if (error) throw error;
             
+            if (isSelf) {
+                await handleLogout();
+                return;
+            }
+
             // Optimistic Local Update
             setAllUsers(prev => ({
                 ...prev,
@@ -252,6 +289,7 @@ const SuperAdminUsers = () => {
                 avatarUrl={avatarUrl}
                 activeSession={activeSession}
                 activeTerm={activeTerm}
+                onLogout={handleLogout}
             />
             
             <div className="qe-container">

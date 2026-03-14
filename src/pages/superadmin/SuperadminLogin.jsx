@@ -29,9 +29,8 @@ const SuperadminLogin = () => {
                         .maybeSingle();
 
                     if (profile && (profile.role === 'super_admin' || profile.role === 'super-admin')) {
-                        // Instant jump to intended page or config
-                        const from = location.state?.from?.pathname || location.state?.from || '/portal/superadmin/config';
-                        navigate(from, { replace: true });
+                        // Instant jump to config
+                        navigate('/portal/superadmin/config', { replace: true });
                         return;
                     }
                 }
@@ -103,9 +102,8 @@ const SuperadminLogin = () => {
                 // Verify specifically for super_admin variants
                 const role = (profile.role || '').toLowerCase();
                 if (role === 'super_admin' || role === 'super-admin') {
-                    // Success -> Grant access to intended page or config
-                    const from = location.state?.from?.pathname || location.state?.from || '/portal/superadmin/config';
-                    navigate(from);
+                    // Success -> Standardize landing on the Config portal as requested
+                    navigate('/portal/superadmin/config', { replace: true });
                 } else {
                     await supabase.auth.signOut();
                     throw new Error('Unauthorized. This portal is for Super Admins only.');

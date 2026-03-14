@@ -9,17 +9,22 @@ import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SchoolConfig = () => {
     const navigate = useNavigate();
-    const [currentSession, setCurrentSession] = useState('');
-    const [currentTerm, setCurrentTerm] = useState('');
-
-    const [activeSession, setActiveSession] = useState('');
-    const [activeTerm, setActiveTerm] = useState('');
-
     const [profile, setProfile] = useState(() => {
         const cached = sessionStorage.getItem('fad_superadmin_profile');
         return cached ? JSON.parse(cached) : null;
     });
-    const [loading, setLoading] = useState(!profile);
+
+    const [cachedSettings] = useState(() => {
+        const cached = sessionStorage.getItem('fad_system_settings');
+        return cached ? JSON.parse(cached) : null;
+    });
+
+    const [currentSession, setCurrentSession] = useState(cachedSettings?.current_session || '');
+    const [currentTerm, setCurrentTerm] = useState(cachedSettings?.current_term || '');
+    const [activeSession, setActiveSession] = useState(cachedSettings?.current_session || '');
+    const [activeTerm, setActiveTerm] = useState(cachedSettings?.current_term || '');
+
+    const [loading, setLoading] = useState(!profile && !cachedSettings);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState('');
     const [error, setError] = useState('');
@@ -59,16 +64,6 @@ const SchoolConfig = () => {
                     setActiveSession(s.current_session || '2024/2025');
                     setActiveTerm(s.current_term || 'First Term');
                     sessionStorage.setItem('fad_system_settings', JSON.stringify(s));
-                } else {
-                    // Try fallback to cache for settings too
-                    const cachedSettings = sessionStorage.getItem('fad_system_settings');
-                    if (cachedSettings) {
-                        const s = JSON.parse(cachedSettings);
-                        setCurrentSession(s.current_session);
-                        setCurrentTerm(s.current_term);
-                        setActiveSession(s.current_session);
-                        setActiveTerm(s.current_term);
-                    }
                 }
 
                 // Finish loading even if partial data missing
@@ -184,6 +179,13 @@ const SchoolConfig = () => {
             // Update active state immediately for UI consistency
             setActiveSession(sessionCopy);
             setActiveTerm(termCopy);
+            
+            // Omni-Fill: Update cache instantly for 0% flicker on refresh
+            sessionStorage.setItem('fad_system_settings', JSON.stringify({
+                id: 1,
+                current_session: sessionCopy,
+                current_term: termCopy
+            }));
             
             setToast('Settings saved successfully!');
             setTimeout(() => setToast(''), 2000);

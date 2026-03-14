@@ -127,15 +127,7 @@ const ExamSubmitted = () => {
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px', width: '100%' }}>
-                        {!loading && hasMore && (
-                            <button
-                                className="login-btn"
-                                style={{ background: '#9D245A', color: 'white' }}
-                                onClick={() => navigate('/portal/student/active-exam')}
-                            >
-                                Take Another Subject
-                            </button>
-                        )}
+                        {/* Remove Try Another Subject button as per request */}
 
                         <button className="nes-logout-btn" onClick={handleLogout} style={{ width: '100%' }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"

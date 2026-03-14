@@ -54,6 +54,9 @@ const AdminProfile = () => {
             setUserInitial(fullName.trim().charAt(0).toUpperCase());
             setNameMsg({ type: 'success', text: 'Display name updated successfully!' });
             
+            // Sync globally
+            refreshAdminData().catch(() => {});
+            
             setTimeout(() => setNameMsg({ type: '', text: '' }), 3000);
         } catch (err) {
             setNameMsg({ type: 'error', text: 'Update failed: ' + err.message });
@@ -123,6 +126,7 @@ const AdminProfile = () => {
             if (updateError) throw updateError;
 
             setAvatarUrl(publicUrl);
+            refreshAdminData().catch(() => {});
         } catch (err) {
             alert('Upload failed: ' + err.message);
         } finally {

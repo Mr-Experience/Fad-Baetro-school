@@ -335,8 +335,11 @@ const AdminQuestionEditor = () => {
             <div className="qe-container">
                 <div className="qe-content-card">
                     <header className="qe-header">
-                        <div>
-                            <h1 className="qe-title">{questionType} Questions ({className} - {subjectName})</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <button className="qe-back-btn" onClick={handleExit} title="Go Back">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
+                            </button>
+                            <h1 className="qe-title">{questionType.toUpperCase()} Questions ({subjectName})</h1>
                         </div>
 
                         <div className="qe-header-actions">

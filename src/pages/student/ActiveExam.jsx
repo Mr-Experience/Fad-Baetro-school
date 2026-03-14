@@ -55,7 +55,7 @@ const ActiveExam = () => {
                     }
 
                     // 2. Setup Active Exam Check
-                    const fetchActive = async () => {
+                    const fetchActive = async (isInitial = false) => {
                         try {
                             const { data: sData } = await supabase
                                 .from('system_settings')
@@ -88,6 +88,9 @@ const ActiveExam = () => {
                                     const cfg = ae.exam_configs;
                                     const examStartTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
                                     const examExpiryTime = examStartTime + (cfg.duration_minutes || 60) * 60 * 1000;
+                                    
+                                    // If expired, silently deactivate in background if possible 
+                                    // (Optional: but client side filtering is enough for now)
                                     return !ae.visible_at || now < examExpiryTime;
                                 });
 
@@ -120,10 +123,11 @@ const ActiveExam = () => {
                                         is_active_ae: availableAE.is_active,
                                         active_exam_id: availableAE.id
                                     };
-                                    setActiveExam(combinedConfig);
+                                    
+                                    // Stability Tip: Only update if the exam actually changed
+                                    setActiveExam(prev => (prev?.id === combinedConfig.id ? prev : combinedConfig));
 
                                     if (!preloadedQuestions || preloadedExamId !== availableAE.id) {
-                                        setPreloadedQuestions(null); // Clear old ones while fetching
                                         setPreloadedExamId(availableAE.id);
                                         
                                         supabase.from('questions')
@@ -152,6 +156,7 @@ const ActiveExam = () => {
                                     return;
                                 } else if (allTaken) {
                                     setLoading(false);
+                                    if (intervalId) clearInterval(intervalId);
                                     navigate('/portal/student/submitted', { replace: true });
                                     return;
                                 }
@@ -166,8 +171,8 @@ const ActiveExam = () => {
                         }
                     };
 
-                    fetchActive();
-                    intervalId = setInterval(fetchActive, 1500);
+                    fetchActive(true);
+                    intervalId = setInterval(() => fetchActive(false), 3000); // 3s is plenty for background checks
 
                 } else {
                     const fallbackName = user.user_metadata?.full_name || user.email;
@@ -253,7 +258,6 @@ const ActiveExam = () => {
                         <li>The exam auto-submits when time expires.</li>
                     </ul>
 
-                    {/* Start button */}
                     <button
                         className="login-btn ae-start-btn"
                         onClick={async () => {
@@ -299,7 +303,7 @@ const ActiveExam = () => {
                     >
                         {preloadedQuestions ? (
                             preloadedQuestions.length > 0 ? 'Start now' : 'No Questions Found'
-                        ) : 'Loading exam paper...'}
+                        ) : 'Checking paper status...'}
                     </button>
                 </div>
             </main>

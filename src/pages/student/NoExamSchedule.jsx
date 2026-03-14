@@ -112,7 +112,7 @@ const NoExamSchedule = () => {
                     };
 
                     checkExamStatus(); // Initial check
-                    intervalId = setInterval(checkExamStatus, 1500); // Check every 1.5s
+                    intervalId = setInterval(checkExamStatus, 3000); // Check every 3s is better for stability
 
                 } else {
                     // Fallback to auth metadata if no student record found

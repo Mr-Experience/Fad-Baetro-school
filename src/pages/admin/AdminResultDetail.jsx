@@ -71,12 +71,17 @@ const AdminResultDetail = () => {
                     .single();
 
                 if (settings) {
-                    setActiveSession((settings.current_session || '').trim());
-                    setActiveTerm((settings.current_term || '').trim());
+                    const s = (settings.current_session || '').trim();
+                    const t = (settings.current_term || '').trim();
+                    setActiveSession(s);
+                    setActiveTerm(t);
                 }
 
                 // 3. Fetch stats and results
                 if (classId && subjectId) {
+                    const sKey = (settings?.current_session || '').trim();
+                    const tKey = (settings?.current_term || '').trim();
+
                     // Total students in class
                     const { count } = await supabase
                         .from('profiles')
@@ -85,31 +90,35 @@ const AdminResultDetail = () => {
                     setTotalStudents(count || 0);
 
                     // Submissions
-                    const { data: resData } = await supabase
+                    const { data: resData, error: resError } = await supabase
                         .from('exam_results')
                         .select(`
                             id, 
+                            student_id,
                             score_percent, 
                             correct_answers, 
                             total_questions, 
                             submitted_at,
-                            completed_at,
-                            profiles:student_id (full_name, email)
+                            profiles!inner(full_name, email, avatar_url)
                         `)
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
                         .eq('question_type', questionType)
-                        .eq('session_id', (activeSession || '').trim())
-                        .eq('term_id', (activeTerm || '').trim())
+                        .eq('session_id', sKey)
+                        .eq('term_id', tKey)
                         .order('score_percent', { ascending: false });
+
+                    if (resError) throw resError;
 
                     if (resData) {
                         setResults(resData);
                         setSubmissionCount(resData.length);
 
                         if (resData.length > 0) {
-                            const avgValue = Math.round(resData.reduce((acc, curr) => acc + Number(curr.score_percent), 0) / resData.length);
+                            const avgValue = Math.round(resData.reduce((acc, curr) => acc + Number(curr.score_percent || 0), 0) / resData.length);
                             setAvgScore(avgValue);
+                        } else {
+                            setAvgScore(0);
                         }
                     }
                 }
@@ -223,7 +232,7 @@ const AdminResultDetail = () => {
                                     <thead>
                                         <tr>
                                             <th>Rank</th>
-                                            <th>Candidate Name</th>
+                                            <th>{questionType === 'candidate' ? 'Candidate Name' : 'Student Name'}</th>
                                             <th>Score</th>
                                             <th>Accuracy</th>
                                             <th>Date Submitted</th>

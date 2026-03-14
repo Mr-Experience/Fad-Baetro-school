@@ -100,7 +100,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 24px;
-    border: 1px solid #E2E8F0;
+    border: none;
     border-radius: 20px;
     background-color: #ffffff;
     transition: all 0.3s ease;
@@ -127,7 +127,9 @@
 /* Box styles - matching aq-box from AdminQuestions.css */
 .aq-box {
     width: 180px;
-    height: 90px;
+    min-height: 90px;
+    height: auto;
+    padding: 16px;
     border-radius: 14px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -149,7 +151,7 @@
 .aq-box.candidate { background-color: #F5F3FF; }
 
 .aq-box.has-results {
-    border-color: currentColor; /* Inherit logic handled in JS for specific colors */
+    border-color: transparent;
 }
 
 .aq-box-label {

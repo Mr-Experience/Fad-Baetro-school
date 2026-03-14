@@ -46,7 +46,7 @@ const ActiveExam = () => {
                 }
 
                 // 2. Initial Fetch for Active Candidate Exam
-                const fetchActive = async () => {
+                const fetchActive = async (isInitial = false) => {
                     try {
                         const { data: sData } = await supabase
                             .from('system_settings')
@@ -84,6 +84,8 @@ const ActiveExam = () => {
                             });
 
                             if (filteredConfigs.length === 0) {
+                                setLoading(false);
+                                if (intervalId) clearInterval(intervalId);
                                 navigate('/portal/candidate/no-exam', { replace: true });
                                 return;
                             }
@@ -100,7 +102,8 @@ const ActiveExam = () => {
                             const allTaken = filteredConfigs.every(c => takenExamIds.has(c.id) || takenKeys.has(`${c.subject_id}_candidate`));
 
                             if (availableExam) {
-                                setActiveExam(availableExam);
+                                // Stability: Only update state if different
+                                setActiveExam(prev => (prev?.id === availableExam.id ? prev : availableExam));
 
                                 if (!preloadedQuestions) {
                                     supabase.from('questions')
@@ -123,7 +126,6 @@ const ActiveExam = () => {
                                 }
 
                                 setLoading(false);
-                                if (intervalId) clearInterval(intervalId); // Clear interval when an exam is found and ready
                                 return;
                             } else if (allTaken) {
                                 setLoading(false);
@@ -140,12 +142,11 @@ const ActiveExam = () => {
                     } catch (err) {
                         console.error("fetchActive Error:", err);
                         setLoading(false);
-                        if (intervalId) clearInterval(intervalId); // Ensure interval is cleared on error
                     }
                 };
 
-                fetchActive();
-                intervalId = setInterval(fetchActive, 1500);
+                fetchActive(true);
+                intervalId = setInterval(() => fetchActive(false), 3000);
 
             } catch (error) {
                 console.error("Error in getData:", error);
@@ -219,7 +220,6 @@ const ActiveExam = () => {
                         <li>The exam auto-submits when time expires.</li>
                     </ul>
 
-                    {/* Start button */}
                     <button
                         className="login-btn ae-start-btn"
                         onClick={async () => {
@@ -270,7 +270,7 @@ const ActiveExam = () => {
                         }}
                         disabled={!activeExam || !preloadedQuestions}
                     >
-                        {preloadedQuestions ? 'Start now' : 'Loading exam paper...'}
+                        {preloadedQuestions ? 'Start now' : 'Checking paper status...'}
                     </button>
                 </div>
             </main>

@@ -3,12 +3,12 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import LoadingOverlay from './LoadingOverlay';
 
-const ROLE_CACHE_KEY = 'fad_mastro_verified_role';
+const getRoleCacheKey = (role) => `fad_mastro_verified_role_${role}`;
 
 const ProtectedRoute = ({ requiredRole = 'admin' }) => {
     // Check cache immediately to prevent initial flicker
     const getInitialAuth = () => {
-        const cached = sessionStorage.getItem(ROLE_CACHE_KEY);
+        const cached = localStorage.getItem(getRoleCacheKey(requiredRole));
         if (!cached) return null;
         try {
             const parsed = JSON.parse(cached);
@@ -67,7 +67,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
 
                 if (!profile) {
                     setIsAuthenticated(false);
-                    sessionStorage.removeItem(ROLE_CACHE_KEY);
+                    localStorage.removeItem(getRoleCacheKey(requiredRole));
                 } else {
                     const dbRole = (profile.role || '').toLowerCase().trim();
                     const targetRole = requiredRole.toLowerCase().trim();
@@ -83,7 +83,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
                     
                     setIsAuthenticated(isMatch);
                     if (isMatch) {
-                        sessionStorage.setItem(ROLE_CACHE_KEY, JSON.stringify({
+                        localStorage.setItem(getRoleCacheKey(requiredRole), JSON.stringify({
                             role: dbRole,
                             userId: session.user.id,
                             timestamp: Date.now()
@@ -101,7 +101,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_OUT') {
                 if (isMounted) {
-                    sessionStorage.removeItem(ROLE_CACHE_KEY);
+                    localStorage.removeItem(getRoleCacheKey(requiredRole));
                     setIsAuthenticated(false);
                     setHasCheckedOnce(true);
                 }

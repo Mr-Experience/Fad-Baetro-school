@@ -49,25 +49,15 @@
     box-shadow: 0 0 0 3px rgba(157, 36, 90, 0.1);
 }
 
-.as-add-btn {
-    background-color: #9D245A;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s;
+.as-search-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 240px;
 }
 
-.as-add-btn:hover {
-    background-color: #831d4b;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(157, 36, 90, 0.2);
+.as-search-input {
+    width: 100%;
+    padding-left: 16px !important;
 }
 
 /* Table Styles - Direct Alignment with Candidate Table */

@@ -8,27 +8,7 @@ const AdminStudents = () => {
     const [students, setStudents] = useState(studentsCache || []);
     const [loading, setLoading] = useState(!studentsCache);
     const [filterClass, setFilterClass] = useState('all');
-
-    // Modal state
-    const [showModal, setShowModal] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-    const [formData, setFormData] = useState({
-        full_name: '',
-        email: '',
-        phone_number: '',
-        class_id: '',
-        password: '',
-        profile_image: null
-    });
-
-    // Clear form when modal opens or closes
-    useEffect(() => {
-        if (!showModal) {
-            setFormData({ full_name: '', email: '', phone_number: '', class_id: '', password: '', profile_image: null });
-            setSuccessMessage('');
-        }
-    }, [showModal]);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         if (studentsCache) {
@@ -40,67 +20,6 @@ const AdminStudents = () => {
         }
     }, [studentsCache]);
 
-    const handleAddStudent = async (e) => {
-        e.preventDefault();
-        setSaving(true);
-        try {
-            if (!formData.class_id) throw new Error("Please select a class.");
-            if (formData.password?.length < 6) throw new Error("Password must be at least 6 characters.");
-
-            const emailExists = students.some(s => s.email.toLowerCase() === formData.email.trim().toLowerCase());
-            if (emailExists) throw new Error("A student with this email already exists.");
-
-            let profileImageUrl = null;
-            if (formData.profile_image) {
-                const file = formData.profile_image;
-                const fileName = `student_${Date.now()}.${file.name.split('.').pop()}`;
-                const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file);
-                if (uploadError) throw uploadError;
-                const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-                profileImageUrl = publicUrl;
-            }
-
-            const tempSupabase = createClient(
-                import.meta.env.VITE_SUPABASE_URL,
-                import.meta.env.VITE_SUPABASE_ANON_KEY,
-                { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
-            );
-
-            const { data: authData, error: authError } = await tempSupabase.auth.signUp({
-                email: formData.email.trim().toLowerCase(),
-                password: formData.password,
-                options: { data: { full_name: formData.full_name.trim(), role: 'student' } }
-            });
-
-            if (authError) throw authError;
-
-            const { data: inserted, error: profileError } = await supabase.from('profiles').insert({
-                id: authData.user?.id,
-                email: formData.email.trim().toLowerCase(),
-                full_name: formData.full_name.trim(),
-                role: 'student',
-                class_id: formData.class_id,
-                phone_number: formData.phone_number.trim(),
-                avatar_url: profileImageUrl,
-            }).select('*, classes(class_name)').single();
-
-            if (profileError) throw profileError;
-
-            setStudents(prev => [inserted, ...prev]);
-            setSuccessMessage('Student added successfully!');
-            setTimeout(() => {
-                setShowModal(false);
-                refreshAdminData().catch(() => {});
-            }, 1200);
-
-        } catch (err) {
-            console.error("Add student error:", err);
-            alert('Error adding student: ' + err.message);
-        } finally {
-            setSaving(false);
-        }
-    };
-
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this student?')) return;
         try {
@@ -109,13 +28,18 @@ const AdminStudents = () => {
             setStudents(prev => prev.filter(s => s.id !== id));
             refreshAdminData().catch(() => {});
         } catch (err) {
-            alert('Failed to delete: ' + error.message);
+            alert('Failed to delete: ' + err.message);
         }
     };
 
-    const filteredStudents = filterClass === 'all'
-        ? students
-        : students.filter(s => s.class_id === filterClass);
+    const filteredStudents = students.filter(s => {
+        const matchesClass = filterClass === 'all' || s.class_id === filterClass;
+        const matchesSearch = !searchTerm || 
+            s.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.classes?.class_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesClass && matchesSearch;
+    });
 
     return (
         <div className="as-container">
@@ -123,6 +47,15 @@ const AdminStudents = () => {
                 <div className="as-header">
                     <h1 className="as-title">Registered Students</h1>
                     <div className="as-controls">
+                        <div className="as-search-wrapper">
+                            <input 
+                                type="text" 
+                                className="as-input as-search-input" 
+                                placeholder="Search by name, email or class..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                         <select
                             className="as-dropdown"
                             value={filterClass}
@@ -133,10 +66,6 @@ const AdminStudents = () => {
                                 <option key={c.id} value={c.id}>{c.class_name}</option>
                             ))}
                         </select>
-                        <button className="as-add-btn" onClick={() => setShowModal(true)}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                            Add Student
-                        </button>
                     </div>
                 </div>
 
@@ -176,7 +105,7 @@ const AdminStudents = () => {
                                 <tr>
                                     <td colSpan="6" className="as-empty-state">
                                         <div className="as-empty-icon">👥</div>
-                                        <p>No students found for this filter.</p>
+                                        <p>No students found for this search/filter.</p>
                                     </td>
                                 </tr>
                             )}
@@ -184,107 +113,6 @@ const AdminStudents = () => {
                     </table>
                 </div>
             </div>
-
-            {/* Add Student Modal */}
-            {showModal && (
-                <div className="as-modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="as-modal" onClick={e => e.stopPropagation()}>
-                        <h2 className="as-modal-title">Create Student Account</h2>
-                        <p className="as-modal-subtitle">Add a new student to the academic registry.</p>
-
-                        {successMessage && (
-                            <div className="as-success-banner">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                                {successMessage}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleAddStudent} autoComplete="off">
-                            <div className="as-form-row">
-                                <div className="as-form-group">
-                                    <label className="as-label">Full Name*</label>
-                                    <input
-                                        type="text"
-                                        className="as-input"
-                                        required
-                                        value={formData.full_name}
-                                        onChange={e => setFormData({ ...formData, full_name: e.target.value })}
-                                    />
-                                </div>
-                                <div className="as-form-group">
-                                    <label className="as-label">Profile Avatar</label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="as-input"
-                                        onChange={e => setFormData({ ...formData, profile_image: e.target.files[0] })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="as-form-row">
-                                <div className="as-form-group">
-                                    <label className="as-label">Email Address*</label>
-                                    <input
-                                        type="email"
-                                        className="as-input"
-                                        required
-                                        autoComplete="new-email"
-                                        value={formData.email}
-                                        onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="as-form-group">
-                                    <label className="as-label">Phone Number</label>
-                                    <input
-                                        type="text"
-                                        className="as-input"
-                                        value={formData.phone_number}
-                                        onChange={e => setFormData({ ...formData, phone_number: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="as-form-row">
-                                <div className="as-form-group">
-                                    <label className="as-label">Class Allocation*</label>
-                                    <select
-                                        className="as-input"
-                                        required
-                                        value={formData.class_id}
-                                        onChange={e => setFormData({ ...formData, class_id: e.target.value })}
-                                    >
-                                        <option value="">Select Class</option>
-                                        {classes.map(c => (
-                                            <option key={c.id} value={c.id}>{c.class_name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="as-form-group">
-                                    <label className="as-label">Login Password*</label>
-                                    <input
-                                        type="password"
-                                        className="as-input"
-                                        required
-                                        autoComplete="new-password"
-                                        value={formData.password}
-                                        onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="as-modal-actions">
-                                <button type="button" className="as-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" className="as-btn-save" disabled={saving}>
-                                    {saving ? 'Processing...' : 'Register Student'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

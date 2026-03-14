@@ -137,3 +137,21 @@
         display: none;
     }
 }
+
+.ad-logout-btn {
+    background: transparent;
+    border: none;
+    color: #9D245A;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.ad-logout-btn:hover {
+    background: #FFF0F6;
+    color: #BE185D;
+}

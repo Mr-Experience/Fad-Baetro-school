@@ -24,38 +24,60 @@ const AdminCandidates = () => {
 
 
     const handleUpdateStatus = async (id, status) => {
-        if (!error) refreshAdminData();
+        try {
+            const { error } = await supabase.from('profiles').update({ status }).eq('id', id);
+            if (error) throw error;
+            // Optimistic update
+            setCandidates(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+            refreshAdminData().catch(() => {});
+        } catch (err) {
+            alert("Failed to update status: " + err.message);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this candidate? This action is permanent.")) return;
+        try {
+            const { error } = await supabase.from('profiles').delete().eq('id', id);
+            if (error) throw error;
+            // Optimistic update
+            setCandidates(prev => prev.filter(c => c.id !== id));
+            refreshAdminData().catch(() => {});
+        } catch (err) {
+            alert("Failed to delete candidate: " + err.message);
+        }
     };
 
     const handleDeactivateCandidate = async (candidate) => {
         if (!window.confirm(`Are you sure you want to deactivate candidate portal access for ${candidate.full_name}? They will no longer be able to login to the admission portal.`)) return;
 
         try {
-            // Check if already deactivated
             if (candidate.status === 'deactivated') {
                 alert("Already deactivated.");
                 return;
             }
 
-            // Update candidate status to 'deactivated'
-            const { error: candidateUpdateError } = await supabase
+            const { error } = await supabase
                 .from('profiles')
                 .update({ status: 'deactivated' })
                 .eq('id', candidate.id);
 
-            if (candidateUpdateError) throw candidateUpdateError;
+            if (error) throw error;
 
-            alert(`${candidate.full_name}'s candidate portal access has been deactivated successfully. You can now add them manually to the student list.`);
-            refreshAdminData();
+            // Optimistic update
+            setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, status: 'deactivated' } : c));
+            refreshAdminData().catch(() => {});
+            alert(`${candidate.full_name}'s candidate portal access has been deactivated successfully.`);
         } catch (err) {
             console.error("Deactivation error:", err);
             alert("Error deactivating candidate: " + err.message);
         }
     };
 
-    const filteredCandidates = filterStatus === 'all'
-        ? candidates
-        : candidates.filter(c => c.status === filterStatus);
+    const filteredCandidates = candidates.filter(c => {
+        const matchesStatus = filterStatus === 'all' || c.status === filterStatus;
+        return matchesStatus;
+    });
 
     return (
         <div className="ac-container">
@@ -118,7 +140,7 @@ const AdminCandidates = () => {
                                                 ) : (
                                                     <span className="ac-deactivated-label">Deactivated</span>
                                                 )}
-                                                <button className="ac-action-btn delete" title="Delete">
+                                                <button className="ac-action-btn delete" title="Delete" onClick={() => handleDelete(c.id)}>
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>

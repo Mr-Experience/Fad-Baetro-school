@@ -286,6 +286,7 @@ const AdminLayout = () => {
                     avatarUrl={avatarUrl}
                     activeSession={activeSession}
                     activeTerm={activeTerm}
+                    onLogout={handleLogout}
                 />
 
                 {/* Individual pages render here - sharing profile context to prevent re-fetching */}
