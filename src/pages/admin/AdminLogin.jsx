@@ -23,7 +23,7 @@ const AdminLogin = () => {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                // If already logged in as admin, redirect to dashboard
+                // If already logged in as admin, redirect to intended target or dashboard
                 const { data: profile } = await supabase
                     .from('profiles')
                     .select('role')
@@ -31,14 +31,17 @@ const AdminLogin = () => {
                     .maybeSingle();
 
                 if (profile && (profile.role === 'admin' || profile.role === 'super_admin')) {
-                    navigate(navigateTo, { replace: true });
+                    // Retain last screen: use state.from or fall back to dashboard
+                    const from = location.state?.from?.pathname || location.state?.from || navigateTo;
+                    const search = location.state?.from?.search || '';
+                    navigate(from + search, { replace: true });
                     return;
                 }
             }
             setCheckingSession(false);
         };
         checkSession();
-    }, [navigate]);
+    }, [navigate, location]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -48,7 +51,7 @@ const AdminLogin = () => {
 
         try {
             const { data, error: authError } = await supabase.auth.signInWithPassword({
-                email,
+                email: email.trim(),
                 password,
             });
 
@@ -139,6 +142,7 @@ const AdminLogin = () => {
                 <main className="portal-content">
                     <div className="login-card">
                         <h2 className="login-title">Login to admin portal</h2>
+                        <p className="login-subtitle">Secure access for school administrators.</p>
 
                         <div className="login-alert-container">
                             {error && <div className="login-error-msg">{error}</div>}

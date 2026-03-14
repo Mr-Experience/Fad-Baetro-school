@@ -16,6 +16,7 @@ const CandidateLogin = () => {
             <main className="portal-content">
                 <div className="login-card">
                     <h2 className="login-title">Login to candidate portal</h2>
+                    <p className="login-subtitle">Secure access for prospective students.</p>
 
                     <form className="login-form" onSubmit={(e) => e.preventDefault()} autoComplete="off">
                         <div className="form-group">

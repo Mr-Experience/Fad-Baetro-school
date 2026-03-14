@@ -45,7 +45,15 @@
     font-size: 24px;
     font-weight: 600;
     color: #1F2937;
+    margin-bottom: 8px; /* Reduced from 32px to move subtitle closer */
+    text-align: center;
+}
+
+.sal-subtitle-login {
+    font-size: 14px;
+    color: #6B7280;
     margin-bottom: 32px;
+    margin-top: 0;
     text-align: center;
 }
 

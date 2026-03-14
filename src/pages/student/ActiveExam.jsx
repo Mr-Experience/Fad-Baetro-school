@@ -8,13 +8,13 @@ import logo from '../../assets/logo.jpg';
 
 const ActiveExam = () => {
     const navigate = useNavigate();
-    const [studentName, setStudentName] = useState('...');
-    const [profileImage, setProfileImage] = useState(null);
+    const [studentName, setStudentName] = useState(sessionStorage.getItem('fad_std_name') || '...');
+    const [profileImage, setProfileImage] = useState(sessionStorage.getItem('fad_std_avatar') || null);
     const [activeExam, setActiveExam] = useState(null);
     const [preloadedQuestions, setPreloadedQuestions] = useState(null);
     const [preloadedExamId, setPreloadedExamId] = useState(null); // Track which exam is preloaded
     const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!sessionStorage.getItem('fad_std_name'));
 
     useEffect(() => {
         let intervalId;

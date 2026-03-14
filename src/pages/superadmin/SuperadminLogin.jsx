@@ -1,37 +1,54 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../student/NoExamSchedule.css'; // Reusing header styles
 import './SuperadminLogin.css';
 import { supabase } from '../../supabaseClient';
 import logoFallback from '../../assets/logo.jpg';
+import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SuperadminLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [checkingSession, setCheckingSession] = useState(true);
     const navigate = useNavigate();
+    const location = useLocation();
 
-    // Check if already logged in
+    // Instant Redirect: Check if already logged in before showing the form
     React.useEffect(() => {
+        let isMounted = true;
         const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                // If a superadmin is already logged in, send them to config
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('id, role')
-                    .eq('id', session.user.id)
-                    .maybeSingle();
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session && isMounted) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', session.user.id)
+                        .maybeSingle();
 
-                if (profile && (profile.role === 'super_admin' || profile.role === 'super-admin')) {
-                    navigate('/portal/superadmin/config', { replace: true });
-                    return;
+                    if (profile && (profile.role === 'super_admin' || profile.role === 'super-admin')) {
+                        // Instant jump to intended page or config
+                        const from = location.state?.from?.pathname || location.state?.from || '/portal/superadmin/config';
+                        navigate(from, { replace: true });
+                        return;
+                    }
                 }
+            } catch (err) {
+                console.error("Session check error:", err);
+            } finally {
+                if (isMounted) setCheckingSession(false);
             }
         };
         checkSession();
-    }, [navigate]);
+        return () => { isMounted = false; };
+    }, [navigate, location]);
+
+    if (checkingSession) {
+        // Show the loading overlay instantly instead of the login portal
+        return <LoadingOverlay isVisible={true} />;
+    }
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -39,62 +56,64 @@ const SuperadminLogin = () => {
         setLoading(true);
 
         try {
-            // 1. Sign in with password
+            // 1. Authenticate using Supabase Auth
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email,
+                email: email.trim(),
                 password,
             });
 
             if (authError) {
-                setPassword(''); // Reset password input on error
+                setPassword('');
                 throw authError;
             }
 
             if (authData.user) {
-                // 2. Fetch user role from profiles table
+                // Fetch profile to verify role
                 let { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('role')
                     .eq('id', authData.user.id)
                     .maybeSingle();
 
-                // 2b. Auto-heal the super_admin profile if it got dropped during SQL migration
-                if (!profile) {
-                    // Check if they have super_admin in their auth metadata
-                    const authRole = authData.user.user_metadata?.role;
-                    if (authRole === 'super_admin' || authData.user.email?.toLowerCase().includes('super')) {
-                        // Recreate the super_admin profile
+                // 2b. Auto-heal Super Admin profile if missing
+                if (!profile && !profileError) {
+                    const email = authData.user.email?.toLowerCase() || '';
+                    const metaRole = authData.user.user_metadata?.role;
+
+                    // If email contains 'fad.com' or 'super' or meta says super, heal it
+                    if (email.includes('fad.com') || email.includes('super') || metaRole?.includes('super')) {
                         const { error: insertError } = await supabase.from('profiles').insert({
                             id: authData.user.id,
-                            email: authData.user.email,
-                            full_name: authData.user.user_metadata?.full_name || 'Super Admin',
+                            email: email,
+                            full_name: authData.user.user_metadata?.full_name || 'System Developer',
                             role: 'super_admin'
                         });
-
-                        if (!insertError) {
-                            profile = { role: 'super_admin' };
-                        }
+                        if (!insertError) profile = { role: 'super_admin' };
                     }
                 }
 
+                if (profileError) throw profileError;
+
+                // 3. Strict Verification
                 if (!profile) {
                     await supabase.auth.signOut();
-                    setPassword('');
-                    throw new Error('Access denied. No profile found in the database. Contact support.');
+                    throw new Error('Access denied. No super administrative profile found.');
                 }
 
-                // 3. Verify specifically for super_admin or super-admin
-                if (profile.role === 'super_admin' || profile.role === 'super-admin') {
-                    navigate('/portal/superadmin/config');
+                // Verify specifically for super_admin variants
+                const role = (profile.role || '').toLowerCase();
+                if (role === 'super_admin' || role === 'super-admin') {
+                    // Success -> Grant access to intended page or config
+                    const from = location.state?.from?.pathname || location.state?.from || '/portal/superadmin/config';
+                    navigate(from);
                 } else {
                     await supabase.auth.signOut();
-                    setPassword('');
-                    throw new Error('Unauthorized access. You are not a Super Admin.');
+                    throw new Error('Unauthorized. This portal is for Super Admins only.');
                 }
             }
         } catch (err) {
-            console.error("Login process error:", err);
-            setError(err.message || 'An error occurred during login');
+            console.error("SuperAdmin Login Error:", err);
+            setError(err.message || 'Authentication failed');
         } finally {
             setLoading(false);
         }
@@ -102,7 +121,6 @@ const SuperadminLogin = () => {
 
     return (
         <div className="sal-container">
-            {/* Simple Header */}
             <header className="portal-header-bar sal-header">
                 <div className="sal-header-left">
                     <img
@@ -114,12 +132,12 @@ const SuperadminLogin = () => {
                 </div>
             </header>
 
-            {/* Main Login Card */}
             <main className="sal-main">
                 <div className="sal-card">
                     <h2 className="sal-title">Login to Super Admin Portal</h2>
+                    <p className="sal-subtitle-login">Secure access for master administrators.</p>
 
-                    {error && <div style={{ color: '#ef4444', fontSize: '14px', marginBottom: '16px', textAlign: 'center', backgroundColor: '#fee2e2', padding: '10px', borderRadius: '8px', border: '1px solid #fecaca' }}>{error}</div>}
+                    {error && <div className="sal-error-container">{error}</div>}
 
                     <form className="sal-form" onSubmit={handleLogin} autoComplete="off">
                         <div className="sal-form-group">

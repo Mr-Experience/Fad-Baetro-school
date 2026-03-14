@@ -73,6 +73,25 @@
     object-fit: cover;
 }
 
+.sc-logout-icon-btn {
+    background: transparent;
+    border: none;
+    color: #9D245A;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.sc-logout-icon-btn:hover {
+    background: #FFF0F6;
+    color: #BE185D;
+}
+
 /* ─── Main ───────────────────────────────────────────── */
 /* flex: 1 fills the remaining height, padding gives breathing room above/below the card */
 .sc-main {
@@ -483,6 +502,32 @@
     transition: all 0.2s;
 }
 
+.sc-admin-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.sc-admin-role-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.sc-admin-role-badge[data-role="admin"] {
+    background: #EFF6FF;
+    color: #1E40AF;
+}
+
+.sc-admin-role-badge[data-role*="super-admin"],
+.sc-admin-role-badge[data-role*="super_admin"] {
+    background: #F5F3FF;
+    color: #5B21B6;
+}
+
 .sc-delete-btn:hover {
     background: #FEF2F2;
     transform: scale(1.1);
@@ -493,4 +538,163 @@
     text-align: center;
     color: #9CA3AF;
     font-size: 14px;
+}
+
+/* ─── Mini Stats ─────────────────────────────────────── */
+.sc-mini-stat {
+    background: #fff;
+    padding: 12px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    transition: transform 0.2s ease;
+}
+
+.sc-mini-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.sc-mini-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.sc-mini-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* ─── Admin Management Table ─────────────────────── */
+.sc-admin-table {
+    width: 100%;
+    margin-top: 8px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #F1F5F9;
+}
+
+.sc-table-header {
+    display: grid;
+    grid-template-columns: 1.5fr 1.8fr 1fr 0.6fr;
+    padding: 12px 16px;
+    background: #F8FAFC;
+    border-bottom: 2px solid #E2E8F0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sc-admin-row {
+    display: grid;
+    grid-template-columns: 1.5fr 1.8fr 1fr 0.6fr;
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid #F1F5F9;
+    align-items: center;
+    transition: background 0.2s ease;
+}
+
+.sc-admin-row:hover {
+    background: #F1F5F9;
+}
+
+.sc-admin-row:last-child {
+    border-bottom: none;
+}
+
+.sc-admin-cell {
+    font-size: 14px;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sc-admin-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #FFF0F6;
+    color: #9D245A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.sc-admin-cell.email {
+    color: #64748B;
+    font-family: inherit;
+}
+
+.sc-admin-cell.action {
+    justify-content: flex-end;
+}
+
+.sc-delete-icon-btn {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #EF4444;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sc-delete-icon-btn:hover {
+    background: #FEF2F2;
+    border-color: #FEE2E2;
+    transform: translateY(-1px);
+}
+
+.sc-toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: #111827;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 2000;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* ─── Loading Spinner ────────────────────────────────── */
+.sc-spinner {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(157, 36, 90, 0.1);
+    border-radius: 50%;
+    border-top-color: #9D245A;
+    animation: sc-spin 0.8s linear infinite;
+}
+
+@keyframes sc-spin {
+    to { transform: rotate(360deg); }
 }

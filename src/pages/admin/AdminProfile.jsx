@@ -1,28 +1,26 @@
 import React, { useEffect, useState, useRef } from 'react';
-import './AdminProfile.css';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { Camera, Shield, Loader2 } from 'lucide-react';
+import './AdminProfile.css';
 
 const AdminProfile = () => {
     const navigate = useNavigate();
+    
+    // OMNI-FILL: Accessing global state for instant data
     const {
         userName, setUserName,
         userInitial, setUserInitial,
         avatarUrl, setAvatarUrl,
-        profileLoading, userId
+        profileLoading, userId, userRole
     } = useOutletContext();
 
-    // Name form
-    const [fullName, setFullName] = useState('');
+    // Local form state
+    const [fullName, setFullName] = useState(userName || '');
     const [nameLoading, setNameLoading] = useState(false);
     const [nameMsg, setNameMsg] = useState({ type: '', text: '' });
 
-    // Sync local fullName with context userName on mount or update
-    useEffect(() => {
-        if (userName) setFullName(userName);
-    }, [userName]);
-
-    // Password form... (rest of the states remain same)
+    // Password state
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [pwLoading, setPwLoading] = useState(false);
@@ -30,33 +28,40 @@ const AdminProfile = () => {
 
     const [avatarLoading, setAvatarLoading] = useState(false);
     const fileInputRef = useRef(null);
-    const userRole = 'Admin';
 
-    // Save full name
-    const handleSaveName = async () => {
-        if (!fullName.trim()) {
-            setNameMsg({ type: 'error', text: 'Full name cannot be empty.' });
-            return;
+    // Sync local state
+    useEffect(() => {
+        if (userName && !fullName) {
+            setFullName(userName);
         }
+    }, [userName]);
+
+    const handleSaveName = async () => {
+        if (!fullName.trim() || fullName === userName) return;
+        
         setNameLoading(true);
         setNameMsg({ type: '', text: '' });
 
-        const { error } = await supabase
-            .from('profiles')
-            .update({ full_name: fullName.trim() })
-            .eq('id', userId);
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ full_name: fullName.trim() })
+                .eq('id', userId);
 
-        if (error) {
-            setNameMsg({ type: 'error', text: 'Failed to update name. Please try again.' });
-        } else {
+            if (error) throw error;
+
             setUserName(fullName.trim());
             setUserInitial(fullName.trim().charAt(0).toUpperCase());
-            setNameMsg({ type: 'success', text: 'Full name updated successfully!' });
+            setNameMsg({ type: 'success', text: 'Display name updated successfully!' });
+            
+            setTimeout(() => setNameMsg({ type: '', text: '' }), 3000);
+        } catch (err) {
+            setNameMsg({ type: 'error', text: 'Update failed: ' + err.message });
+        } finally {
+            setNameLoading(false);
         }
-        setNameLoading(false);
     };
 
-    // Change password
     const handleChangePassword = async () => {
         if (!newPassword || newPassword.length < 8) {
             setPwMsg({ type: 'error', text: 'Password must be at least 8 characters.' });
@@ -66,63 +71,74 @@ const AdminProfile = () => {
             setPwMsg({ type: 'error', text: 'Passwords do not match.' });
             return;
         }
+
         setPwLoading(true);
         setPwMsg({ type: '', text: '' });
 
-        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+            if (error) throw error;
 
-        if (error) {
-            setPwMsg({ type: 'error', text: 'Failed to change password. ' + error.message });
-        } else {
-            // GLOBAL LOGOUT: Force logout from all devices
-            await supabase.auth.signOut({ scope: 'global' });
-            setPwMsg({ type: 'success', text: 'Password changed successfully! You have been logged out of all devices. Redirecting...' });
+            setPwMsg({ type: 'success', text: 'Password updated. Sign-out required.' });
             
-            setTimeout(() => {
+            setTimeout(async () => {
+                await supabase.auth.signOut({ scope: 'global' });
                 navigate('/portal/admin/login');
-            }, 3000);
-            
-            setNewPassword('');
-            setConfirmPassword('');
+            }, 2500);
+        } catch (err) {
+            setPwMsg({ type: 'error', text: 'Error: ' + err.message });
+            setPwLoading(false);
         }
-        setPwLoading(false);
     };
 
-    // Upload avatar
     const handleAvatarChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         if (file.size > 2 * 1024 * 1024) {
-            alert('File size must be under 2MB.');
+            alert('Image must be under 2MB.');
             return;
         }
 
         setAvatarLoading(true);
-        const filePath = `avatars/${userId}_${Date.now()}.png`;
+        try {
+            const ext = file.name.split('.').pop();
+            const filePath = `avatars/${userId}_${Date.now()}.${ext}`;
 
-        const { error: uploadError } = await supabase.storage
-            .from('Profile Image')
-            .upload(filePath, file, { upsert: true });
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file);
 
-        if (uploadError) {
-            alert('Failed to upload image: ' + uploadError.message);
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ avatar_url: publicUrl })
+                .eq('id', userId);
+            
+            if (updateError) throw updateError;
+
+            setAvatarUrl(publicUrl);
+        } catch (err) {
+            alert('Upload failed: ' + err.message);
+        } finally {
             setAvatarLoading(false);
-            return;
         }
-
-        const { data: { publicUrl } } = supabase.storage
-            .from('Profile Image')
-            .getPublicUrl(filePath);
-
-        await supabase
-            .from('profiles')
-            .update({ avatar_url: publicUrl })
-            .eq('id', userId);
-
-        setAvatarUrl(publicUrl);
-        setAvatarLoading(false);
     };
+
+    if (profileLoading && !userName) {
+        return (
+            <div className="ap-content">
+                <div className="ap-inner-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
+                    <Loader2 className="ap-spin" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="ap-content">
@@ -130,7 +146,7 @@ const AdminProfile = () => {
                 <h1 className="ap-page-title">My Profile</h1>
 
                 <div className="ap-layout">
-                    {/* Avatar Card */}
+                    {/* Avatar Column (Left) */}
                     <div className="ap-avatar-card">
                         <div className="ap-avatar-wrapper">
                             {avatarUrl
@@ -145,27 +161,23 @@ const AdminProfile = () => {
                                     onChange={handleAvatarChange}
                                     disabled={avatarLoading}
                                 />
-                                {avatarLoading
-                                    ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="12" cy="12" r="10" opacity="0.25" /></svg>
-                                    : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                        <polyline points="17 8 12 3 7 8"></polyline>
-                                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                                    </svg>
-                                }
+                                {avatarLoading ? <Loader2 size={12} className="ap-spin" /> : <Camera size={12} />}
                             </label>
                         </div>
                         <div className="ap-avatar-name">{userName}</div>
-                        <div className="ap-avatar-role">{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</div>
-                        <div className="ap-avatar-hint">Click the upload icon to change your profile photo. Max size 2MB.</div>
+                        <div className="ap-avatar-role">
+                            <Shield size={10} style={{ marginRight: '4px' }} />
+                            {userRole?.toUpperCase() || 'ADMINISTRATOR'}
+                        </div>
+                        <div className="ap-avatar-hint">Click the camera icon to upload a new photo. Max size 2MB.</div>
                     </div>
 
-                    {/* Right Column */}
+                    {/* Form Column (Right - Split in two) */}
                     <div className="ap-form-column">
                         {/* Name Card */}
                         <div className="ap-card">
                             <div className="ap-card-title">Personal Information</div>
-                            <div className="ap-card-subtitle">Update your display name</div>
+                            <div className="ap-card-subtitle">Update your account display name</div>
                             <div className="ap-divider"></div>
 
                             <div className="ap-alert-container">
@@ -186,7 +198,7 @@ const AdminProfile = () => {
                             </div>
 
                             <div className="ap-card-footer">
-                                <button className="ap-btn-primary" onClick={handleSaveName} disabled={nameLoading}>
+                                <button className="ap-btn-primary" onClick={handleSaveName} disabled={nameLoading || fullName === userName}>
                                     {nameLoading ? 'Saving...' : 'Save Changes'}
                                 </button>
                             </div>
@@ -197,8 +209,8 @@ const AdminProfile = () => {
 
                         {/* Password Card */}
                         <div className="ap-card">
-                            <div className="ap-card-title">Change Password</div>
-                            <div className="ap-card-subtitle">Use a strong password you haven't used before</div>
+                            <div className="ap-card-title">Security & Privacy</div>
+                            <div className="ap-card-subtitle">Update your access credentials</div>
                             <div className="ap-divider"></div>
 
                             <div className="ap-alert-container">
@@ -214,10 +226,10 @@ const AdminProfile = () => {
                                     className="ap-input"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    placeholder="Enter new password"
+                                    placeholder="Min. 8 characters"
                                     autoComplete="new-password"
                                 />
-                                <div className="ap-password-rules">At least 8 characters with a mix of letters and numbers.</div>
+                                <div className="ap-password-rules">Ensure your password is at least 8 characters long for security.</div>
                             </div>
 
                             <div className="ap-form-group">
@@ -227,7 +239,7 @@ const AdminProfile = () => {
                                     className="ap-input"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    placeholder="Confirm new password"
+                                    placeholder="Repeat new password"
                                     autoComplete="new-password"
                                 />
                             </div>

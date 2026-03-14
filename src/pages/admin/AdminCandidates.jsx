@@ -5,41 +5,26 @@ import { UserX, Trash2 } from 'lucide-react';
 import './AdminCandidates.css';
 
 const AdminCandidates = () => {
-    const { classes, candidatesCache, setCandidatesCache } = useOutletContext();
+    const { classes, candidatesCache, refreshAdminData } = useOutletContext();
     const [candidates, setCandidates] = useState(candidatesCache || []);
     const [loading, setLoading] = useState(!candidatesCache);
     const [filterStatus, setFilterStatus] = useState('all');
 
     useEffect(() => {
-        fetchCandidates();
-    }, []);
-
-    const fetchCandidates = async () => {
-        if (!candidatesCache) setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('candidates')
-                .select(`
-                    *,
-                    classes (class_name)
-                `)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            if (data) {
-                setCandidates(data);
-                setCandidatesCache(data);
-            }
-        } catch (err) {
-            console.error("Error fetching candidates:", err);
-        } finally {
+        if (candidatesCache) {
+            setCandidates(candidatesCache);
             setLoading(false);
+            refreshAdminData().catch(() => {});
+        } else {
+            setLoading(true);
+            refreshAdminData().finally(() => setLoading(false));
         }
-    };
+    }, [candidatesCache]);
+
+
 
     const handleUpdateStatus = async (id, status) => {
-        const { error } = await supabase.from('candidates').update({ status }).eq('id', id);
-        if (!error) fetchCandidates();
+        if (!error) refreshAdminData();
     };
 
     const handleDeactivateCandidate = async (candidate) => {
@@ -54,14 +39,14 @@ const AdminCandidates = () => {
 
             // Update candidate status to 'deactivated'
             const { error: candidateUpdateError } = await supabase
-                .from('candidates')
+                .from('profiles')
                 .update({ status: 'deactivated' })
                 .eq('id', candidate.id);
 
             if (candidateUpdateError) throw candidateUpdateError;
 
             alert(`${candidate.full_name}'s candidate portal access has been deactivated successfully. You can now add them manually to the student list.`);
-            fetchCandidates();
+            refreshAdminData();
         } catch (err) {
             console.error("Deactivation error:", err);
             alert("Error deactivating candidate: " + err.message);

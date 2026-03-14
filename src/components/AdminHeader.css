@@ -35,11 +35,56 @@
     gap: 16px;
 }
 
+.ad-user-info-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ad-user-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
 .ad-user-name-text {
     font-size: 14px;
     font-weight: 600;
     color: #1e293b;
-    margin-right: 12px;
+    line-height: 1.2;
+}
+
+.ad-role-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #F1F5F9;
+    margin-top: 2px;
+}
+
+.ad-role-badge[data-role="super_admin"],
+.ad-role-badge[data-role="super-admin"] {
+    background: #FFF0F6;
+    color: #9D245A;
+}
+
+.ad-role-badge[data-role="admin"] {
+    background: #F0F9FF;
+    color: #0284C7;
+}
+
+.ad-role-badge[data-role="candidate"] {
+    background: #FFFBEB;
+    color: #B45309;
+}
+
+.ad-role-badge[data-role="student"] {
+    background: #F0FDF4;
+    color: #15803D;
 }
 
 .ad-user-avatar {

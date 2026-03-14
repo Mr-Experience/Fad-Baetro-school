@@ -10,6 +10,7 @@ const AdminLayout = () => {
 
     // User Profile state
     const [userName, setUserName] = useState('');
+    const [userRole, setUserRole] = useState('');
     const [userId, setUserId] = useState('');
     const [userInitial, setUserInitial] = useState('A');
     const [avatarUrl, setAvatarUrl] = useState(null);
@@ -24,6 +25,9 @@ const AdminLayout = () => {
     const [eventsCache, setEventsCache] = useState(null);
     const [candidatesCache, setCandidatesCache] = useState(null);
     const [infoCache, setInfoCache] = useState(null);
+    const [questionSummaryCache, setQuestionSummaryCache] = useState(null); // { [classId]: summaryData }
+    const [resultsSummaryCache, setResultsSummaryCache] = useState(null); // { [classId]: summaryData }
+ // { [classId]: summaryData }
 
     // Classes cache
     const [classes, setClasses] = useState([]);
@@ -34,79 +38,125 @@ const AdminLayout = () => {
         navigate('/portal/admin/login');
     };
 
-    useEffect(() => {
-        const fetchInitialData = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
+    const fetchInitialData = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
 
-            if (user) {
-                setUserId(user.id);
-                
-                // Parallel fetch for speed
-                const [profileRes, settingsRes, classesRes] = await Promise.all([
-                    supabase.from('profiles').select('full_name, avatar_url, role').eq('id', user.id).maybeSingle(),
-                    supabase.from('system_settings').select('current_session, current_term, admin_reset_signal').eq('id', 1).single(),
-                    supabase.from('classes').select('id, class_name').order('class_name')
-                ]);
+        if (user) {
+            setUserId(user.id);
+            
+            // --- OMNI-FETCH (All Tabs Data Up Front) ---
+            // Safer fetching: One failing request won't block the whole portal
+            const [
+                profileRes, 
+                settingsRes, 
+                classesRes,
+                studentsRes,
+                candidatesRes,
+                subjectsRes,
+                postsRes,
+                heroRes,
+                mediaRes
+            ] = await Promise.all([
+                supabase.from('profiles').select('full_name, avatar_url, role').eq('id', user.id).maybeSingle(),
+                supabase.from('system_settings').select('current_session, current_term').eq('id', 1).maybeSingle(),
+                supabase.from('classes').select('*').order('class_name'),
+                supabase.from('profiles').select('*, classes(class_name)').eq('role', 'student').order('full_name'),
+                supabase.from('profiles').select('*, classes(class_name)').eq('role', 'candidate').order('created_at', { ascending: false }),
+                supabase.from('subjects').select('*, classes(class_name)').order('subject_name'),
+                supabase.from('system_posts').select('*').order('created_at', { ascending: false }),
+                supabase.from('hero_images').select('*').order('display_order', { ascending: true }),
+                supabase.from('media_items').select('*').order('created_at', { ascending: false })
+            ]);
 
-                // Handle Profile
-                const profile = profileRes.data;
-                if (!profile && !profileRes.error) {
-                    handleLogout();
-                    return;
-                }
-                if (profile) {
-                    setUserName(profile.full_name || user.email?.split('@')[0]);
-                    setUserInitial((profile.full_name || 'A').charAt(0).toUpperCase());
-                    setAvatarUrl(profile.avatar_url);
-                }
-
-                // Handle Settings
-                const settings = settingsRes.data;
-                if (settings) {
-                    setActiveSession((settings.current_session || '').trim());
-                    setActiveTerm((settings.current_term || '').trim());
-
-                    const resetSignal = settings.admin_reset_signal;
-                    const sessionStart = localStorage.getItem('admin_session_start');
-                    if (resetSignal && sessionStart && new Date(resetSignal) > new Date(sessionStart)) {
-                        handleLogout();
-                        return;
-                    }
-                }
-
-                // Handle Classes
-                if (classesRes.data) setClasses(classesRes.data);
-                
-                setClassesLoading(false);
-                setProfileLoading(false);
-            } else {
-                navigate('/portal/admin/login');
+            // 1. Profile & Session
+            if (profileRes.data) {
+                setUserName(profileRes.data.full_name);
+                setUserRole(profileRes.data.role);
+                setUserInitial(profileRes.data.full_name?.charAt(0) || 'A');
+                setAvatarUrl(profileRes.data.avatar_url);
             }
-        };
+
+            if (settingsRes.data) {
+                setActiveSession(settingsRes.data.current_session);
+                setActiveTerm(settingsRes.data.current_term);
+            }
+
+            // 2. Cache Data (Omni-Fill)
+            if (classesRes.data) setClasses(classesRes.data);
+            if (studentsRes.data) setStudentsCache(studentsRes.data);
+            if (candidatesRes.data) setCandidatesCache(candidatesRes.data);
+            if (subjectsRes.data) {
+                const grouped = {};
+                subjectsRes.data.forEach(s => {
+                    if (!grouped[s.class_id]) grouped[s.class_id] = [];
+                    grouped[s.class_id].push(s);
+                });
+                setSubjectsCache(grouped);
+            }
+            
+            // Events are now handled via system_posts logic
+            if (postsRes.data) {
+                setEventsCache(postsRes.data.filter(p => p.post_type === 'event' || p.is_event));
+            }
+            
+            // New Content Prefetch
+            setInfoCache({
+                hero: heroRes.data || [],
+                media: mediaRes.data || [],
+                posts: postsRes.data || [] // Added posts to infoCache structure
+            });
+
+            setClassesLoading(false);
+            setProfileLoading(false);
+
+            // 3. Realtime Subscription for System Settings (Instant Sync across all tabs)
+            const settingsSubscription = supabase
+                .channel('admin-settings-sync')
+                .on('postgres_changes', { 
+                    event: 'UPDATE', 
+                    schema: 'public', 
+                    table: 'system_settings',
+                    filter: 'id=eq.1'
+                }, (payload) => {
+                    const fresh = payload.new;
+                    setActiveSession(fresh.current_session);
+                    setActiveTerm(fresh.current_term);
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(settingsSubscription);
+            };
+        } else {
+            navigate('/portal/admin/login');
+        }
+    };
+
+    useEffect(() => {
         fetchInitialData();
+
+        // 1. Background Auto-Refresh (Every 2 minutes)
+        const autoRefresh = setInterval(() => {
+            console.log("Admin background sync active...");
+            fetchInitialData();
+        }, 120000);
+
+        // 2. Focus-Sync: Re-fetch when admin switches back to this tab
+        const handleFocus = () => {
+            console.log("Window focus: Syncing admin state...");
+            fetchInitialData();
+        };
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            clearInterval(autoRefresh);
+            window.removeEventListener('focus', handleFocus);
+        };
     }, []);
 
-    // Proactive check on navigation to ensure account still exists
-    useEffect(() => {
-        const verifySession = async () => {
-            if (!userId) return;
-            
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('id', userId)
-                .maybeSingle();
-                
-            if (!profile) {
-                console.warn("Session verification failed: Account deleted.");
-                handleLogout();
-            }
-        };
-        
-        if (location.pathname !== '/portal/admin/login') {
-            verifySession();
-        }
-    }, [location.pathname, userId]);
+    // Proactive check on navigation is now handled efficiently by ProtectedRoute.jsx
+    // Removing the redundant verifySession hit to the database on every navigation
+    // which was occasionally causing flickering logouts on slow networks.
 
     const renderIcon = (type) => {
         switch (type) {
@@ -145,6 +195,7 @@ const AdminLayout = () => {
     // Memoize context to prevent unnecessary child re-renders
     const contextValue = React.useMemo(() => ({
         userName,
+        userRole,
         setUserName,
         userInitial,
         setUserInitial,
@@ -167,12 +218,17 @@ const AdminLayout = () => {
         candidatesCache,
         setCandidatesCache,
         infoCache,
-        setInfoCache
+        setInfoCache,
+        questionSummaryCache,
+        setQuestionSummaryCache,
+        resultsSummaryCache,
+        setResultsSummaryCache,
+        refreshAdminData: fetchInitialData
     }), [
-        userName, userInitial, avatarUrl, profileLoading, userId, 
+        userName, userRole, userInitial, avatarUrl, profileLoading, userId, 
         classes, classesLoading, activeSession, activeTerm, 
         dashboardStats, studentsCache, subjectsCache, eventsCache, 
-        candidatesCache, infoCache
+        candidatesCache, infoCache, questionSummaryCache, resultsSummaryCache, fetchInitialData
     ]);
 
     return (
@@ -225,6 +281,7 @@ const AdminLayout = () => {
                 <AdminHeader
                     profileLoading={profileLoading}
                     userName={userName}
+                    userRole={userRole}
                     userInitial={userInitial}
                     avatarUrl={avatarUrl}
                     activeSession={activeSession}

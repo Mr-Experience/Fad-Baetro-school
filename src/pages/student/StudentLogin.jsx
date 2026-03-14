@@ -135,6 +135,7 @@ const StudentLogin = () => {
             <main className="portal-content">
                 <div className="login-card">
                     <h2 className="login-title">Login to student portal</h2>
+                    <p className="login-subtitle">Access your classes, exams and results.</p>
 
                     {error && <div style={{ color: 'red', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>{error}</div>}
 

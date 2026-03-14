@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
-import { supabase } from '../../supabaseClient';
+import { createClient, supabase } from '../../supabaseClient';
 import { UserPlus, ArrowLeft, ShieldCheck } from 'lucide-react';
 import './SchoolConfig.css'; // Reusing some base styles
 
@@ -12,6 +11,7 @@ const RegisterAdmin = () => {
     const [fullName, setFullName] = useState('');
     const [role, setRole] = useState('admin');
     const [loading, setLoading] = useState(false);
+    const [redirecting, setRedirecting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
@@ -22,48 +22,52 @@ const RegisterAdmin = () => {
         setSuccess('');
 
         try {
-            // 1. Create a temporary non-persisting client
-            // This prevents Supabase from signing out the Super Admin and signing in the new Admin.
             const tempSupabase = createClient(
                 import.meta.env.VITE_SUPABASE_URL,
                 import.meta.env.VITE_SUPABASE_ANON_KEY,
-                { auth: { persistSession: false } }
+                { 
+                    auth: { 
+                        persistSession: false, 
+                        autoRefreshToken: false,
+                        detectSessionInUrl: false
+                    } 
+                }
             );
 
-            // 2. Create the user in Supabase Auth
             const { data: authData, error: authError } = await tempSupabase.auth.signUp({
                 email,
                 password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                        role: role
-                    }
-                }
+                options: { data: { full_name: fullName, role: role } }
             });
 
             if (authError) throw authError;
 
             if (authData.user) {
-                // 2. Create the profile
-                const { error: profileError } = await supabase
+                // 1. Instantly trigger Success UI and Navigation
+                setLoading(false);
+                setRedirecting(true);
+                setSuccess(`Successfully registered ${fullName}!`);
+                
+                // 2. Immediate Navigation (Instant feel)
+                navigate('/portal/superadmin/config', { replace: true });
+
+                // 3. Background Sync (Fire and forget, doesn't block UI navigation)
+                supabase
                     .from('profiles')
-                    .insert({
+                    .upsert({
                         id: authData.user.id,
-                        email: email,
-                        full_name: fullName,
-                        role: role
+                        email: email.trim().toLowerCase(),
+                        full_name: fullName.trim(),
+                        role: role.trim().toLowerCase()
+                    })
+                    .then(({ error: profileError }) => {
+                        if (profileError && profileError.code !== '42501') {
+                            console.error("Background profile sync warning:", profileError);
+                        }
                     });
-
-                if (profileError) throw profileError;
-
-                setSuccess(`Successfully registered ${fullName} as ${role}!`);
-                setEmail('');
-                setPassword('');
-                setFullName('');
             }
         } catch (err) {
-            console.error("Registration error:", err);
+            console.error("Full Registration error:", err);
             setError(err.message || "Failed to register administrator.");
         } finally {
             setLoading(false);
@@ -144,8 +148,8 @@ const RegisterAdmin = () => {
                                     onChange={(e) => setRole(e.target.value)}
                                     style={{ height: '40px' }}
                                 >
-                                    <option value="admin">Admin</option>
-                                    <option value="super_admin">Super Admin</option>
+                                    <option value="admin">Admin (Standard)</option>
+                                    <option value="super_admin">Super Admin (Full Access)</option>
                                 </select>
                                 <div className="sc-select-arrow">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -158,10 +162,13 @@ const RegisterAdmin = () => {
                         <button 
                             type="submit" 
                             className="sc-save-btn" 
-                            disabled={loading}
-                            style={{ height: '44px' }}
+                            disabled={loading || redirecting}
+                            style={{ 
+                                height: '44px',
+                                backgroundColor: redirecting ? '#059669' : '#9D245A' 
+                            }}
                         >
-                            {loading ? 'Processing...' : 'Register Account'}
+                            {loading ? 'Processing...' : redirecting ? 'Success! Redirecting...' : 'Register Account'}
                         </button>
                     </form>
                 </div>

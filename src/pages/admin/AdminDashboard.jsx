@@ -5,7 +5,7 @@ import { Users, UserCheck, BookOpen, BarChart3, Clock, ArrowRight } from 'lucide
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
-    const { activeSession, activeTerm, dashboardStats, setDashboardStats } = useOutletContext();
+    const { activeSession, activeTerm, dashboardStats, setDashboardStats, refreshAdminData } = useOutletContext();
     const navigate = useNavigate();
     const [stats, setStats] = useState(dashboardStats || {
         students: 0,
@@ -19,13 +19,17 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
-            // Prevent fetching only if settings are truly null/undefined (not just empty string)
+            // 1. Instant UI Feedback (Use cached stats if available)
+            if (dashboardStats) {
+                setStats(dashboardStats);
+                setLoading(false);
+            }
+            
             if (activeSession === null || activeTerm === null) return;
-            // Only show loader if we have NO cached data at all
-            if (!dashboardStats) setLoading(true);
-
+            
+            // 2. Mandatory Background Fetch ("Always Fetch" requirement)
             try {
-                // Fetch Metrics and Recent Submissions in PARALLEL
+                // Fetch Metrics and Recent Submissions
                 const [
                     { count: studentCount },
                     { count: subjectCount },
@@ -65,6 +69,9 @@ const AdminDashboard = () => {
                 setDashboardStats(newStats);
                 if (recentRes.data) setRecentSubmissions(recentRes.data);
 
+                // Silently refresh other layout data too
+                refreshAdminData().catch(() => {});
+
             } catch (err) {
                 console.error("Dashboard metric error:", err);
             } finally {
@@ -73,7 +80,9 @@ const AdminDashboard = () => {
         };
 
         fetchDashboardData();
-    }, [activeSession, activeTerm]);
+        // Remove dashboardStats from dependencies to prevent unintended loops
+        // while ensuring it always fetches on mount or session change.
+    }, [activeSession, activeTerm, setDashboardStats, refreshAdminData]);
 
     return (
         <div className="ad-wrapper">
@@ -83,7 +92,7 @@ const AdminDashboard = () => {
                 <div className="ad-banner-content">
                     <h1>Welcome Back Admin,</h1>
                     <p>
-                        Current Session: <span style={{ color: '#fff', fontWeight: 'bold' }}>{activeSession} {activeTerm} Session</span>
+                        Current Session: <span style={{ color: '#fff', fontWeight: 'bold' }}>{activeSession ? `${activeSession} ${activeTerm}` : 'Loading Session...'}</span>
                     </p>
                 </div>
             </section>

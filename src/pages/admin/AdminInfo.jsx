@@ -26,9 +26,19 @@ const AdminInfo = () => {
     const [lightbox, setLightbox] = useState(null); // { url, caption }
 
     useEffect(() => {
-        // Only fetch content, profile is handled by Layout context
-        fetchHeroImages();
-        fetchMediaItems();
+        // If we have cached data, show it immediately
+        if (infoCache) {
+            if (infoCache.hero) setHeroImages(infoCache.hero);
+            if (infoCache.media) setMediaItems(infoCache.media);
+            setLoading({ hero: false, media: false });
+            // Refresh silently in background
+            fetchHeroImages(true);
+            fetchMediaItems(true);
+        } else {
+            // First time load
+            fetchHeroImages();
+            fetchMediaItems();
+        }
     }, []);
 
     // Close lightbox on Escape
@@ -38,8 +48,8 @@ const AdminInfo = () => {
         return () => window.removeEventListener('keydown', handleKey);
     }, []);
 
-    const fetchHeroImages = async () => {
-        if (!infoCache?.hero) setLoading(prev => ({ ...prev, hero: true }));
+    const fetchHeroImages = async (silent = false) => {
+        if (!silent && !heroImages.length) setLoading(prev => ({ ...prev, hero: true }));
         const { data, error } = await supabase
             .from('hero_images')
             .select('*')
@@ -52,8 +62,8 @@ const AdminInfo = () => {
         setLoading(prev => ({ ...prev, hero: false }));
     };
 
-    const fetchMediaItems = async () => {
-        if (!infoCache?.media) setLoading(prev => ({ ...prev, media: true }));
+    const fetchMediaItems = async (silent = false) => {
+        if (!silent && !mediaItems.length) setLoading(prev => ({ ...prev, media: true }));
         const { data, error } = await supabase
             .from('media_items')
             .select('*');
@@ -72,15 +82,15 @@ const AdminInfo = () => {
         try {
             const ext = file.name.split('.').pop();
             const path = `hero/hero_${Date.now()}.${ext}`;
-            const { error: upErr } = await supabase.storage.from('portal-assets').upload(path, file);
+            const { error: upErr } = await supabase.storage.from('website_image').upload(path, file);
 
             if (upErr) {
                 if (upErr.message.includes('Bucket not found')) {
-                    throw new Error("Storage bucket 'portal-assets' does not exist in your Supabase project. Please create a public storage bucket named 'portal-assets' first.");
+                    throw new Error("Storage bucket 'website_image' does not exist. Please check your Supabase Storage settings.");
                 }
                 throw upErr;
             }
-            const { data: { publicUrl } } = supabase.storage.from('portal-assets').getPublicUrl(path);
+            const { data: { publicUrl } } = supabase.storage.from('website_image').getPublicUrl(path);
 
             const { error: dbErr } = await supabase.from('hero_images').insert({
                 image_url: publicUrl,
@@ -89,11 +99,11 @@ const AdminInfo = () => {
                 created_by: userId
             });
             if (dbErr) throw dbErr;
-            fetchHeroImages();
+            fetchHeroImages(true);
         } catch (err) {
             console.error("Hero upload error:", err);
             if (err.message.includes('row-level security')) {
-                alert("Upload failed: Database permission error (RLS). Please ensure you have run the required SQL setup in Supabase to allow admin uploads.");
+                alert("Upload failed: Database permission error (RLS). Please ensure you have run the website_setup.sql script in Supabase to allow admin uploads.");
             } else {
                 alert("Upload failed: " + err.message);
             }
@@ -115,16 +125,16 @@ const AdminInfo = () => {
         try {
             const ext = pendingMediaFile.name.split('.').pop();
             const path = `media/media_${Date.now()}.${ext}`;
-            const { error: upErr } = await supabase.storage.from('portal-assets').upload(path, pendingMediaFile);
+            const { error: upErr } = await supabase.storage.from('website_image').upload(path, pendingMediaFile);
 
             if (upErr) {
                 if (upErr.message.includes('Bucket not found')) {
-                    throw new Error("Storage bucket 'portal-assets' does not exist in your Supabase project. Please create a public storage bucket named 'portal-assets' first.");
+                    throw new Error("Storage bucket 'website_image' does not exist.");
                 }
                 throw upErr;
             }
 
-            const { data: { publicUrl } } = supabase.storage.from('portal-assets').getPublicUrl(path);
+            const { data: { publicUrl } } = supabase.storage.from('website_image').getPublicUrl(path);
 
             const { error: dbErr } = await supabase.from('media_items').insert({
                 image_url: publicUrl,
@@ -138,7 +148,7 @@ const AdminInfo = () => {
             setPendingMediaFile(null);
             setNewMediaTitle('');
             setNewMediaDesc('');
-            fetchMediaItems();
+            fetchMediaItems(true);
         } catch (err) {
             console.error("Media upload error:", err);
             if (err.message.includes('row-level security')) {

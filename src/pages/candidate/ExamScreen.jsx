@@ -15,7 +15,8 @@ const ExamScreen = () => {
 
     // Identity & Config
     const [candidate, setCandidate] = useState(null);
-    const [profileImage, setProfileImage] = useState(null);
+    const [candidateName, setCandidateName] = useState(sessionStorage.getItem('fad_cand_name') || '...');
+    const [profileImage, setProfileImage] = useState(sessionStorage.getItem('fad_cand_avatar') || null);
     const [activeConfig, setActiveConfig] = useState(null);
     const [questions, setQuestions] = useState([]);
     const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
@@ -42,10 +43,14 @@ const ExamScreen = () => {
                     .maybeSingle();
 
                 if (!std) {
-                    setCandidate({ full_name: user.email, id: user.id });
+                    const fallback = user.user_metadata?.full_name || user.email;
+                    setCandidate({ full_name: fallback, id: user.id });
+                    setCandidateName(fallback);
                 } else {
                     setCandidate(std);
-                    setProfileImage(std.image_url || std.profile_image || std.profile_picture || std.avatar_url || null);
+                    setCandidateName(std.full_name);
+                    const avatar = std.image_url || std.profile_image || std.profile_picture || std.avatar_url;
+                    if (avatar) setProfileImage(avatar);
                 }
 
                 // Get System Settings early
@@ -370,7 +375,7 @@ const ExamScreen = () => {
                         <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', lineHeight: 1 }}>TIME LEFT</span>
                         <span style={{ fontSize: '18px', fontWeight: '800', color: timeLeft < 60 ? '#ef4444' : '#1f2937' }}>{formatTime(timeLeft)}</span>
                     </div>
-                    <span className="nes-user-name" style={{ marginRight: '10px' }}>{candidate?.full_name}</span>
+                    <span className="nes-user-name" style={{ marginRight: '13px' }}>{candidateName}</span>
                     <div className="nes-avatar" style={{ marginRight: '10px' }}>
                         {profileImage ? (
                             <img src={profileImage} alt="Profile" className="nes-profile-img" />

@@ -1,0 +1,201 @@
+/* SuperAdminUsers.css */
+
+.qe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.qe-header-left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.qe-subtitle-custom {
+    font-size: 14px;
+    color: #64748B;
+}
+
+.sau-search-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.sau-search-input {
+    width: 100%;
+    padding: 10px 16px;
+    border: 1px solid #CBD5E1;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #1E293B;
+    background: white;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.sau-search-input:focus {
+    border-color: #9D245A;
+    box-shadow: 0 0 0 3px rgba(157, 36, 90, 0.1);
+}
+
+.sau-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #F8FAFC;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid #E2E8F0;
+}
+
+.sau-role-select {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid #CBD5E1;
+    background: white;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1E293B;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 140px;
+}
+
+.sau-role-select:focus {
+    border-color: #9D245A;
+    box-shadow: 0 0 0 3px rgba(157, 36, 90, 0.1);
+}
+
+.sau-add-btn {
+    padding: 10px 20px;
+    white-space: nowrap;
+}
+
+.sau-user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    padding-top: 10px;
+}
+
+.sau-user-card {
+    padding: 20px !important;
+    transition: all 0.3s ease;
+    border: 1px solid #F1F5F9;
+}
+
+.sau-user-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    border-color: #9D245A22;
+}
+
+.sau-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sau-avatar-circle {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #9D245A, #C026D3);
+    color: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    box-shadow: 0 4px 10px rgba(157, 36, 90, 0.2);
+}
+
+.sau-user-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0F172A;
+    margin: 0;
+}
+
+.sau-user-email {
+    font-size: 13px;
+    color: #64748B;
+    margin: 2px 0 0 0;
+}
+
+.sau-card-meta {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #F1F5F9;
+}
+
+.sau-meta-tag {
+    background: #F1F5F9;
+    color: #475569;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Form Customizations */
+.sau-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.full-width {
+    grid-column: span 2;
+}
+
+.sau-file-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+}
+
+.sau-preview-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #F1F5F9;
+    flex-shrink: 0;
+    border: 2px solid #9D245A22;
+}
+
+.sau-preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@media (max-width: 768px) {
+    .qe-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .sau-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .sau-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .full-width {
+        grid-column: span 1;
+    }
+}

@@ -12,6 +12,7 @@ import NewsPage from './pages/media/NewsPage';
 import SuperadminLogin from './pages/superadmin/SuperadminLogin';
 import SchoolConfig from './pages/superadmin/SchoolConfig';
 import RegisterAdmin from './pages/superadmin/RegisterAdmin';
+import SuperAdminUsers from './pages/superadmin/SuperAdminUsers';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminStudents from './pages/admin/AdminStudents';
 import AdminQuestions from './pages/admin/AdminQuestions';
@@ -65,6 +66,7 @@ function App() {
                 {/* Protected Superadmin Routes */}
                 <Route element={<ProtectedRoute requiredRole="super_admin" />}>
                     <Route path="/portal/superadmin/config" element={<SchoolConfig />} />
+                    <Route path="/portal/superadmin/users" element={<SuperAdminUsers />} />
                     <Route path="/portal/superadmin/register" element={<RegisterAdmin />} />
                 </Route>
 

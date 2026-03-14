@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, Settings, Trash2, X } from 'lucide-react';
+import { UserPlus, Trash2, X, LogOut } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import '../student/NoExamSchedule.css';
 import './SchoolConfig.css';
@@ -9,14 +9,17 @@ import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SchoolConfig = () => {
     const navigate = useNavigate();
-    const [currentSession, setCurrentSession] = useState('2025/2026');
-    const [currentTerm, setCurrentTerm] = useState('First Term');
+    const [currentSession, setCurrentSession] = useState('');
+    const [currentTerm, setCurrentTerm] = useState('');
 
-    const [activeSession, setActiveSession] = useState('2025/2026');
-    const [activeTerm, setActiveTerm] = useState('First Term');
+    const [activeSession, setActiveSession] = useState('');
+    const [activeTerm, setActiveTerm] = useState('');
 
-    const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState(() => {
+        const cached = sessionStorage.getItem('fad_superadmin_profile');
+        return cached ? JSON.parse(cached) : null;
+    });
+    const [loading, setLoading] = useState(!profile);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState('');
     const [error, setError] = useState('');
@@ -25,114 +28,100 @@ const SchoolConfig = () => {
     const [fetchingAdmins, setFetchingAdmins] = useState(false);
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            // Only show initial loader if we have absolutely nothing
-            if (!profile) setLoading(true);
-            
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profileData } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
-                if (profileData) setProfile(profileData);
+        let isMounted = true;
+
+        const init = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!session) {
+                    if (isMounted) setLoading(false);
+                    return;
+                }
+
+                // Fetch everything in parallel with a safety timeout
+                const [profileRes, settingsRes] = await Promise.all([
+                    supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
+                    supabase.from('system_settings').select('*').eq('id', 1).maybeSingle()
+                ]);
+
+                if (!isMounted) return;
+
+                if (profileRes.data) {
+                    setProfile(profileRes.data);
+                    sessionStorage.setItem('fad_superadmin_profile', JSON.stringify(profileRes.data));
+                }
+
+                if (settingsRes.data) {
+                    const s = settingsRes.data;
+                    setCurrentSession(s.current_session || '2024/2025');
+                    setCurrentTerm(s.current_term || 'First Term');
+                    setActiveSession(s.current_session || '2024/2025');
+                    setActiveTerm(s.current_term || 'First Term');
+                    sessionStorage.setItem('fad_system_settings', JSON.stringify(s));
+                } else {
+                    // Try fallback to cache for settings too
+                    const cachedSettings = sessionStorage.getItem('fad_system_settings');
+                    if (cachedSettings) {
+                        const s = JSON.parse(cachedSettings);
+                        setCurrentSession(s.current_session);
+                        setCurrentTerm(s.current_term);
+                        setActiveSession(s.current_session);
+                        setActiveTerm(s.current_term);
+                    }
+                }
+
+                // Finish loading even if partial data missing
+                setLoading(false);
+                
+                // 1. Initial Fetch (Prefetch - Silent to avoid flicker)
+                fetchAdmins(true);
+
+                // 2. Realtime Subscription for instant sync
+                const crossSessionSync = supabase
+                    .channel('admin-list-sync')
+                    .on('postgres_changes', { 
+                        event: '*', 
+                        schema: 'public', 
+                        table: 'profiles',
+                        filter: 'role=eq.admin' // Strictly track only 'admin' role changes
+                    }, () => {
+                        fetchAdmins(true); // Silent refresh on background changes
+                    })
+                    .subscribe();
+
+                return () => {
+                    supabase.removeChannel(crossSessionSync);
+                };
+            } catch (err) {
+                console.error("Superadmin Init Error:", err);
+                if (isMounted) {
+                    setError("Failed to initialize session. Please try refreshing.");
+                    setLoading(false);
+                }
             }
-            await fetchSettings();
         };
-        fetchUserData();
-    }, []);
 
-    const fetchSettings = async () => {
-        // If we already have some data, fetch the rest silently in the background
-        if (!activeSession) setLoading(true);
-        try {
-            const { data } = await supabase
-                .from('system_settings')
-                .select('*')
-                .eq('id', 1)
-                .single();
-            if (data) {
-                setCurrentSession(data.current_session);
-                setCurrentTerm(data.current_term);
-                setActiveSession(data.current_session);
-                setActiveTerm(data.current_term);
-            }
-        } catch (err) {
-            console.error('Error fetching settings:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+        init();
+        return () => { isMounted = false; };
+    }, [navigate]);
 
-    const handleSave = async () => {
-        setSaving(true);
-        setToast('');
-        setError('');
-        try {
-            const { error: saveError } = await supabase
-                .from('system_settings')
-                .upsert({
-                    id: 1,
-                    current_session: currentSession,
-                    current_term: currentTerm,
-                    updated_at: new Date().toISOString()
-                });
-            if (saveError) throw saveError;
-            setActiveSession(currentSession);
-            setActiveTerm(currentTerm);
-            setToast('Settings updated successfully!');
-            setTimeout(() => setToast(''), 3000);
-        } catch (err) {
-            setError(err.message || 'Failed to save settings');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleForceLogout = async () => {
-        if (!window.confirm("CRITICAL ACTION: This will log out EVERY administrator currently logged into the portal. They will need to log in again. Continue?")) {
-            return;
-        }
-
-        setSaving(true);
-        try {
-            const { error: resetError } = await supabase
-                .from('system_settings')
-                .update({ 
-                    admin_reset_signal: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', 1);
-
-            if (resetError) throw resetError;
-
-            setToast('Global logout signal sent successfully!');
-            setTimeout(() => setToast(''), 3000);
-        } catch (err) {
-            console.error('Error sending reset signal:', err);
-            setError('Failed to send logout signal. If this persists, the database column might be missing.');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const fetchAdmins = async () => {
-        setFetchingAdmins(true);
+    const fetchAdmins = async (silent = false) => {
+        if (!silent) setFetchingAdmins(true);
         try {
             const { data, error: fetchError } = await supabase
                 .from('profiles')
-                .select('*')
-                .eq('role', 'admin')
-                .order('full_name');
+                .select('id, full_name, email, role, avatar_url')
+                .eq('role', 'admin') // Strictly filter profiles table for 'admin' role
+                .order('created_at', { ascending: false });
 
             if (fetchError) throw fetchError;
             setAdmins(data || []);
         } catch (err) {
             console.error('Error fetching admins:', err);
-            setError('Failed to load administrators');
+            if (!silent) setError('Failed to load administrators');
         } finally {
-            setFetchingAdmins(false);
+            if (!silent) setFetchingAdmins(false);
         }
     };
 
@@ -146,29 +135,78 @@ const SchoolConfig = () => {
             return;
         }
 
-        setSaving(true);
+        const previousAdmins = [...admins];
         try {
+            // Optimistic Update: Remove from UI immediately
+            setAdmins(prev => prev.filter(a => a.id !== adminId));
+            setToast(`Deleting ${adminName}...`);
+
             const { error: deleteError } = await supabase
                 .from('profiles')
                 .delete()
                 .eq('id', adminId);
 
-            if (deleteError) throw deleteError;
+            if (deleteError) {
+                // Rollback if delete fails
+                setAdmins(previousAdmins);
+                throw deleteError;
+            }
 
-            setAdmins(prev => prev.filter(a => a.id !== adminId));
             setToast(`Deleted ${adminName} successfully`);
-            setTimeout(() => setToast(''), 3000);
+            setTimeout(() => setToast(''), 2500);
         } catch (err) {
             console.error('Error deleting admin:', err);
             setError(err.message || 'Failed to delete admin');
+            setAdmins(previousAdmins); // Ensure rollback on any catch
+        }
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        setToast('');
+        setError('');
+        
+        const sessionCopy = currentSession;
+        const termCopy = currentTerm;
+
+        try {
+            const { error: saveError } = await supabase
+                .from('system_settings')
+                .upsert({
+                    id: 1,
+                    current_session: sessionCopy,
+                    current_term: termCopy,
+                    updated_at: new Date().toISOString()
+                });
+
+            if (saveError) throw saveError;
+
+            // Update active state immediately for UI consistency
+            setActiveSession(sessionCopy);
+            setActiveTerm(termCopy);
+            
+            setToast('Settings saved successfully!');
+            setTimeout(() => setToast(''), 2000);
+        } catch (err) {
+            console.error("Save Error:", err);
+            setError(err.message || 'Failed to save configuration');
         } finally {
             setSaving(false);
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            setLoading(true);
+            await supabase.auth.signOut();
+            window.location.href = '/portal/superadmin';
+        } catch (err) {
+            navigate('/portal/superadmin');
+        }
+    };
+
     const handleOpenAdminList = () => {
         setShowAdminList(true);
-        fetchAdmins();
     };
 
     // Generate session options dynamically to ensure they never "end"
@@ -191,9 +229,9 @@ const SchoolConfig = () => {
 
     return (
         <div className="sc-container">
-            <LoadingOverlay isVisible={loading || saving} />
+            {saving && <LoadingOverlay isVisible={true} />}
 
-            {/* Floating toast — rendered in fixed position so card layout never shifts */}
+            {/* Floating toast */}
             {toast && (
                 <div className="sc-toast">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -221,29 +259,31 @@ const SchoolConfig = () => {
                             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
                             <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
                         </svg>
-                        <span className="sc-badge-text">Current Session: {activeSession} {activeTerm}</span>
+                        <span className="sc-badge-text">
+                            {activeSession ? `Current Session: ${activeSession} ${activeTerm}` : 'Loading Session...'}
+                        </span>
                     </div>
-                    <span className="sc-user-name">{profile?.full_name || 'Super Admin'}</span>
+                    
+                    <div className="ad-user-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '12px' }}>
+                        <span className="sc-user-name" style={{ marginRight: 0 }}>{profile?.full_name || '...'}</span>
+                    </div>
+
                     <div className="sc-avatar">
                         <img
                             src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.full_name || 'Super Admin')}&background=D1D5DB&color=333`}
                             alt="Avatar"
                         />
                     </div>
+                    <button className="sc-logout-icon-btn" onClick={handleLogout} title="Logout">
+                        <LogOut size={20} />
+                    </button>
                 </div>
             </header>
 
             <div className="sc-action-bar">
-                <button 
-                    className="sc-settings-btn" 
-                    onClick={handleOpenAdminList}
-                    title="Manage Administrators"
-                >
-                    <Settings size={20} />
-                </button>
-                <button className="sc-register-btn" onClick={() => navigate('/portal/superadmin/register')}>
+                <button className="sc-register-btn" onClick={() => navigate('/portal/superadmin/users')}>
                     <UserPlus size={18} />
-                    Register New Admin
+                    Manage User
                 </button>
             </div>
 
@@ -258,25 +298,48 @@ const SchoolConfig = () => {
                             </button>
                         </div>
                         <div className="sc-modal-body">
-                            {fetchingAdmins ? (
+                            {fetchingAdmins && admins.length === 0 ? (
                                 <div className="sc-modal-empty">Loading administrators...</div>
                             ) : admins.length === 0 ? (
                                 <div className="sc-modal-empty">No administrators found.</div>
                             ) : (
-                                admins.map(admin => (
-                                    <div key={admin.id} className="sc-admin-item">
-                                        <span className="sc-admin-name">{admin.full_name}</span>
-                                        {admin.id !== profile?.id && (
-                                            <button 
-                                                className="sc-delete-btn"
-                                                onClick={() => handleDeleteAdmin(admin.id, admin.full_name)}
-                                                title="Delete Admin"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        )}
+                                <div className="sc-admin-table">
+                                    <div className="sc-table-header">
+                                        <span>Full Name</span>
+                                        <span>Email Address</span>
+                                        <span>User Role</span>
+                                        <span style={{ textAlign: 'right' }}>Action</span>
                                     </div>
-                                ))
+                                    <div className="sc-table-body">
+                                        {admins.map(admin => (
+                                            <div key={admin.id} className="sc-admin-row">
+                                                <div className="sc-admin-cell name">
+                                                    <div className="sc-admin-avatar-small">
+                                                        {admin.full_name.charAt(0)}
+                                                    </div>
+                                                    <span>{admin.full_name}</span>
+                                                </div>
+                                                <div className="sc-admin-cell email">
+                                                    {admin.email}
+                                                </div>
+                                                <div className="sc-admin-cell role" style={{ display: 'flex' }}>
+                                                    <span className="ad-role-badge" data-role={admin.role} style={{ margin: 0, fontSize: '9px' }}>
+                                                        {admin.role?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </span>
+                                                </div>
+                                                <div className="sc-admin-cell action">
+                                                    <button 
+                                                        className="sc-delete-icon-btn"
+                                                        onClick={() => handleDeleteAdmin(admin.id, admin.full_name)}
+                                                        title="Delete Admin"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -297,74 +360,58 @@ const SchoolConfig = () => {
 
                     {error && <div className="sc-alert sc-alert-error">{error}</div>}
 
-                    <div className="sc-form">
-                        <div className="sc-select-wrap">
-                            <select
-                                className="sc-select"
-                                value={currentSession}
-                                onChange={(e) => setCurrentSession(e.target.value)}
+                    {loading ? (
+                        <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                            <div className="sc-spinner"></div>
+                            <p style={{ marginTop: '12px', color: '#6B7280', fontSize: '14px' }}>Fetching configuration...</p>
+                        </div>
+                    ) : (
+                        <div className="sc-form">
+                            <div className="sc-select-wrap">
+                                <select
+                                    className="sc-select"
+                                    value={currentSession}
+                                    onChange={(e) => setCurrentSession(e.target.value)}
+                                    disabled={loading || saving}
+                                >
+                                    {sessionOptions.map(session => (
+                                        <option key={session} value={session}>Session {session}</option>
+                                    ))}
+                                </select>
+                                <div className="sc-select-arrow">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div className="sc-select-wrap">
+                                <select
+                                    className="sc-select"
+                                    value={currentTerm}
+                                    onChange={(e) => setCurrentTerm(e.target.value)}
+                                    disabled={loading || saving}
+                                >
+                                    <option value="First Term">First Term</option>
+                                    <option value="Second Term">Second Term</option>
+                                    <option value="Third Term">Third Term</option>
+                                </select>
+                                <div className="sc-select-arrow">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <button
+                                className="sc-save-btn"
+                                onClick={handleSave}
                                 disabled={loading || saving}
                             >
-                                {sessionOptions.map(session => (
-                                    <option key={session} value={session}>Session {session}</option>
-                                ))}
-                            </select>
-                            <div className="sc-select-arrow">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </div>
+                                {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
                         </div>
-
-                        <div className="sc-select-wrap">
-                            <select
-                                className="sc-select"
-                                value={currentTerm}
-                                onChange={(e) => setCurrentTerm(e.target.value)}
-                                disabled={loading || saving}
-                            >
-                                <option value="First Term">First Term</option>
-                                <option value="Second Term">Second Term</option>
-                                <option value="Third Term">Third Term</option>
-                            </select>
-                            <div className="sc-select-arrow">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </div>
-                        </div>
-
-                        <button
-                            className="sc-save-btn"
-                            onClick={handleSave}
-                            disabled={loading || saving}
-                        >
-                            {saving ? 'Saving...' : 'Save Changes'}
-                        </button>
-                    </div>
-
-                    <div className="sc-danger-zone" style={{ marginTop: '32px', width: '100%', borderTop: '1px solid #fee2e2', paddingTop: '24px' }}>
-                        <h3 style={{ fontSize: '14px', color: '#991B1B', marginBottom: '8px', fontWeight: '700' }}>Danger Zone</h3>
-                        <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px' }}>Terminate all active administrator sessions immediately.</p>
-                        <button
-                            className="sc-reset-btn"
-                            onClick={handleForceLogout}
-                            disabled={loading || saving}
-                            style={{ 
-                                width: '100%', 
-                                padding: '12px', 
-                                backgroundColor: '#FEF2F2', 
-                                border: '1.5px solid #FCA5A5', 
-                                color: '#B91C1C', 
-                                borderRadius: '10px', 
-                                fontSize: '14px', 
-                                fontWeight: '600', 
-                                cursor: 'pointer' 
-                            }}
-                        >
-                            {saving ? 'Processing...' : 'Force Global Admin Logout'}
-                        </button>
-                    </div>
+                    )}
                 </div>
             </main>
         </div>

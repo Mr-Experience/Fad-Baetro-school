@@ -7,9 +7,9 @@ import logo from '../../assets/logo.jpg';
 
 const NoExamSchedule = () => {
     const navigate = useNavigate();
-    const [studentName, setStudentName] = useState('...');
-    const [profileImage, setProfileImage] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [studentName, setStudentName] = useState(sessionStorage.getItem('fad_std_name') || '...');
+    const [profileImage, setProfileImage] = useState(sessionStorage.getItem('fad_std_avatar') || null);
+    const [loading, setLoading] = useState(!sessionStorage.getItem('fad_std_name'));
     const [isExpired, setIsExpired] = useState(false);
 
     useEffect(() => {
@@ -38,13 +38,14 @@ const NoExamSchedule = () => {
                     const displayName = student.full_name || student.name || user.user_metadata?.full_name || user.email;
                     setStudentName(displayName);
 
-                    // Set profile image from database - check multiple possible column names
-                    if (student.image_url) setProfileImage(student.image_url);
-                    else if (student.profile_image) setProfileImage(student.profile_image);
-                    else if (student.profile_picture) setProfileImage(student.profile_picture);
-                    else if (student.avatar_url) setProfileImage(student.avatar_url);
+                    const avatar = student.image_url || student.profile_image || student.profile_picture || student.avatar_url;
+                    setProfileImage(avatar);
 
-                    console.log("✅ Student profile synced from database:", { name: displayName, hasImage: !!(student.image_url || student.profile_image || student.profile_picture || student.avatar_url) });
+                    // Cache for zero flicker
+                    sessionStorage.setItem('fad_std_name', displayName || '');
+                    if (avatar) sessionStorage.setItem('fad_std_avatar', avatar);
+
+                    console.log("✅ Student profile synced from database:", { name: displayName, hasImage: !!avatar });
 
                     // --- AUTO REDIRECT Logic ---
                     // If an exam is active for this class, kick them to ActiveExam portal immediately
@@ -163,7 +164,9 @@ const NoExamSchedule = () => {
                     <h1 className="portal-school-name">Fad Maestro Academy</h1>
                 </div>
                 <div className="nes-header-right">
-                    <span className="nes-user-name">{studentName}</span>
+                    <div className="ad-user-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '13px' }}>
+                        <span className="nes-user-name" style={{ marginRight: 0 }}>{studentName}</span>
+                    </div>
                     <div className="nes-avatar">
                         {profileImage ? (
                             <img src={profileImage} alt="Profile" className="nes-profile-img" />

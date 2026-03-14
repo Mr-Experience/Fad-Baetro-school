@@ -16,9 +16,10 @@ const ExamScreen = () => {
 
     // Identity & Config
     const [student, setStudent] = useState(null);
+    const [studentName, setStudentName] = useState(sessionStorage.getItem('fad_std_name') || '...');
     const [activeConfig, setActiveConfig] = useState(null);
     const [questions, setQuestions] = useState([]);
-    const [profileImage, setProfileImage] = useState(null);
+    const [profileImage, setProfileImage] = useState(sessionStorage.getItem('fad_std_avatar') || null);
     const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
 
     // Exam State
@@ -53,17 +54,10 @@ const ExamScreen = () => {
                     return;
                 }
                 setStudent(std);
+                setStudentName(std.full_name || std.name || user.user_metadata?.full_name || user.email);
 
-                // Extract profile image from database
-                if (std.image_url) {
-                    setProfileImage(std.image_url);
-                } else if (std.profile_image) {
-                    setProfileImage(std.profile_image);
-                } else if (std.profile_picture) {
-                    setProfileImage(std.profile_picture);
-                } else if (std.avatar_url) {
-                    setProfileImage(std.avatar_url);
-                }
+                const avatar = std.image_url || std.profile_image || std.profile_picture || std.avatar_url;
+                if (avatar) setProfileImage(avatar);
 
                 // Get System Settings early
                 const { data: sData, error: sErr } = await supabase
@@ -414,7 +408,7 @@ const ExamScreen = () => {
                         <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', lineHeight: 1 }}>TIME LEFT</span>
                         <span style={{ fontSize: '18px', fontWeight: '800', color: timeLeft < 60 ? '#ef4444' : '#1f2937' }}>{formatTime(timeLeft)}</span>
                     </div>
-                    <span className="nes-user-name" style={{ marginRight: '10px' }}>{student?.full_name}</span>
+                    <span className="nes-user-name" style={{ marginRight: '13px' }}>{studentName}</span>
                     <div className="nes-avatar" style={{ marginRight: '10px' }}>
                         {profileImage ? (
                             <img src={profileImage} alt="Profile" className="nes-profile-img" />

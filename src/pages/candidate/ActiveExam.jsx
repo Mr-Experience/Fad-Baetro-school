@@ -8,12 +8,12 @@ import logo from '../../assets/logo.jpg';
 
 const ActiveExam = () => {
     const navigate = useNavigate();
-    const [candidateName, setCandidateName] = useState('...');
-    const [profileImage, setProfileImage] = useState(null);
+    const [candidateName, setCandidateName] = useState(sessionStorage.getItem('fad_cand_name') || '...');
+    const [profileImage, setProfileImage] = useState(sessionStorage.getItem('fad_cand_avatar') || null);
     const [activeExam, setActiveExam] = useState(null);
     const [preloadedQuestions, setPreloadedQuestions] = useState(null);
     const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!sessionStorage.getItem('fad_cand_name'));
 
     useEffect(() => {
         let intervalId;

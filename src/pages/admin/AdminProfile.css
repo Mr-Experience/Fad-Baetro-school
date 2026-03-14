@@ -1,15 +1,17 @@
-/* AdminProfile.css */
+/* AdminProfile.css - Restored Classic UI Style */
 
 .ap-content {
     flex: 1;
-    padding: 32px;
+    padding: 30px 40px 60px; /* Synchronized padding */
     background: #F8FAFC;
-    min-height: 100%;
+    min-height: calc(100vh - 80px);
     box-sizing: border-box;
     font-family: inherit;
     position: relative;
     color: #333;
     overflow-y: auto;
+    display: flex;
+    justify-content: center;
 }
 
 .ap-inner-wrap {
@@ -17,6 +19,7 @@
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     padding: 28px 32px;
+    width: 100%;
 }
 
 .ap-page-title {
@@ -66,7 +69,7 @@
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary-500), var(--primary-800));
+    background: linear-gradient(135deg, #9D245A, #C2185B);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -82,7 +85,7 @@
     right: 2px;
     width: 28px;
     height: 28px;
-    background: var(--primary-600);
+    background: #9D245A;
     border: 2px solid #fff;
     border-radius: 50%;
     display: flex;
@@ -94,7 +97,7 @@
 }
 
 .ap-avatar-upload-btn:hover {
-    background: var(--primary-700);
+    background: #831d4b;
 }
 
 .ap-avatar-upload-btn input[type="file"] {
@@ -109,8 +112,8 @@
 }
 
 .ap-avatar-role {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 700;
     color: #64748B;
     background-color: #F1F5F9;
     padding: 4px 12px;
@@ -121,6 +124,7 @@
     font-size: 11px;
     color: #94A3B8;
     line-height: 1.5;
+    margin-top: 8px;
 }
 
 /* Form Cards */
@@ -195,38 +199,16 @@
 }
 
 .ap-input:focus {
-    border-color: var(--primary-600);
-    box-shadow: 0 0 0 3px rgba(205, 53, 140, 0.12);
-    background-color: #fff;
-}
-
-.ap-input::placeholder {
-    color: #94A3B8;
-}
-
-.ap-btn-secondary {
-    padding: 8px 16px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #444;
-    background-color: #f4f4f4;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.2s;
-    font-family: inherit;
-}
-
-.ap-btn-secondary:hover {
-    background-color: #E2E8F0;
+    border-color: #9D245A;
+    box-shadow: 0 0 0 3px rgba(157, 36, 90, 0.1);
 }
 
 .ap-btn-primary {
-    padding: 8px 16px;
+    padding: 10px 16px;
     font-size: 12px;
     font-weight: 600;
     color: #fff;
-    background-color: var(--primary-600);
+    background-color: #9D245A;
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -235,12 +217,25 @@
 }
 
 .ap-btn-primary:hover {
-    background-color: var(--primary-700);
+    background-color: #831d4b;
 }
 
 .ap-btn-primary:disabled {
-    background-color: var(--primary-300);
+    background-color: #E2E8F0;
+    color: #94A3B8;
     cursor: not-allowed;
+}
+
+.ap-btn-secondary {
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #444;
+    background-color: #f4f4f4;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
 /* Alert Messages */
@@ -286,7 +281,14 @@
     border-top: 1px solid #eee;
 }
 
-/* Responsiveness */
+.ap-spin {
+    animation: apSpin 1s linear infinite;
+}
+
+@keyframes apSpin {
+    to { transform: rotate(360deg); }
+}
+
 @media (max-width: 992px) {
     .ap-layout {
         grid-template-columns: 1fr;
@@ -302,30 +304,10 @@
 
     .ap-form-column {
         grid-template-columns: 1fr;
-        gap: 32px;
+        gap: 28px;
     }
-
+    
     .ap-col-divider {
         display: none;
-    }
-}
-
-@media (max-width: 768px) {
-    .ap-content {
-        padding: 16px;
-    }
-
-    .ap-inner-wrap {
-        padding: 24px 16px;
-    }
-}
-
-@media (max-width: 480px) {
-    .ap-card-footer {
-        flex-direction: column;
-    }
-
-    .ap-btn-primary, .ap-btn-secondary {
-        width: 100%;
     }
 }

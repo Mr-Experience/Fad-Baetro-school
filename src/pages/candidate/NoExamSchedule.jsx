@@ -7,9 +7,9 @@ import logo from '../../assets/logo.jpg';
 
 const NoExamSchedule = () => {
     const navigate = useNavigate();
-    const [userName, setUserName] = useState('...');
-    const [profileImage, setProfileImage] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [userName, setUserName] = useState(sessionStorage.getItem('fad_cand_name') || '...');
+    const [profileImage, setProfileImage] = useState(sessionStorage.getItem('fad_cand_avatar') || null);
+    const [loading, setLoading] = useState(!sessionStorage.getItem('fad_cand_name'));
 
     useEffect(() => {
         let intervalId;
@@ -31,10 +31,17 @@ const NoExamSchedule = () => {
 
                 if (profile) {
                     setUserName(profile.full_name);
-                    setProfileImage(profile.image_url || profile.profile_image);
+                    const avatar = profile.image_url || profile.profile_image || profile.avatar_url;
+                    setProfileImage(avatar);
                     candidateId = profile.id;
+
+                    // Cache for zero flicker
+                    sessionStorage.setItem('fad_cand_name', profile.full_name || '');
+                    if (avatar) sessionStorage.setItem('fad_cand_avatar', avatar);
                 } else {
-                    setUserName(user.user_metadata?.full_name || user.email);
+                    const fallback = user.user_metadata?.full_name || user.email;
+                    setUserName(fallback);
+                    sessionStorage.setItem('fad_cand_name', fallback || '');
                 }
 
                 // --- AUTO REDIRECT Logic ---
@@ -139,7 +146,9 @@ const NoExamSchedule = () => {
                     <h1 className="portal-school-name">Fad Maestro Academy</h1>
                 </div>
                 <div className="nes-header-right">
-                    <span className="nes-user-name">{userName}</span>
+                    <div className="ad-user-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '13px' }}>
+                        <span className="nes-user-name" style={{ marginRight: 0 }}>{userName}</span>
+                    </div>
                     <div className="nes-avatar">
                         {profileImage ? (
                             <img src={profileImage} alt="Profile" className="nes-profile-img" />

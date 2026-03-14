@@ -5,9 +5,9 @@ import LoadingOverlay from '../../components/LoadingOverlay';
 import './AdminEvents.css';
 
 const AdminEvents = () => {
-    const { userId, eventsCache, setEventsCache } = useOutletContext();
-    const [posts, setPosts] = useState(eventsCache || []);
-    const [loading, setLoading] = useState(!eventsCache);
+    const { userId, infoCache, setInfoCache } = useOutletContext();
+    const [posts, setPosts] = useState(infoCache?.posts || []);
+    const [loading, setLoading] = useState(!infoCache?.posts);
     const [saving, setSaving] = useState(false);
 
     // Modal state
@@ -19,26 +19,26 @@ const AdminEvents = () => {
     const [imageFile, setImageFile] = useState(null);
 
     useEffect(() => {
-        fetchPosts();
+        if (infoCache?.posts) {
+            setPosts(infoCache.posts);
+            setLoading(false);
+            fetchPosts(true); // Silent refresh
+        } else {
+            fetchPosts();
+        }
     }, []);
 
-    const fetchPosts = async () => {
-        if (!eventsCache) setLoading(true);
+    const fetchPosts = async (silent = false) => {
+        if (!silent && !posts.length) setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('system_posts')
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                // Ignore error if table doesn't exist yet
-                if (!error.message.includes('does not exist')) {
-                    console.error("Error fetching posts:", error);
-                }
-            } else {
-                const fetchedPosts = data || [];
-                setPosts(fetchedPosts);
-                setEventsCache(fetchedPosts);
+            if (!error && data) {
+                setPosts(data);
+                setInfoCache(prev => ({ ...prev, posts: data }));
             }
         } catch (err) {
             console.error("Fetch error:", err);
@@ -66,17 +66,17 @@ const AdminEvents = () => {
             // Upload image if provided
             if (imageFile) {
                 const fileExt = imageFile.name.split('.').pop();
-                const fileName = `${Math.random()}.${fileExt}`;
-                const filePath = `${userId}/${fileName}`;
+                const fileName = `post_${Date.now()}.${fileExt}`;
+                const filePath = `${fileName}`;
 
                 const { error: uploadError } = await supabase.storage
-                    .from('portal-assets') // Reusing the gallery bucket
+                    .from('website_image')
                     .upload(filePath, imageFile);
 
                 if (uploadError) throw uploadError;
 
                 const { data: { publicUrl } } = supabase.storage
-                    .from('portal-assets')
+                    .from('website_image')
                     .getPublicUrl(filePath);
 
                 imageUrl = publicUrl;
@@ -102,12 +102,12 @@ const AdminEvents = () => {
             setNewContent('');
             setEventDate('');
             setImageFile(null);
-            fetchPosts();
+            fetchPosts(true);
 
         } catch (err) {
             console.error("Save post error:", err);
-            if (err.message.includes('row-level security') || err.message.includes('does not exist')) {
-                alert("Database Error: Ensure you ran the SQL setup script for the system_posts table!");
+            if (err.message.includes('row-level security')) {
+                alert("Failed to save post: Database permission error (RLS). Please ensure you have run the website_setup.sql script in Supabase to allow admin posts.");
             } else {
                 alert("Failed to save post: " + err.message);
             }
@@ -122,7 +122,7 @@ const AdminEvents = () => {
         try {
             const { error } = await supabase.from('system_posts').delete().eq('id', id);
             if (error) throw error;
-            fetchPosts();
+            fetchPosts(true);
         } catch (err) {
             console.error("Delete error:", err);
             alert("Failed to delete post.");

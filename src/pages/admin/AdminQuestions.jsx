@@ -5,74 +5,66 @@ import './AdminQuestions.css';
 
 const AdminQuestions = () => {
     const navigate = useNavigate();
-    const { classes, activeSession, activeTerm, subjectsCache, setSubjectsCache } = useOutletContext();
+    const { 
+        classes, 
+        activeSession, 
+        activeTerm, 
+        subjectsCache, 
+        setSubjectsCache,
+        questionSummaryCache,
+        setQuestionSummaryCache 
+    } = useOutletContext();
 
     const [subjects, setSubjects] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [selectedSubjectId, setSelectedSubjectId] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Question summary state
-    const [questionSummary, setQuestionSummary] = useState([]);
-
-    // Fetch Subjects
+    // Initial class selection
     useEffect(() => {
-        const fetchSubjects = async () => {
-            if (!selectedClassId) {
-                setSubjects([]);
-                setSelectedSubjectId('');
-                setQuestionSummary([]);
-                return;
-            }
+        if (!selectedClassId && classes && classes.length > 0) {
+            setSelectedClassId(classes[0].id);
+        }
+    }, [classes, selectedClassId]);
 
-            // Check cache
-            if (subjectsCache[selectedClassId]) {
-                setSubjects(subjectsCache[selectedClassId]);
-                return;
-            }
-
-            const { data } = await supabase
-                .from('subjects')
-                .select('id, subject_name')
-                .eq('class_id', selectedClassId)
-                .order('subject_name');
-
-            if (data) {
-                setSubjects(data);
-                setSubjectsCache(prev => ({ ...prev, [selectedClassId]: data }));
-            }
-        };
-        fetchSubjects();
+    // Fetch Subjects (using cache from Layout)
+    useEffect(() => {
+        if (selectedClassId && subjectsCache) {
+            setSubjects(subjectsCache[selectedClassId] || []);
+        } else {
+            setSubjects([]);
+        }
     }, [selectedClassId, subjectsCache]);
 
-    // Fetch Question Summary
+    // Fetch Question Summary (Synchronized & Stable)
     useEffect(() => {
         const fetchSummary = async () => {
             if (!selectedClassId || subjects.length === 0) return;
-            setLoading(true);
+            
+            // Check if we already have this in the global summary cache (Omni-Fill)
+            const isSilent = !!questionSummaryCache?.[selectedClassId];
+            if (!isSilent) setLoading(true);
+
             try {
-                const { data: qData } = await supabase
-                    .from('questions')
-                    .select('subject_id, question_type')
-                    .eq('class_id', selectedClassId)
-                    .eq('session_id', (activeSession || '').trim())
-                    .eq('term_id', (activeTerm || '').trim());
+                const sessionKey = (activeSession || '').trim();
+                const termKey = (activeTerm || '').trim();
 
-                // 3. Fetch activation status
-                const { data: cData } = await supabase
-                    .from('exam_configs')
-                    .select('subject_id, question_type, is_active')
-                    .eq('class_id', selectedClassId)
-                    .eq('session_id', (activeSession || '').trim())
-                    .eq('term_id', (activeTerm || '').trim());
+                const [qData, cData] = await Promise.all([
+                    supabase.from('questions')
+                        .select('subject_id, question_type')
+                        .eq('class_id', selectedClassId)
+                        .eq('session_id', sessionKey)
+                        .eq('term_id', termKey),
+                    supabase.from('exam_configs')
+                        .select('subject_id, question_type, is_active')
+                        .eq('class_id', selectedClassId)
+                        .eq('session_id', sessionKey)
+                        .eq('term_id', termKey)
+                ]);
 
-                const relevantSubjects = selectedSubjectId
-                    ? subjects.filter(s => s.id === selectedSubjectId)
-                    : subjects;
-
-                const summary = relevantSubjects.map(sub => {
-                    const subQs = qData?.filter(q => q.subject_id === sub.id) || [];
-                    const subCfgs = cData?.filter(c => c.subject_id === sub.id) || [];
+                const summary = subjects.map(sub => {
+                    const subQs = qData.data?.filter(q => q.subject_id === sub.id) || [];
+                    const subCfgs = cData.data?.filter(c => c.subject_id === sub.id) || [];
 
                     return {
                         id: sub.id,
@@ -91,7 +83,9 @@ const AdminQuestions = () => {
                         }
                     };
                 });
-                setQuestionSummary(summary);
+                
+                // Update global sync cache
+                setQuestionSummaryCache(prev => ({ ...prev, [selectedClassId]: summary }));
             } catch (err) {
                 console.error(err);
             } finally {
@@ -99,7 +93,7 @@ const AdminQuestions = () => {
             }
         };
         fetchSummary();
-    }, [selectedClassId, selectedSubjectId, subjects, activeSession, activeTerm]);
+    }, [selectedClassId, selectedSubjectId, subjects, activeSession, activeTerm, setQuestionSummaryCache]);
 
     const handleOpenEditor = (subject, type) => {
         const className = classes.find(c => c.id === selectedClassId)?.class_name || 'Class';
@@ -107,13 +101,19 @@ const AdminQuestions = () => {
         navigate(url);
     };
 
+    const currentSummary = questionSummaryCache?.[selectedClassId] || [];
+    // If a specific subject is selected, filter the displayed summary
+    const displayedSummary = selectedSubjectId 
+        ? currentSummary.filter(s => s.id === selectedSubjectId)
+        : currentSummary;
+
     return (
         <div className="aq-main-wrap">
             <div className="aq-content-card">
                 <header className="aq-header">
                     <div className="aq-title-area">
-                        <h1>Questions</h1>
-                        <p>Select a class and subject to manage questions.</p>
+                        <h1>Questions Registry</h1>
+                        <p>Manage examinations, tests, and admission assessments.</p>
                     </div>
 
                     <div className="aq-filters">
@@ -140,7 +140,7 @@ const AdminQuestions = () => {
                                 onChange={e => setSelectedSubjectId(e.target.value)}
                                 disabled={!selectedClassId}
                             >
-                                <option value="">Select Subject</option>
+                                <option value="">Draft (All Subjects)</option>
                                 {subjects.map(s => <option key={s.id} value={s.id}>{s.subject_name}</option>)}
                             </select>
                             <div className="aq-select-icon">
@@ -153,13 +153,18 @@ const AdminQuestions = () => {
                 </header>
 
                 <main className="aq-main-content">
-                    {!selectedClassId ? (
+                    {loading && displayedSummary.length === 0 ? (
                         <div className="aq-empty-placeholder">
-                            <p>Select class and subject to preview</p>
+                            <div className="aq-spinner-mini"></div>
+                            <p>Loading questions...</p>
+                        </div>
+                    ) : !selectedClassId ? (
+                        <div className="aq-empty-placeholder">
+                            <p>Please select a class to view records</p>
                         </div>
                     ) : (
                         <div className="aq-questions-list">
-                            {questionSummary.map(sub => (
+                            {displayedSummary.map(sub => (
                                 <div key={sub.id} className="aq-subject-row">
                                     <h2 className="aq-subject-name">{sub.name}</h2>
                                     <div className="aq-box-group">

@@ -73,7 +73,15 @@
     font-weight: 700;
     text-align: center;
     color: #1F2937;
-    margin-bottom: 12px;
+    margin-bottom: 2px; /* Smoother closer gap */
+}
+
+.login-subtitle {
+    font-size: 14px;
+    color: #6B7280;
+    text-align: center;
+    margin-bottom: 24px;
+    margin-top: 0;
 }
 
 .login-form {

@@ -1,25 +1,20 @@
-/* AdminQuestions.css - Portal Integrated Style */
-
+/* AdminQuestions.css - Reverted to Classic List UI */
 .aq-main-wrap {
     padding: 30px;
     display: flex;
     justify-content: center;
-    font-family: 'Inter', sans-serif;
-    box-sizing: border-box;
+    background-color: #F8FAFC;
+    min-height: calc(100vh - 80px);
 }
 
 .aq-content-card {
     background-color: #ffffff;
-    border-radius: 8px;
+    border-radius: 12px;
     width: 100%;
-    min-height: calc(100vh - 160px);
-    padding: 28px 32px;
+    padding: 32px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
 }
 
-/* Header Styles */
 .aq-header {
     display: flex;
     justify-content: space-between;
@@ -29,30 +24,18 @@
 
 .aq-title-area h1 {
     font-size: 20px;
-    font-weight: 600;
+    font-weight: 700;
     color: #1a1a1a;
-    margin: 0 0 10px 0;
+    margin: 0 0 8px 0;
 }
 
 .aq-title-area p {
     font-size: 14px;
-    color: #6B7280;
+    color: #64748B;
     margin: 0;
+    font-weight: 500;
 }
 
-.aq-session-badge {
-    display: inline-block;
-    background: #FDF2F8;
-    color: #9D245A;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 11px !important;
-    font-weight: 700;
-    margin-top: 12px !important;
-    border: 1px solid rgba(157, 36, 90, 0.1);
-}
-
-/* Filters */
 .aq-filters {
     display: flex;
     gap: 16px;
@@ -67,20 +50,20 @@
     width: 100%;
     padding: 10px 16px;
     padding-right: 40px;
-    border: 1.5px solid #E5E7EB;
+    border: 1.5px solid #E2E8F0;
     border-radius: 12px;
     font-size: 13px;
-    color: #374151;
+    color: #1E293B;
     background: #fff;
     appearance: none;
     cursor: pointer;
     transition: all 0.2s;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .aq-select:focus {
     border-color: #9D245A;
-    box-shadow: 0 0 0 3px rgba(157, 36, 90, 0.1);
+    box-shadow: 0 0 0 3px rgba(157, 36, 90, 0.05);
     outline: none;
 }
 
@@ -90,74 +73,56 @@
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
-    color: #6B7280;
+    color: #64748B;
 }
 
-/* Empty State */
 .aq-empty-placeholder {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 140px 0;
-    font-size: 20px;
+    padding: 100px 0;
+    text-align: center;
+    font-size: 16px;
     font-weight: 500;
-    color: #9CA3AF;
-    animation: aqFadeIn 0.4s ease-out;
+    color: #94A3B8;
 }
 
-/* Questions List */
 .aq-questions-list {
     display: flex;
     flex-direction: column;
-    gap: 32px;
-    animation: aqFadeIn 0.5s ease-out;
-}
-
-@keyframes aqFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    gap: 24px;
 }
 
 .aq-subject-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 28px;
-    border: 1.2px solid #E5E7EB;
+    padding: 24px;
+    border: 1px solid #E2E8F0;
     border-radius: 20px;
-    background-color: transparent;
+    background-color: #ffffff;
     transition: all 0.3s ease;
 }
 
 .aq-subject-row:hover {
-    border-color: #FDF2F8;
+    border-color: #FDF2F7;
     box-shadow: 0 10px 25px -5px rgba(157, 36, 90, 0.05);
+    transform: translateY(-2px);
 }
 
 .aq-subject-name {
-    font-size: 14px;
-    font-weight: 500;
-    color: #6B7280;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1E293B;
     width: 300px;
 }
 
 .aq-box-group {
     display: flex;
-    gap: 20px;
+    gap: 16px;
 }
 
 .aq-box {
-    width: 200px;
-    height: 100px;
-    border-radius: 12px;
+    width: 180px;
+    height: 90px;
+    border-radius: 14px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -166,51 +131,33 @@
     justify-content: center;
     border: 1px solid transparent;
     position: relative;
-    overflow: hidden;
 }
 
 .aq-box:hover {
     transform: translateY(-3px);
-    box-shadow: 0 8px 15px -3px rgba(157, 36, 90, 0.1);
-    border-color: rgba(157, 36, 90, 0.2);
+    box-shadow: 0 8px 15px -3px rgba(157, 36, 90, 0.08);
 }
 
-.aq-box.test {
-    background-color: #FDF2F8;
-}
-
-.aq-box.exam {
-    background-color: #EFF6FF;
-}
-
-.aq-box.candidate {
-    background-color: #F5F3FF;
-}
+.aq-box.test { background-color: #FDF2F7; }
+.aq-box.exam { background-color: #EFF6FF; }
+.aq-box.candidate { background-color: #F5F3FF; }
 
 .aq-box-label {
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 6px;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
 }
 
-.aq-box.test .aq-box-label {
-    color: #9D245A;
-}
-
-.aq-box.exam .aq-box-label {
-    color: #2563EB;
-}
-
-.aq-box.candidate .aq-box-label {
-    color: #7C3AED;
-}
+.aq-box.test .aq-box-label { color: #9D245A; }
+.aq-box.exam .aq-box-label { color: #2563EB; }
+.aq-box.candidate .aq-box-label { color: #7C3AED; }
 
 .aq-box-count {
-    font-size: 24px;
-    font-weight: 700;
-    color: #111827;
+    font-size: 22px;
+    font-weight: 800;
+    color: #1E293B;
 }
 
 .aq-live-indicator {
@@ -224,56 +171,36 @@
     box-shadow: 0 0 0 2px #fff, 0 0 8px #10B981;
 }
 
-/* Responsiveness */
-@media (max-width: 900px) {
-    .aq-main-wrap {
-        padding: 16px;
-    }
+.aq-spinner-mini {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #F1F5F9;
+    border-top-color: #9D245A;
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    animation: aqSpin 1s linear infinite;
+}
 
-    .aq-content-card {
-        padding: 24px 20px;
-    }
+@keyframes aqSpin {
+    to { transform: rotate(360deg); }
+}
 
-    .aq-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 20px;
-    }
-
-    .aq-filters {
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .aq-select-wrapper {
-        width: 100%;
-    }
-
+@media (max-width: 950px) {
     .aq-subject-row {
         flex-direction: column;
         align-items: flex-start;
-        gap: 16px;
+        gap: 20px;
     }
-
     .aq-box-group {
         width: 100%;
-        justify-content: flex-start;
         overflow-x: auto;
         padding-bottom: 10px;
-        gap: 12px;
     }
-
+    .aq-box {
+        flex-shrink: 0;
+        width: 140px;
+    }
     .aq-subject-name {
         width: auto;
-    }
-
-    .aq-box {
-        width: 160px;
-        height: 90px;
-        flex-shrink: 0;
-    }
-
-    .aq-box-count {
-        font-size: 20px;
     }
 }

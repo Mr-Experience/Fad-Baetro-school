@@ -1,3 +1,4 @@
+/* AdminStudents.css - Aligned with AdminCandidates.css */
 .as-container {
     padding: 32px;
     background-color: #F8FAFC;
@@ -44,12 +45,12 @@
 
 .as-dropdown:focus {
     outline: none;
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px var(--primary-100);
+    border-color: #9D245A;
+    box-shadow: 0 0 0 3px rgba(157, 36, 90, 0.1);
 }
 
 .as-add-btn {
-    background-color: var(--primary-600);
+    background-color: #9D245A;
     color: white;
     padding: 10px 20px;
     border-radius: 8px;
@@ -64,12 +65,12 @@
 }
 
 .as-add-btn:hover {
-    background-color: var(--primary-700);
+    background-color: #831d4b;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(205, 53, 140, 0.2);
+    box-shadow: 0 4px 12px rgba(157, 36, 90, 0.2);
 }
 
-/* Table Styles */
+/* Table Styles - Direct Alignment with Candidate Table */
 .as-table-wrapper {
     overflow-x: auto;
     border: 1px solid #E5E7EB;
@@ -100,10 +101,6 @@
     border-bottom: 1px solid #E5E7EB;
 }
 
-.as-table tr:last-child td {
-    border-bottom: none;
-}
-
 .as-table tr:hover {
     background-color: #F8FAFC;
 }
@@ -123,50 +120,41 @@
     border-radius: 9999px;
     font-size: 12px;
     font-weight: 500;
-    background-color: var(--primary-50);
-    color: var(--primary-700);
+    background-color: #FDF2F7;
+    color: #9D245A;
 }
 
 .as-actions {
     display: flex;
-    gap: 8px;
+    gap: 10px;
+    align-items: center;
 }
 
 .as-action-btn {
     background: none;
-    border: none;
+    border: 1px solid #FEE2E2;
     cursor: pointer;
-    padding: 6px;
+    padding: 8px;
     border-radius: 6px;
-    transition: background-color 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s;
 }
 
-.as-action-btn.view {
-    color: #64748B;
-}
-
-.as-action-btn.edit {
-    color: var(--primary-600);
-}
-
-.as-action-btn.delete {
-    color: #EF4444;
-}
+.as-action-btn.view { color: #64748B; border-color: #E2E8F0; }
+.as-action-btn.edit { color: #9D245A; border-color: #FCE7F3; }
+.as-action-btn.delete { color: #EF4444; border-color: #FEE2E2; }
 
 .as-action-btn:hover {
-    background-color: #F1F5F9;
+    transform: scale(1.1);
+    background-color: #F8FAFC;
 }
 
 /* Modal Styles */
 .as-modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     background-color: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
     display: flex;
@@ -177,10 +165,10 @@
 
 .as-modal {
     background: white;
-    width: 100%;
-    max-width: 520px;
-    border-radius: 16px;
-    padding: 24px 28px;
+    width: 90%;
+    max-width: 540px;
+    border-radius: 12px;
+    padding: 28px 32px;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
@@ -194,34 +182,7 @@
 .as-modal-subtitle {
     font-size: 13px;
     color: #6B7280;
-    margin-bottom: 20px;
-}
-
-.as-success-banner {
-    background-color: var(--success-50);
-    color: var(--success-700);
-    border: 1px solid var(--success-200);
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    margin-bottom: 24px;
 }
 
 .as-form-row {
@@ -232,10 +193,6 @@
 
 .as-form-group {
     margin-bottom: 20px;
-}
-
-.as-form-row .as-form-group {
-    margin-bottom: 12px;
 }
 
 .as-label {
@@ -252,14 +209,13 @@
     border: 1.5px solid #E5E7EB;
     border-radius: 8px;
     font-size: 13px;
-    transition: border-color 0.2s;
-    background-color: #fff;
+    transition: all 0.2s;
 }
 
 .as-input:focus {
+    border-color: #9D245A;
+    box-shadow: 0 0 0 3px rgba(157, 36, 90, 0.1);
     outline: none;
-    border-color: var(--primary-500);
-    box-shadow: 0 0 0 3px var(--primary-100);
 }
 
 .as-modal-actions {
@@ -270,7 +226,7 @@
 
 .as-btn-cancel {
     flex: 1;
-    background-color: white;
+    background: white;
     border: 1.5px solid #E5E7EB;
     color: #374151;
     padding: 12px;
@@ -281,33 +237,43 @@
 
 .as-btn-save {
     flex: 1;
-    background-color: var(--primary-600);
+    background: #9D245A;
     border: none;
     color: white;
     padding: 12px;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
 }
 
-.as-btn-save:hover:not(:disabled) {
-    background-color: var(--primary-700);
+.as-success-banner {
+    background: #F0FDF4;
+    color: #166534;
+    border: 1px solid #BBF7D0;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.as-btn-save:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Skeleton/Empty State */
 .as-empty-state {
     padding: 48px;
     text-align: center;
     color: #64748B;
 }
 
-.as-empty-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
+@media (max-width: 768px) {
+    .as-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+    .as-controls {
+        flex-direction: column;
+    }
+    .as-dropdown { width: 100%; }
 }
