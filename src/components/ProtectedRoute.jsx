@@ -14,12 +14,8 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
             const parsed = JSON.parse(cached);
             const dbRole = (parsed.role || '').toLowerCase().trim();
             const targetRole = requiredRole.toLowerCase().trim();
-            
-            // Hierarchy Check: super_admin can access admin routes
-            if (targetRole === 'admin') {
-                return (dbRole === 'admin' || dbRole === 'super_admin' || dbRole === 'super-admin');
-            }
-            
+
+            // Strict isolation: only match the exact role
             if (targetRole === 'super_admin') {
                 return (dbRole === 'super_admin' || dbRole === 'super-admin');
             }
@@ -79,9 +75,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
                     const targetRole = requiredRole.toLowerCase().trim();
                     
                     let isMatch = false;
-                    if (targetRole === 'admin') {
-                        isMatch = (dbRole === 'admin' || dbRole === 'super_admin' || dbRole === 'super-admin');
-                    } else if (targetRole === 'super_admin') {
+                    if (targetRole === 'super_admin') {
                         isMatch = (dbRole === 'super_admin' || dbRole === 'super-admin');
                     } else {
                         isMatch = (dbRole === targetRole);
