@@ -284,7 +284,7 @@ const AdminQuestionEditor = () => {
                             <button className="qe-back-btn" onClick={handleExit} title="Go Back">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
                             </button>
-                            <h1 className="qe-title">{questionType.toUpperCase()} Questions ({subjectName})</h1>
+                            <h1 className="qe-title">{questionType.toUpperCase()} Questions ({className} - {subjectName})</h1>
                         </div>
 
                         <div className="qe-header-actions">
@@ -414,7 +414,7 @@ const AdminQuestionEditor = () => {
                     <div className="qe-modal-overlay" onClick={() => setIsConfigModalOpen(false)}>
                         <div className="qe-modal config" onClick={e => e.stopPropagation()}>
                             <div className="qe-modal-header">
-                                <h2 className="qe-modal-title">Exam Settings - {subjectName}</h2>
+                                <h2 className="qe-modal-title">Exam Settings - {className} ({subjectName})</h2>
                                 <p className="qe-modal-subtitle">Configure access controls for this {questionType}.</p>
                             </div>
                             <form className="qe-form" onSubmit={handleSaveConfig}>
