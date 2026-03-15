@@ -30,22 +30,28 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(getInitialAuth());
     const [hasCheckedOnce, setHasCheckedOnce] = useState(getInitialAuth() !== null);
     const location = useLocation();
+    const verificationInProgressRef = React.useRef(false);
 
     useEffect(() => {
         let isMounted = true;
         
         const verifyAccess = async (session) => {
-            if (!isMounted) return;
+            if (!isMounted || verificationInProgressRef.current) return;
+            verificationInProgressRef.current = true;
 
             if (!session) {
                 setIsAuthenticated(false);
                 setHasCheckedOnce(true);
+                verificationInProgressRef.current = false;
                 return;
             }
 
             try {
                 // If we already know we're authenticated for this role, skip the DB hit
-                if (isAuthenticated === true && hasCheckedOnce) return;
+                if (isAuthenticated === true && hasCheckedOnce) {
+                    verificationInProgressRef.current = false;
+                    return;
+                }
 
                 // Race a 10s timeout (increased for reliability)
                 const profilePromise = supabase
@@ -95,6 +101,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
                 setIsAuthenticated(false);
             } finally {
                 if (isMounted) setHasCheckedOnce(true);
+                verificationInProgressRef.current = false;
             }
         };
 
@@ -124,7 +131,7 @@ const ProtectedRoute = ({ requiredRole = 'admin' }) => {
                             setIsAuthenticated(false);
                             setHasCheckedOnce(true);
                         }
-                    }, 2000); // Increased buffer to prevent false-negative redirects on slow networks
+                    }, 4000); // Increased buffer to prevent false-negative redirects on slow networks
                 }
             });
         }

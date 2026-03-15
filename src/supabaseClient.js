@@ -18,18 +18,16 @@ const getPortalStorageKey = () => {
 // Dynamic Storage Proxy
 const dynamicPortalStorage = {
     getItem: (key) => {
-        // We ignore the key passed by Supabase (usually 'sb-xxx-auth-token') 
-        // and use our own context-aware key for true isolation during client-side navigation.
-        const actualKey = getPortalStorageKey();
-        return window.localStorage.getItem(actualKey);
+        const portalPrefix = getPortalStorageKey(); 
+        return window.localStorage.getItem(`${portalPrefix}_${key}`);
     },
     setItem: (key, value) => {
-        const actualKey = getPortalStorageKey();
-        window.localStorage.setItem(actualKey, value);
+        const portalPrefix = getPortalStorageKey();
+        window.localStorage.setItem(`${portalPrefix}_${key}`, value);
     },
     removeItem: (key) => {
-        const actualKey = getPortalStorageKey();
-        window.localStorage.removeItem(actualKey);
+        const portalPrefix = getPortalStorageKey();
+        window.localStorage.removeItem(`${portalPrefix}_${key}`);
     }
 };
 
