@@ -53,13 +53,14 @@ const AdminResultDetail = () => {
                     const sKey = globalSession.trim();
                     const tKey = globalTerm.trim();
 
-                    // Total students in class
-                    const { count } = await supabase
+                    // Total eligible users in class (Student + Candidate)
+                    const { count: pCount } = await supabase
                         .from('profiles')
                         .select('*', { count: 'exact', head: true })
-                        .eq('role', 'student')
+                        .in('role', ['student', 'candidate'])
                         .eq('class_id', classId);
-                    setTotalStudents(count || 0);
+                    
+                    setTotalStudents(pCount || 0);
 
                     // Submissions
                     let query = supabase
