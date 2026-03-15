@@ -274,19 +274,29 @@ const SuperAdminUsers = () => {
         setPromoStep('analyze');
 
         try {
-            // 1. Fetch JSS 3 Subjects
+            // 1. Calculate Previous Session (e.g. 2025/2026 -> 2024/2025)
+            const parts = activeSession.split('/');
+            const year1 = parseInt(parts[0]);
+            const year2 = parseInt(parts[1]);
+            const prevSession = (!isNaN(year1) && !isNaN(year2)) 
+                ? `${year1 - 1}/${year2 - 1}` 
+                : activeSession; // Fallback to current if format is strange
+            
+            const prevTerm = 'Third Term';
+
+            // 2. Fetch JSS 3 Subjects
             const { data: jss3Subjects } = await supabase.from('subjects').select('id').eq('class_id', jss3Id);
             const totalSubjects = jss3Subjects?.length || 0;
 
-            // 2. Fetch all results for JSS 3 students in THIS session and term
+            // 3. Fetch all results for JSS 3 students in PREVIOUS session and PREVIOUS term
             const { data: results } = await supabase
                 .from('exam_results')
                 .select('student_id, subject_id')
                 .eq('class_id', jss3Id)
-                .eq('session_id', activeSession)
-                .eq('term_id', activeTerm);
+                .eq('session_id', prevSession)
+                .eq('term_id', prevTerm);
 
-            // 3. Map readiness
+            // 4. Map readiness
             const readinessMap = {};
             jss3Students.forEach(student => {
                 const studentResults = results?.filter(r => r.student_id === student.id) || [];
@@ -295,7 +305,8 @@ const SuperAdminUsers = () => {
                 readinessMap[student.id] = {
                     count: distinctSubjectsTaken,
                     total: totalSubjects,
-                    ready: totalSubjects > 0 && distinctSubjectsTaken >= totalSubjects
+                    ready: totalSubjects > 0 && distinctSubjectsTaken >= totalSubjects,
+                    session: prevSession
                 };
             });
 
@@ -387,7 +398,7 @@ const SuperAdminUsers = () => {
                     </header>
 
                     <main className="qe-questions-list">
-                        {selectedRole === 'student' && !loading && activeTerm === 'Third Term' && allUsers.student.some(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3') && (
+                        {selectedRole === 'student' && !loading && activeTerm === 'First Term' && allUsers.student.some(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3') && (
                             <div className="sau-promo-bar">
                                 <div className="sau-avatar-circle" style={{ background: '#F59E0B', width: '36px', height: '36px' }}>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -395,11 +406,11 @@ const SuperAdminUsers = () => {
                                     </svg>
                                 </div>
                                 <div className="sau-promo-info">
-                                    <h4 className="sau-promo-title">Third Term Session: JSS 3 Graduation</h4>
-                                    <p className="sau-promo-subtitle">Final exams in progress. Promote students once they complete all subjects.</p>
+                                    <h4 className="sau-promo-title">New Academic Session: JSS 3 Promotion Required</h4>
+                                    <p className="sau-promo-subtitle">Verify that students completed all subjects in Third Term before moving them.</p>
                                 </div>
                                 <button className="sau-promo-btn" onClick={handleOpenPromoModal}>
-                                    Check Readiness & Promote
+                                    Verify & Promote
                                 </button>
                             </div>
                         )}
