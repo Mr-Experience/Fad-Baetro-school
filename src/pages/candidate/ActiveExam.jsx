@@ -12,6 +12,7 @@ const ActiveExam = () => {
     const [profileImage, setProfileImage] = useState(sessionStorage.getItem('fad_cand_avatar') || null);
     const [activeExam, setActiveExam] = useState(null);
     const [preloadedQuestions, setPreloadedQuestions] = useState(null);
+    const [preloadedExamId, setPreloadedExamId] = useState(null);
     const [sessionInfo, setSessionInfo] = useState({ session: '', term: '' });
     const [loading, setLoading] = useState(!sessionStorage.getItem('fad_cand_name'));
 
@@ -37,11 +38,12 @@ const ActiveExam = () => {
                 let candidateId = user.id;
 
                 if (student) {
-                    setCandidateName(student.full_name);
-                    setProfileImage(student.image_url || student.profile_image || null);
+                    const displayName = student.full_name || student.name || user.user_metadata?.full_name || user.email;
+                    setCandidateName(displayName);
+                    const avatar = student.image_url || student.profile_image || student.profile_picture || student.avatar_url;
+                    setProfileImage(avatar);
                     candidateId = student.id;
                 } else {
-                    // If not in students table, fallback to metadata
                     setCandidateName(user.user_metadata?.full_name || user.email);
                 }
 
@@ -101,52 +103,58 @@ const ActiveExam = () => {
 
                             const allTaken = filteredConfigs.every(c => takenExamIds.has(c.id) || takenKeys.has(`${c.subject_id}_candidate`));
 
-                            if (availableExam) {
-                                // Stability: Only update state if different
-                                setActiveExam(prev => (prev?.id === availableExam.id ? prev : availableExam));
+                                if (availableExam) {
+                                    const combinedConfig = {
+                                        ...availableExam,
+                                        active_exam_id: availableExam.id
+                                    };
+                                    setActiveExam(prev => (prev?.id === combinedConfig.id ? prev : combinedConfig));
 
-                                if (!preloadedQuestions) {
-                                    supabase.from('questions')
-                                        .select('*')
-                                        .eq('class_id', availableExam.class_id)
-                                        .eq('subject_id', availableExam.subject_id)
-                                        .eq('question_type', 'candidate')
-                                        .eq('session_id', curSession)
-                                        .eq('term_id', curTerm)
-                                        .then(({ data: qData }) => {
-                                            if (qData) {
-                                                let processed = [...qData];
-                                                if (availableExam.selection_type === 'random') {
-                                                    processed = processed.sort(() => Math.random() - 0.5);
+                                    if (!preloadedQuestions || preloadedExamId !== availableExam.id) {
+                                        setPreloadedExamId(availableExam.id);
+                                        supabase.from('questions')
+                                            .select('*')
+                                            .eq('class_id', availableExam.class_id)
+                                            .eq('subject_id', availableExam.subject_id)
+                                            .eq('question_type', 'candidate')
+                                            .eq('session_id', curSession)
+                                            .eq('term_id', curTerm)
+                                            .then(({ data: qData }) => {
+                                                if (qData) {
+                                                    let processed = [...qData];
+                                                    if (availableExam.selection_type === 'random') {
+                                                        processed = processed.sort(() => Math.random() - 0.5);
+                                                    }
+                                                    const count = availableExam.question_count || processed.length;
+                                                    setPreloadedQuestions(processed.slice(0, count === 0 ? processed.length : count));
                                                 }
-                                                const count = availableExam.question_count || processed.length;
-                                                setPreloadedQuestions(processed.slice(0, count));
-                                            }
-                                        }).catch(err => console.error(err));
+                                            }).catch(err => {
+                                                console.error("Question Preload Error:", err);
+                                                setPreloadedQuestions([]);
+                                            });
+                                    }
+
+                                    setLoading(false);
+                                    return;
+                                } else if (allTaken) {
+                                    setLoading(false);
+                                    if (intervalId) clearInterval(intervalId);
+                                    navigate('/portal/candidate/submitted', { replace: true });
+                                    return;
                                 }
-
-                                setLoading(false);
-                                return;
-                            } else if (allTaken) {
-                                setLoading(false);
-                                if (intervalId) clearInterval(intervalId);
-                                navigate('/portal/candidate/submitted', { replace: true });
-                                return;
                             }
+
+                            setLoading(false);
+                            if (intervalId) clearInterval(intervalId);
+                            navigate('/portal/candidate/no-exam');
+                        } catch (err) {
+                            console.error("fetchActive Error:", err);
+                            setLoading(false);
                         }
+                    };
 
-                        // If no active configs or no available exam after filtering
-                        setLoading(false);
-                        if (intervalId) clearInterval(intervalId);
-                        navigate('/portal/candidate/no-exam');
-                    } catch (err) {
-                        console.error("fetchActive Error:", err);
-                        setLoading(false);
-                    }
-                };
-
-                fetchActive(true);
-                intervalId = setInterval(() => fetchActive(false), 3000);
+                    fetchActive(true);
+                    intervalId = setInterval(() => fetchActive(false), 15000 + (Math.random() * 5000));
 
             } catch (error) {
                 console.error("Error in getData:", error);
@@ -225,21 +233,10 @@ const ActiveExam = () => {
                         onClick={async () => {
                             if (!activeExam || !preloadedQuestions) return;
 
-                            // 1. Fetch Candidate ID
                             const { data: { user } } = await supabase.auth.getUser();
-                            let candidateId = user.id;
+                            if (!user) return;
 
-                            const { data: profile } = await supabase
-                                .from('profiles')
-                                .select('id')
-                                .eq('id', user.id)
-                                .maybeSingle();
-
-                            if (profile) {
-                                candidateId = profile.id;
-                            }
-
-                            // 2. Record Attempt
+                            // Record Attempt
                             const startTime = new Date();
                             const durationSec = (activeExam.duration_minutes || 60) * 60;
                             const individualEndTime = new Date(startTime.getTime() + (durationSec * 1000));
@@ -255,12 +252,12 @@ const ActiveExam = () => {
                             }
 
                             await supabase.from('exam_attempts').insert({
-                                student_id: candidateId,
+                                student_id: user.id,
                                 exam_id: activeExam.id,
                                 start_time: startTime.toISOString(),
                                 end_time: finalEndTime.toISOString(),
-                                session_id: sessionInfo.session,
-                                term_id: sessionInfo.term,
+                                session_id: sessionInfo.session.trim(),
+                                term_id: sessionInfo.term.trim(),
                                 status: 'started'
                             });
 
@@ -270,7 +267,9 @@ const ActiveExam = () => {
                         }}
                         disabled={!activeExam || !preloadedQuestions}
                     >
-                        {preloadedQuestions ? 'Start now' : 'Checking paper status...'}
+                        {preloadedQuestions ? (
+                            preloadedQuestions.length > 0 ? 'Start now' : 'No Questions Found'
+                        ) : 'Checking paper status...'}
                     </button>
                 </div>
             </main>

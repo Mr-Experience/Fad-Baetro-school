@@ -74,7 +74,9 @@ const CandidateSignup = () => {
                 id: newUserId,
                 full_name: formData.full_name,
                 email: generatedEmail,
-                role: 'candidate'
+                role: 'candidate',
+                class_id: formData.class_id,
+                phone_number: formData.phone_number
             });
 
             if (profileError) throw profileError;

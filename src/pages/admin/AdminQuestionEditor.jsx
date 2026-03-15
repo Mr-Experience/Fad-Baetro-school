@@ -159,7 +159,7 @@ const AdminQuestionEditor = () => {
                 option_b: form.option_b,
                 option_c: form.option_c,
                 option_d: form.option_d,
-                options: JSON.stringify({ a: form.option_a, b: form.option_b, c: form.option_c, d: form.option_d }),
+                options: { a: form.option_a, b: form.option_b, c: form.option_c, d: form.option_d },
                 correct_answer: form.correct_answer,
                 correct_option: form.correct_answer
             };

@@ -49,11 +49,11 @@ const AdminDashboard = () => {
                     recentRes
                 ] = await Promise.all([
                     supabase.from('questions').select('*', { count: 'exact', head: true })
-                        .eq('session_id', sKey).eq('term_id', tKey),
+                        .ilike('session_id', sKey).ilike('term_id', tKey),
                     supabase.from('exam_results').select('*', { count: 'exact', head: true })
-                        .eq('session_id', sKey).eq('term_id', tKey).eq('question_type', 'test'),
+                        .ilike('session_id', sKey).ilike('term_id', tKey).eq('question_type', 'test'),
                     supabase.from('exam_results').select('*', { count: 'exact', head: true })
-                        .eq('session_id', sKey).eq('term_id', tKey).eq('question_type', 'exam'),
+                        .ilike('session_id', sKey).ilike('term_id', tKey).eq('question_type', 'exam'),
                     supabase.from('exam_results')
                         .select('*, profiles(full_name), subjects(subject_name)')
                         .order('submitted_at', { ascending: false })
@@ -66,11 +66,8 @@ const AdminDashboard = () => {
                     examResults: examResultCount || 0
                 };
 
-                setStats(prev => {
-                    const merged = { ...prev, ...updatedStats };
-                    setDashboardStats(merged);
-                    return merged;
-                });
+                const updatedFullStats = { ...stats, ...updatedStats };
+                setStats(updatedFullStats);
                 if (recentRes.data) setRecentSubmissions(recentRes.data);
                 setLoading(false);
             } catch (err) {
@@ -80,7 +77,18 @@ const AdminDashboard = () => {
 
         fetchGlobalStats();
         fetchSessionStats();
-    }, [activeSession, activeTerm, setDashboardStats]);
+    }, [activeSession, activeTerm]); // Removed setDashboardStats from here to avoid noise
+
+    // 2. Sync Stats to Global Cache (Stability Fix: Correctly uses useEffect to avoid setState-in-render warning)
+    useEffect(() => {
+        if (stats && setDashboardStats) {
+            const isStatEmpty = stats.students === 0 && stats.subjects === 0;
+            // Only sync if we have something or it's clearly the initialized state after a fetch
+            if (!loading || !isStatEmpty) {
+                setDashboardStats(stats);
+            }
+        }
+    }, [stats, loading, setDashboardStats]);
 
     const [healthLoaded, setHealthLoaded] = useState(false);
     useEffect(() => {

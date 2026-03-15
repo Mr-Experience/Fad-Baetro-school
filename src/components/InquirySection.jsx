@@ -9,9 +9,13 @@ const InquirySection = () => {
 
     React.useEffect(() => {
         const fetchSettings = async () => {
-            const { data } = await supabase.from('system_settings').select('inquiry_bg_url').eq('id', 1).maybeSingle();
-            if (data?.inquiry_bg_url && data.inquiry_bg_url.startsWith('http') && !data.inquiry_bg_url.includes('YOUR_DIRECT_PUBLIC')) {
-                setBgImage(data.inquiry_bg_url);
+            try {
+                const { data, error } = await supabase.from('system_settings').select('inquiry_bg_url').eq('id', 1).maybeSingle();
+                if (!error && data?.inquiry_bg_url && data.inquiry_bg_url.startsWith('http') && !data.inquiry_bg_url.includes('YOUR_DIRECT_PUBLIC')) {
+                    setBgImage(data.inquiry_bg_url);
+                }
+            } catch (err) {
+                console.warn("Inquiry bg fetch failed (column might be missing):", err);
             }
         };
         fetchSettings();

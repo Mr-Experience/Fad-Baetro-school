@@ -5,7 +5,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nvbsgzintqxsjc
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im52YnNnemludHF4c2pjcHR1amxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTczNDYsImV4cCI6MjA4OTA3MzM0Nn0.Zc1uHjqD4AIzYQ5pPHyU4dIDPPq2jUnw_TzLNhcZHMI';
 
 // --- AUTH SESSION ISOLATION LOGIC ---
-// This prevents logging in as Super Admin from kicking you out of the Admin portal (and vice versa)
+// This ensures that navigating between portals doesn't cause session "leaks" or overwrites
 const getPortalStorageKey = () => {
     const path = window.location.pathname;
     if (path.includes('/portal/superadmin')) return 'fad_superadmin_auth_token';
@@ -15,14 +15,31 @@ const getPortalStorageKey = () => {
     return 'fad_default_auth_token';
 };
 
-// Global singleton client (Context-Aware)
+// Dynamic Storage Proxy
+const dynamicPortalStorage = {
+    getItem: (key) => {
+        // We ignore the key passed by Supabase (usually 'sb-xxx-auth-token') 
+        // and use our own context-aware key for true isolation during client-side navigation.
+        const actualKey = getPortalStorageKey();
+        return window.localStorage.getItem(actualKey);
+    },
+    setItem: (key, value) => {
+        const actualKey = getPortalStorageKey();
+        window.localStorage.setItem(actualKey, value);
+    },
+    removeItem: (key) => {
+        const actualKey = getPortalStorageKey();
+        window.localStorage.removeItem(actualKey);
+    }
+};
+
+// Global singleton client
 export const supabase = createBrowserClient(
     supabaseUrl,
     supabaseAnonKey,
     {
         auth: {
-            storage: window.localStorage,
-            storageKey: getPortalStorageKey(), // Dynamically isolate sessions
+            storage: dynamicPortalStorage,
             autoRefreshToken: true,
             persistSession: true,
             detectSessionInUrl: true

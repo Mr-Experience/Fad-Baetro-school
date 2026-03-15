@@ -17,6 +17,9 @@ export const checkAndPromoteStudent = async (studentId, currentClassId, sessionI
 
     try {
         // 1. OMNI-RESOURCES: Fetch everything needed for the check in parallel
+        const sKey = (sessionId || '').trim();
+        const tKey = (termId || '').trim();
+
         const [classRes, subjectsRes, resultsRes] = await Promise.all([
             supabase.from('classes').select('class_name').eq('id', currentClassId).maybeSingle(),
             supabase.from('subjects').select('id').eq('class_id', currentClassId),
@@ -24,8 +27,8 @@ export const checkAndPromoteStudent = async (studentId, currentClassId, sessionI
                 .select('subject_id')
                 .eq('student_id', studentId)
                 .eq('class_id', currentClassId)
-                .eq('session_id', sessionId)
-                .eq('term_id', termId)
+                .ilike('session_id', sKey)
+                .ilike('term_id', tKey)
                 .eq('question_type', 'exam')
         ]);
 
@@ -39,23 +42,23 @@ export const checkAndPromoteStudent = async (studentId, currentClassId, sessionI
             return { promoted: false, reason: 'No subjects found for this class in curriculum' };
         }
 
-        // 2. Define Promotion Path
+        // 2. Define Promotion Path (Synced with database_setup.sql names)
         const promotionMap = {
             'JSS 1': 'JSS 2',
             'JSS 2': 'JSS 3',
-            'JSS 3': 'SSS 1 (Art)', 
-            'SSS 1 (Art)': 'SSS 2 (Art)',
-            'SSS 1 (Sci)': 'SSS 2 (Sci)',
-            'SSS 1 (Com)': 'SSS 2 (Com)',
-            'SSS 2 (Art)': 'SSS 3 (Art)',
-            'SSS 2 (Sci)': 'SSS 3 (Sci)',
-            'SSS 2 (Com)': 'SSS 3 (Com)',
-            'SSS 3 (Art)': 'PASSEDOUT',
-            'SSS 3 (Sci)': 'PASSEDOUT',
-            'SSS 3 (Com)': 'PASSEDOUT',
+            'JSS 3': 'SSS 1 SCI', // Default transition, can be adjusted by admin later if needed
+            'SSS 1 ART': 'SSS 2 ART',
+            'SSS 1 COM': 'SSS 2 COM',
+            'SSS 1 SCI': 'SSS 2 SCI',
+            'SSS 2 ART': 'SSS 3 ART',
+            'SSS 2 COM': 'SSS 3 COM',
+            'SSS 2 SCI': 'SSS 3 SCI',
+            'SSS 3 ART': 'PASSEDOUT',
+            'SSS 3 COM': 'PASSEDOUT',
+            'SSS 3 SCI': 'PASSEDOUT',
         };
 
-        const nextClassName = promotionMap[currentClass.class_name];
+        const nextClassName = promotionMap[currentClass.class_name.toUpperCase()];
         if (!nextClassName) return { promoted: false, reason: `No promotion path defined for ${currentClass.class_name}` };
 
         const completedSubjectIds = new Set(examResults?.map(r => r.subject_id) || []);

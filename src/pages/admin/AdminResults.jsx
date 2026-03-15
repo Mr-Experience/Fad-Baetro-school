@@ -38,8 +38,8 @@ const AdminResults = () => {
 
             try {
                 // Normalize Session/Term keys to prevent invisible data due to case/whitespace
-                const sessionKey = (activeSession || '').trim();
-                const termKey = (activeTerm || '').trim();
+                const sessionKey = (activeSession || '').trim().toLowerCase();
+                const termKey = (activeTerm || '').trim().toLowerCase();
 
                 // Fetch all result counts for this class
                 const { data: rawData, error } = await supabase.from('exam_results')
@@ -48,10 +48,10 @@ const AdminResults = () => {
 
                 if (error) throw error;
 
-                // ROBUST FILTERING: Client-side filtering to handle whitespace inconsistencies
+                // ROBUST FILTERING: Case-insensitive & Trimmed matching
                 const resultsData = rawData?.filter(r => {
-                    const rowSession = (r.session_id || '').trim();
-                    const rowTerm = (r.term_id || '').trim();
+                    const rowSession = (r.session_id || '').trim().toLowerCase();
+                    const rowTerm = (r.term_id || '').trim().toLowerCase();
                     return rowSession === sessionKey && rowTerm === termKey;
                 }) || [];
 

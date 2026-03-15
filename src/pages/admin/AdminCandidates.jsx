@@ -35,6 +35,49 @@ const AdminCandidates = () => {
         }
     };
 
+    const handleApproveCandidate = async (candidate) => {
+        if (!window.confirm(`Approve admission for ${candidate.full_name}? They will be promoted to the Student role and granted access to the Student portal.`)) return;
+        
+        try {
+            // Update both tables for consistency
+            const [pRes, cRes] = await Promise.all([
+                supabase.from('profiles').update({ 
+                    role: 'student', 
+                    status: 'approved' 
+                }).eq('id', candidate.id),
+                supabase.from('candidates').update({ 
+                    status: 'approved' 
+                }).eq('id', candidate.id)
+            ]);
+
+            if (pRes.error) throw pRes.error;
+            
+            alert(`${candidate.full_name} has been approved and moved to the Student registry.`);
+            refreshAdminData();
+        } catch (err) {
+            console.error("Approval error:", err);
+            alert("Error approving candidate: " + err.message);
+        }
+    };
+
+    const handleRejectCandidate = async (candidate) => {
+        if (!window.confirm(`Are you sure you want to reject ${candidate.full_name}'s application?`)) return;
+        
+        try {
+            const [pRes, cRes] = await Promise.all([
+                supabase.from('profiles').update({ status: 'rejected' }).eq('id', candidate.id),
+                supabase.from('candidates').update({ status: 'rejected' }).eq('id', candidate.id)
+            ]);
+
+            if (pRes.error) throw pRes.error;
+            
+            setCandidates(prev => prev.map(c => c.id === candidate.id ? { ...c, status: 'rejected' } : c));
+            refreshAdminData().catch(() => {});
+        } catch (err) {
+            alert("Error rejecting candidate: " + err.message);
+        }
+    };
+
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this candidate? This action is permanent.")) return;
         try {
@@ -133,6 +176,24 @@ const AdminCandidates = () => {
                                         <td>{new Date(c.created_at).toLocaleDateString()}</td>
                                         <td>
                                             <div className="ac-actions">
+                                                {c.status === 'pending' && (
+                                                    <>
+                                                        <button 
+                                                            className="ac-action-btn approve" 
+                                                            title="Approve Admission"
+                                                            onClick={() => handleApproveCandidate(c)}
+                                                        >
+                                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                                                        </button>
+                                                        <button 
+                                                            className="ac-action-btn reject" 
+                                                            title="Reject Application"
+                                                            onClick={() => handleRejectCandidate(c)}
+                                                        >
+                                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                                                        </button>
+                                                    </>
+                                                )}
                                                 {c.status !== 'deactivated' ? (
                                                     <button
                                                         className="ac-action-btn deactivate"

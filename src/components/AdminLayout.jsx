@@ -21,7 +21,7 @@ const AdminLayout = () => {
     // Dashboard Stats Cache (to prevent flicker)
     const [dashboardStats, setDashboardStats] = useState(null);
     const [studentsCache, setStudentsCache] = useState(null);
-    const [subjectsCache, setSubjectsCache] = useState({}); // { classId: [subjects] }
+    const [subjectsCache, setSubjectsCache] = useState({}); 
     const [eventsCache, setEventsCache] = useState(null);
     const [candidatesCache, setCandidatesCache] = useState(null);
     const [infoCache, setInfoCache] = useState(null);
@@ -31,6 +31,7 @@ const AdminLayout = () => {
     // Sync status (Stability improvement)
     const [syncPercentage, setSyncPercentage] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
+    const syncInProgressRef = React.useRef(false);
 
     // Classes cache
     const [classes, setClasses] = useState([]);
@@ -42,17 +43,19 @@ const AdminLayout = () => {
     };
 
     const fetchInitialData = React.useCallback(async () => {
+        if (syncInProgressRef.current) return;
+        syncInProgressRef.current = true;
         setIsSyncing(true);
-        setSyncPercentage(10); // Start
+        setSyncPercentage(10);
         
-        const { data: { user } } = await supabase.auth.getUser();
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const user = session?.user;
 
-        if (user) {
-            setUserId(user.id);
-            setSyncPercentage(25);
-            
-            try {
-                // --- HYPER-FETCH (Parallelizing everything for extreme speed) ---
+            if (user) {
+                setUserId(user.id);
+                setSyncPercentage(25);
+                
                 const [profileRes, settingsRes, classesRes, studentsRes, candidatesRes, subjectsRes] = await Promise.all([
                     supabase.from('profiles').select('full_name, avatar_url, role').eq('id', user.id).maybeSingle(),
                     supabase.from('system_settings').select('current_session, current_term').eq('id', 1).maybeSingle(),
@@ -62,7 +65,6 @@ const AdminLayout = () => {
                     supabase.from('subjects').select('*').order('subject_name')
                 ]);
 
-                // 1. Session & Identity
                 if (profileRes.data) {
                     setUserName(prev => prev !== profileRes.data.full_name ? profileRes.data.full_name : prev);
                     setUserRole(prev => prev !== profileRes.data.role ? profileRes.data.role : prev);
@@ -75,13 +77,11 @@ const AdminLayout = () => {
                 }
                 setSyncPercentage(45);
 
-                // 2. Core Data
                 if (classesRes.data) setClasses(prev => JSON.stringify(prev) !== JSON.stringify(classesRes.data) ? classesRes.data : prev);
                 if (studentsRes.data) setStudentsCache(prev => JSON.stringify(prev) !== JSON.stringify(studentsRes.data) ? studentsRes.data : prev);
                 if (candidatesRes.data) setCandidatesCache(prev => JSON.stringify(prev) !== JSON.stringify(candidatesRes.data) ? candidatesRes.data : prev);
                 setSyncPercentage(77);
 
-                // 3. Subjects & Pre-warm
                 if (subjectsRes.data) {
                     const grouped = {};
                     subjectsRes.data.forEach(s => {
@@ -92,52 +92,47 @@ const AdminLayout = () => {
                 }
                 setInfoCache(prev => prev?.hero?.length ? prev : { hero: [], media: [], posts: [] });
                 setSyncPercentage(100);
-            } catch (err) {
-                console.warn("Omni-sync partial failure:", err);
-            } finally {
-                setClassesLoading(false);
-                setProfileLoading(false);
-                setTimeout(() => {
-                    setIsSyncing(false);
-                    setSyncPercentage(0);
-                }, 800);
             }
-
-            // Realtime Sync Subscription
-            const settingsSubscription = supabase
-                .channel('admin-settings-sync')
-                .on('postgres_changes', { 
-                    event: 'UPDATE', 
-                    schema: 'public', 
-                    table: 'system_settings',
-                    filter: 'id=eq.1'
-                }, (payload) => {
-                    const fresh = payload.new;
-                    setActiveSession(fresh.current_session);
-                    setActiveTerm(fresh.current_term);
-                })
-                .subscribe();
-
-            return () => {
-                supabase.removeChannel(settingsSubscription);
-            };
-        } else {
-            navigate('/portal/admin/login');
+        } catch (err) {
+            console.warn("Omni-sync partial failure:", err);
+        } finally {
+            setClassesLoading(false);
+            setProfileLoading(false);
+            syncInProgressRef.current = false;
+            setTimeout(() => {
+                setIsSyncing(false);
+                setSyncPercentage(0);
+            }, 800);
         }
     }, [navigate]);
 
     useEffect(() => {
-        fetchInitialData();
+        const settingsSubscription = supabase
+            .channel('admin-settings-sync')
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'system_settings',
+                filter: 'id=eq.1'
+            }, (payload) => {
+                const fresh = payload.new;
+                setActiveSession(fresh.current_session);
+                setActiveTerm(fresh.current_term);
+            })
+            .subscribe();
 
-        // 1. Background Auto-Refresh (Every 2 minutes)
+        return () => {
+            supabase.removeChannel(settingsSubscription);
+        };
+    }, []);
+
+    useEffect(() => {
+        fetchInitialData();
         const autoRefresh = setInterval(() => {
-            console.log("Admin background sync active...");
             fetchInitialData();
         }, 120000);
 
-        // 2. Focus-Sync: Re-fetch when admin switches back to this tab
         const handleFocus = () => {
-            console.log("Window focus: Syncing admin state...");
             fetchInitialData();
         };
         window.addEventListener('focus', handleFocus);
@@ -146,11 +141,7 @@ const AdminLayout = () => {
             clearInterval(autoRefresh);
             window.removeEventListener('focus', handleFocus);
         };
-    }, []);
-
-    // Proactive check on navigation is now handled efficiently by ProtectedRoute.jsx
-    // Removing the redundant verifySession hit to the database on every navigation
-    // which was occasionally causing flickering logouts on slow networks.
+    }, [fetchInitialData]);
 
     const renderIcon = (type) => {
         switch (type) {
@@ -179,49 +170,22 @@ const AdminLayout = () => {
         { label: 'Profile', path: '/portal/admin/profile', icon: 'user' }
     ];
 
-
     const handleNavClick = (path) => {
         if (location.pathname !== path) {
             navigate(path);
         }
     };
 
-    // Memoize context to prevent unnecessary child re-renders
     const contextValue = React.useMemo(() => ({
-        userName,
-        userRole,
-        setUserName,
-        userInitial,
-        setUserInitial,
-        avatarUrl,
-        setAvatarUrl,
-        profileLoading,
-        userId,
-        classes,
-        classesLoading,
-        activeSession,
-        activeTerm,
-        dashboardStats,
-        setDashboardStats,
-        studentsCache,
-        setStudentsCache,
-        subjectsCache,
-        setSubjectsCache,
-        eventsCache,
-        setEventsCache,
-        candidatesCache,
-        setCandidatesCache,
-        infoCache,
-        setInfoCache,
-        questionSummaryCache,
-        setQuestionSummaryCache,
-        resultsSummaryCache,
-        setResultsSummaryCache,
+        userName, userRole, setUserName, userInitial, setUserInitial, avatarUrl, setAvatarUrl,
+        profileLoading, userId, classes, classesLoading, activeSession, activeTerm,
+        dashboardStats, setDashboardStats, studentsCache, setStudentsCache, subjectsCache, setSubjectsCache,
+        eventsCache, setEventsCache, candidatesCache, setCandidatesCache, infoCache, setInfoCache,
+        questionSummaryCache, setQuestionSummaryCache, resultsSummaryCache, setResultsSummaryCache,
         refreshAdminData: fetchInitialData
     }), [
-        userName, userRole, userInitial, avatarUrl, profileLoading, userId, 
-        classes, classesLoading, activeSession, activeTerm, 
-        dashboardStats, studentsCache, subjectsCache, eventsCache, 
+        userName, userRole, userInitial, avatarUrl, profileLoading, userId, classes, classesLoading, 
+        activeSession, activeTerm, dashboardStats, studentsCache, subjectsCache, eventsCache, 
         candidatesCache, infoCache, questionSummaryCache, resultsSummaryCache, fetchInitialData
     ]);
 
@@ -229,7 +193,6 @@ const AdminLayout = () => {
 
     return (
         <div className={`ad-container ${isZenMode ? 'zen-mode' : ''}`}>
-            {/* Sidebar remains mounted across admin route changes (Desktop) */}
             {!isZenMode && (
                 <aside className="ad-sidebar">
                     <nav className="ad-nav">
@@ -259,7 +222,6 @@ const AdminLayout = () => {
                 </aside>
             )}
 
-            {/* Mobile Bottom Navigation */}
             {!isZenMode && (
                 <nav className="ad-mobile-nav">
                     {navItems.filter(item => ['Dashboard', 'Students', 'Results', 'Profile'].includes(item.label)).map(item => (
@@ -275,9 +237,7 @@ const AdminLayout = () => {
                 </nav>
             )}
 
-            {/* Main Area */}
             <main className={`ad-main ${isZenMode ? 'full-width' : ''}`}>
-                {/* Header remains mounted across admin route changes */}
                 <AdminHeader
                     profileLoading={profileLoading}
                     userName={userName}
@@ -288,8 +248,6 @@ const AdminLayout = () => {
                     activeTerm={activeTerm}
                     onLogout={handleLogout}
                 />
-
-                {/* Individual pages render here - sharing profile context to prevent re-fetching */}
                 <Outlet context={contextValue} />
             </main>
         </div>

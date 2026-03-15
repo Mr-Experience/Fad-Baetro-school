@@ -1,19 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { UserPlus, Trash2, X, LogOut } from 'lucide-react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
+import { UserPlus, Trash2, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
-import '../student/NoExamSchedule.css';
 import './SchoolConfig.css';
-import logoFallback from '../../assets/logo.jpg';
 import LoadingOverlay from '../../components/LoadingOverlay';
 
 const SchoolConfig = () => {
     const navigate = useNavigate();
-    const [profile, setProfile] = useState(() => {
-        const cached = sessionStorage.getItem('fad_superadmin_profile');
-        return cached ? JSON.parse(cached) : null;
-    });
-
+    const { profile } = useOutletContext();
+    
     const [cachedSettings] = useState(() => {
         const cached = sessionStorage.getItem('fad_system_settings');
         return cached ? JSON.parse(cached) : null;
@@ -24,7 +19,7 @@ const SchoolConfig = () => {
     const [activeSession, setActiveSession] = useState(cachedSettings?.current_session || '');
     const [activeTerm, setActiveTerm] = useState(cachedSettings?.current_term || '');
 
-    const [loading, setLoading] = useState(!profile && !cachedSettings);
+    const [loading, setLoading] = useState(!cachedSettings);
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState('');
     const [error, setError] = useState('');
@@ -37,28 +32,12 @@ const SchoolConfig = () => {
 
         const init = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: settingsRes } = await supabase.from('system_settings').select('*').eq('id', 1).maybeSingle();
                 
-                if (!session) {
-                    if (isMounted) setLoading(false);
-                    return;
-                }
-
-                // Fetch everything in parallel with a safety timeout
-                const [profileRes, settingsRes] = await Promise.all([
-                    supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
-                    supabase.from('system_settings').select('*').eq('id', 1).maybeSingle()
-                ]);
-
                 if (!isMounted) return;
 
-                if (profileRes.data) {
-                    setProfile(profileRes.data);
-                    sessionStorage.setItem('fad_superadmin_profile', JSON.stringify(profileRes.data));
-                }
-
-                if (settingsRes.data) {
-                    const s = settingsRes.data;
+                if (settingsRes) {
+                    const s = settingsRes;
                     setCurrentSession(s.current_session || '2024/2025');
                     setCurrentTerm(s.current_term || 'First Term');
                     setActiveSession(s.current_session || '2024/2025');
@@ -66,22 +45,18 @@ const SchoolConfig = () => {
                     sessionStorage.setItem('fad_system_settings', JSON.stringify(s));
                 }
 
-                // Finish loading even if partial data missing
                 setLoading(false);
-                
-                // 1. Initial Fetch (Prefetch - Silent to avoid flicker)
                 fetchAdmins(true);
 
-                // 2. Realtime Subscription for instant sync
                 const crossSessionSync = supabase
                     .channel('admin-list-sync')
                     .on('postgres_changes', { 
                         event: '*', 
                         schema: 'public', 
                         table: 'profiles',
-                        filter: 'role=eq.admin' // Strictly track only 'admin' role changes
+                        filter: 'role=eq.admin'
                     }, () => {
-                        fetchAdmins(true); // Silent refresh on background changes
+                        fetchAdmins(true);
                     })
                     .subscribe();
 
@@ -242,52 +217,6 @@ const SchoolConfig = () => {
                     {toast}
                 </div>
             )}
-
-            {/* Header */}
-            <header className="sc-header">
-                <div className="sc-header-left">
-                    <img
-                        src={logoFallback}
-                        alt="Logo"
-                        className="portal-logo-img"
-                        style={{ width: '40px', height: '40px', borderRadius: '50%' }}
-                    />
-                    <span className="sc-brand-name">Fad Mastro Academy</span>
-                </div>
-
-                <div className="sc-header-right">
-                    <div className="sc-session-badge">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9D245A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                        </svg>
-                        <span className="sc-badge-text">
-                            {activeSession ? `Current Session: ${activeSession} ${activeTerm}` : 'Loading Session...'}
-                        </span>
-                    </div>
-                    
-                    <div className="ad-user-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: '12px' }}>
-                        <span className="sc-user-name" style={{ marginRight: 0 }}>{profile?.full_name || '...'}</span>
-                    </div>
-
-                    <div className="sc-avatar">
-                        <img
-                            src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.full_name || 'Super Admin')}&background=D1D5DB&color=333`}
-                            alt="Avatar"
-                        />
-                    </div>
-                    <button className="sc-logout-icon-btn" onClick={handleLogout} title="Logout">
-                        <LogOut size={20} />
-                    </button>
-                </div>
-            </header>
-
-            <div className="sc-action-bar">
-                <button className="sc-register-btn" onClick={() => navigate('/portal/superadmin/users')}>
-                    <UserPlus size={18} />
-                    Manage User
-                </button>
-            </div>
 
             {/* Admin List Modal */}
             {showAdminList && (

@@ -89,11 +89,13 @@ const AdminResultDetail = () => {
                     if (resError) throw resError;
 
                     if (resData) {
-                        // ROBUST FILTERING: Handle potentially mismatched whitespace from DB
+                        // ROBUST FILTERING: Handle potentially mismatched whitespace or casing
                         const filtered = resData.filter(r => {
-                            const dbSession = (r.session_id || '').trim();
-                            const dbTerm = (r.term_id || '').trim();
-                            return dbSession === sKey && dbTerm === tKey;
+                            const dbSession = (r.session_id || '').trim().toLowerCase();
+                            const dbTerm = (r.term_id || '').trim().toLowerCase();
+                            const targetS = sKey.toLowerCase();
+                            const targetT = tKey.toLowerCase();
+                            return dbSession === targetS && dbTerm === targetT;
                         });
 
                         setResults(filtered);

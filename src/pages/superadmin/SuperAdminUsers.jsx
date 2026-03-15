@@ -1,21 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useOutletContext } from 'react-router-dom';
 import { createClient, supabase } from '../../supabaseClient';
-import AdminHeader from '../../components/AdminHeader';
-import { LogOut } from 'lucide-react';
-import '../admin/AdminQuestionEditor.css';
-import './SuperAdminUsers.css'; // New CSS for specific tweaks
+import './SuperAdminUsers.css'; 
 import './SchoolConfig.css'; 
 
 const SuperAdminUsers = () => {
     const navigate = useNavigate();
+    const { profile } = useOutletContext();
 
-    // User Profile state for header
-    const [userName, setUserName] = useState('');
-    const [userInitial, setUserInitial] = useState('S');
-    const [avatarUrl, setAvatarUrl] = useState(null);
-    const [userRole, setUserRole] = useState('super_admin');
-    const [profileLoading, setProfileLoading] = useState(true);
+    // User Profile state for display references
     const [activeSession, setActiveSession] = useState('');
     const [activeTerm, setActiveTerm] = useState('');
 
@@ -52,39 +45,19 @@ const SuperAdminUsers = () => {
         const init = async () => {
             setLoading(true);
             try {
-                // 1. Silent Auth / Profile Check
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) {
-                    navigate('/portal/superadmin');
-                    return;
-                }
-
-                const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-                if (!profile || (profile.role !== 'super_admin' && profile.role !== 'super-admin')) {
-                    navigate('/portal/superadmin');
-                    return;
-                }
-
-                setUserName(profile.full_name || 'Super Admin');
-                setUserInitial((profile.full_name || 'S').charAt(0).toUpperCase());
-                setAvatarUrl(profile.avatar_url);
-                setUserRole(profile.role);
-                setProfileLoading(false);
-
-                // 2. Fetch Settings
+                // 1. Fetch Settings
                 const { data: settings } = await supabase.from('system_settings').select('current_session, current_term').eq('id', 1).maybeSingle();
                 if (settings) {
                     setActiveSession(settings.current_session || '');
                     setActiveTerm(settings.current_term || '');
                 }
 
-                // 3. Fetch Classes (needed for student popup)
+                // 2. Fetch Classes
                 const { data: classData } = await supabase.from('classes').select('*').order('class_name');
                 if (classData) setClasses(classData);
 
-                // 4. Omni-Fetch: Get all users for all roles up front for INSTANT switching
+                // 3. Omni-Fetch
                 await fetchAllData();
-
             } catch (err) {
                 console.error("Init Error:", err);
             } finally {
@@ -281,16 +254,6 @@ const SuperAdminUsers = () => {
 
     return (
         <div className="qe-wrapper">
-            <AdminHeader 
-                profileLoading={profileLoading}
-                userName={userName}
-                userRole={userRole}
-                userInitial={userInitial}
-                avatarUrl={avatarUrl}
-                activeSession={activeSession}
-                activeTerm={activeTerm}
-                onLogout={handleLogout}
-            />
             
             <div className="qe-container">
                 <div className="qe-content-card">

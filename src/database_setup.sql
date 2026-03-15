@@ -67,6 +67,10 @@ CREATE TABLE public.system_settings (
     id INT PRIMARY KEY DEFAULT 1,
     current_session TEXT DEFAULT '2024/2025',
     current_term TEXT DEFAULT 'First Term',
+    inquiry_bg_url TEXT,
+    hero_bg_url TEXT,
+    news_bg_url TEXT,
+    about_image_url TEXT,
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT single_row CHECK (id = 1)
 );

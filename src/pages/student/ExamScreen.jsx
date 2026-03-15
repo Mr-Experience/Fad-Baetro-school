@@ -30,6 +30,177 @@ const ExamScreen = () => {
     const [loading, setLoading] = useState(true);
     const submittingRef = React.useRef(false); // Persistent safety guard
 
+    // --- ACTIONS ---
+    const handleAnswer = (option) => {
+        const q = questions[currentQuestionIdx];
+        const newAnswers = { ...answers, [q.id]: option };
+        setAnswers(newAnswers);
+
+        // Save to LocalStorage
+        if (student && activeConfig) {
+            const storageKey = `exam_prog_${student.id}_${activeConfig.id}`;
+            const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            localStorage.setItem(storageKey, JSON.stringify({ ...existing, answers: newAnswers }));
+        }
+    };
+
+    const navToQuestion = (idx) => {
+        setCurrentQuestionIdx(idx);
+        if (student && activeConfig) {
+            const storageKey = `exam_prog_${student.id}_${activeConfig.id}`;
+            const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            localStorage.setItem(storageKey, JSON.stringify({ ...existing, currentQuestionIdx: idx }));
+        }
+    };
+
+    // Use refs for values needed in handleSubmit to prevent unnecessary re-creations 
+    // and ensuring we always have the latest state even if the callback is stale
+    const answersRef = React.useRef(answers);
+    const questionsRef = React.useRef(questions);
+    const timeLeftRef = React.useRef(timeLeft);
+    const studentRef = React.useRef(student);
+    const sessionInfoRef = React.useRef(sessionInfo);
+
+    useEffect(() => { answersRef.current = answers; }, [answers]);
+    useEffect(() => { questionsRef.current = questions; }, [questions]);
+    useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
+    useEffect(() => { studentRef.current = student; }, [student]);
+    useEffect(() => { sessionInfoRef.current = sessionInfo; }, [sessionInfo]);
+
+    const handleSubmit = React.useCallback(async (skipConfirm = false) => {
+        if (isSubmitting || submittingRef.current) {
+            console.log("Submit already in progress, skipping.");
+            return;
+        }
+
+        // Use the ref values for the latest data
+        const currentAnswers = answersRef.current;
+        const currentQuestions = questionsRef.current;
+        const currentStudent = studentRef.current;
+        const currentSessionInfo = sessionInfoRef.current;
+        const currentTime = timeLeftRef.current;
+
+        if (!skipConfirm && currentTime > 0 && !window.confirm("Are you sure you want to submit your exam now?")) return;
+
+        submittingRef.current = true;
+        setIsSubmitting(true);
+
+        try {
+            if (!currentStudent || !activeConfig) throw new Error("Missing student or exam configuration.");
+
+            // Robust Score Calculation
+            let correctCount = 0;
+            const examQuestions = currentQuestions || [];
+            const totalQ = examQuestions.length || 1;
+            
+            examQuestions.forEach(q => {
+                const studentAns = (currentAnswers[q.id] || '').toString().trim().toUpperCase();
+                const correctAns = (q.correct_answer || q.correct_option || '').toString().trim().toUpperCase();
+                if (studentAns && studentAns === correctAns) {
+                    correctCount++;
+                }
+            });
+
+            const scorePercentFloat = (correctCount / totalQ) * 100;
+            const scorePercent = scorePercentFloat.toFixed(1);
+
+            // Fetch class and subject names (Optimistic/Silently)
+            let className = '';
+            let subjectName = '';
+            try {
+                const [{ data: cData }, { data: sData }] = await Promise.all([
+                    supabase.from('classes').select('class_name').eq('id', currentStudent.class_id).maybeSingle(),
+                    supabase.from('subjects').select('subject_name').eq('id', activeConfig.subject_id).maybeSingle()
+                ]);
+                className = cData?.class_name || '';
+                subjectName = sData?.subject_name || '';
+            } catch (metaErr) {
+                console.warn("Meta fetch failed:", metaErr);
+            }
+
+            const sId = (currentSessionInfo.session || '').trim();
+            const tId = (currentSessionInfo.term || '').trim();
+
+            if (!sId || !tId) {
+                console.error("CRITICAL: Session/Term data missing during submission!");
+                throw new Error("Academic session information is missing. Please notify the administrator.");
+            }
+
+            const detailedAnswers = examQuestions.map(q => {
+                const sAns = (currentAnswers[q.id] || '').toString().trim().toUpperCase();
+                const cAns = (q.correct_answer || q.correct_option || '').toString().trim().toUpperCase();
+                return {
+                    student_id: currentStudent.id,
+                    question_id: q.id,
+                    selected_option: currentAnswers[q.id] || null,
+                    is_correct: sAns && sAns === cAns,
+                    session_id: sId,
+                    term_id: tId
+                };
+            });
+
+            // Save to Results Summary
+            const { error: insertError } = await supabase
+                .from('exam_results')
+                .insert({
+                    student_id: currentStudent.id,
+                    exam_id: activeConfig.id,
+                    class_id: currentStudent.class_id,
+                    subject_id: activeConfig.subject_id,
+                    question_type: activeConfig.question_type,
+                    total_questions: examQuestions.length,
+                    correct_answers: correctCount,
+                    score_percent: scorePercent,
+                    answers_json: currentAnswers,
+                    submitted_at: new Date().toISOString(),
+                    session_id: sId, 
+                    term_id: tId,   
+                    class_name: className,
+                    subject_name: subjectName
+                });
+
+            if (insertError) {
+                if (insertError.code === '23505') {
+                    console.log("Duplicate result detected, probably already submitted.");
+                } else {
+                    throw insertError;
+                }
+            } else {
+                await supabase.from('student_answers').upsert(detailedAnswers, {
+                    onConflict: 'student_id, question_id, session_id, term_id'
+                });
+            }
+
+            // Update Attempt status
+            await supabase
+                .from('exam_attempts')
+                .update({ status: 'completed' })
+                .eq('student_id', currentStudent.id)
+                .eq('exam_id', activeConfig.id);
+
+            localStorage.removeItem(`exam_prog_${currentStudent.id}_${activeConfig.id}`);
+            
+            if (activeConfig.question_type === 'exam') {
+                try {
+                    await checkAndPromoteStudent(currentStudent.id, currentStudent.class_id, sId, tId);
+                } catch (promoErr) {
+                    console.error("Non-blocking Promotion Error:", promoErr);
+                }
+            }
+
+            navigate('/portal/student/submitted', {
+                state: { score: scorePercent, name: currentStudent.full_name },
+                replace: true
+            });
+
+        } catch (err) {
+            console.error("Submission Error:", err);
+            submittingRef.current = false; // Reset on error to allow manual retry
+            setIsSubmitting(false);
+            alert(`Error: ${err.message || "Failed to submit."} Please try again.`);
+        }
+    }, [isSubmitting, activeConfig, navigate]);
+
     // 1. Initial Identity & Config Fetch
     useEffect(() => {
         const initExam = async () => {
@@ -218,8 +389,7 @@ const ExamScreen = () => {
 
         if (timeLeft <= 0) {
             console.log("Time's up! Auto-submitting...");
-            // Stop logic immediately
-            submittingRef.current = true;
+            // Do NOT set submittingRef.current here, handleSubmit will do it!
             handleSubmit(true);
             return;
         }
@@ -256,170 +426,6 @@ const ExamScreen = () => {
         return () => clearInterval(interval);
     }, [student, activeConfig, isSubmitting, navigate]);
 
-    // --- ACTIONS ---
-    const handleAnswer = (option) => {
-        const q = questions[currentQuestionIdx];
-        const newAnswers = { ...answers, [q.id]: option };
-        setAnswers(newAnswers);
-
-        // Save to LocalStorage
-        if (student && activeConfig) {
-            const storageKey = `exam_prog_${student.id}_${activeConfig.id}`;
-            const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
-            localStorage.setItem(storageKey, JSON.stringify({ ...existing, answers: newAnswers }));
-        }
-    };
-
-    const navToQuestion = (idx) => {
-        setCurrentQuestionIdx(idx);
-        if (student && activeConfig) {
-            const storageKey = `exam_prog_${student.id}_${activeConfig.id}`;
-            const existing = JSON.parse(localStorage.getItem(storageKey) || '{}');
-            localStorage.setItem(storageKey, JSON.stringify({ ...existing, currentQuestionIdx: idx }));
-        }
-    };
-
-    const handleSubmit = React.useCallback(async (skipConfirm = false) => {
-        if (isSubmitting || submittingRef.current) {
-            console.log("Submit already in progress, skipping.");
-            return;
-        }
-
-        if (!skipConfirm && timeLeft > 0 && !window.confirm("Are you sure you want to submit your exam now?")) return;
-
-        submittingRef.current = true;
-        setIsSubmitting(true);
-
-        try {
-            // Robust Score Calculation
-            let correctCount = 0;
-            const examQuestions = questions || [];
-            const totalQ = examQuestions.length || 1;
-            
-            examQuestions.forEach(q => {
-                // Ensure we compare trimmed, upper-cased strings for accuracy
-                const studentAns = (answers[q.id] || '').toString().trim().toUpperCase();
-                const correctAns = (q.correct_answer || q.correct_option || '').toString().trim().toUpperCase();
-                
-                if (studentAns && studentAns === correctAns) {
-                    correctCount++;
-                }
-            });
-
-            const scorePercentFloat = (correctCount / totalQ) * 100;
-            const scorePercent = scorePercentFloat.toFixed(1);
-
-            // Fetch class and subject names (Optimistic/Silently)
-            let className = '';
-            let subjectName = '';
-            try {
-                const [{ data: cData }, { data: sData }] = await Promise.all([
-                    supabase.from('classes').select('class_name').eq('id', student.class_id).maybeSingle(),
-                    supabase.from('subjects').select('subject_name').eq('id', activeConfig.subject_id).maybeSingle()
-                ]);
-                className = cData?.class_name || '';
-                subjectName = sData?.subject_name || '';
-            } catch (metaErr) {
-                console.warn("Meta fetch failed:", metaErr);
-            }
-
-            // 1. PREPARE DETAILED ANSWERS (For analytics/specific question tracking)
-            const sId = (sessionInfo.session || '').trim();
-            const tId = (sessionInfo.term || '').trim();
-
-            const detailedAnswers = questions.map(q => {
-                const sAns = (answers[q.id] || '').toString().trim().toUpperCase();
-                const cAns = (q.correct_answer || q.correct_option || '').toString().trim().toUpperCase();
-                return {
-                    student_id: student.id,
-                    question_id: q.id,
-                    selected_option: answers[q.id] || null,
-                    is_correct: sAns && sAns === cAns,
-                    session_id: sId,
-                    term_id: tId
-                };
-            });
-
-            // VERIFY SESSION DATA: Never submit if session/term is empty to prevent orphaned results
-            if (!sId || !tId) {
-                console.error("CRITICAL: Session/Term data missing during submission!");
-                // Try to recover from localStorage if possible
-                const fallbackStr = localStorage.getItem(`exam_prog_${student.id}_${activeConfig.id}`);
-                const fallback = fallbackStr ? JSON.parse(fallbackStr) : null;
-                if (!sId && !tId) throw new Error("Academic session information is missing. Contact admin.");
-            }
-
-            // Save to Results Summary
-            const { error: insertError } = await supabase
-                .from('exam_results')
-                .insert({
-                    student_id: student.id,
-                    exam_id: activeConfig.id,
-                    class_id: student.class_id,
-                    subject_id: activeConfig.subject_id,
-                    question_type: activeConfig.question_type,
-                    total_questions: questions.length,
-                    correct_answers: correctCount,
-                    score_percent: scorePercent,
-                    answers_json: answers,
-                    submitted_at: new Date().toISOString(),
-                    session_id: sId, 
-                    term_id: tId,   
-                    class_name: className,
-                    subject_name: subjectName
-                });
-
-            if (insertError) {
-                if (insertError.code === '23505') {
-                    console.log("Duplicate result detected, probably already submitted.");
-                } else {
-                    console.error("Supabase Insert Error:", insertError);
-                    throw insertError;
-                }
-            } else {
-                // Only insert detailed answers if the summary succeeded (to avoid partial data)
-                // Use upsert to prevent unique constraint errors on retries
-                await supabase.from('student_answers').upsert(detailedAnswers, {
-                    onConflict: 'student_id, question_id, session_id, term_id'
-                });
-            }
-
-            // Update Attempt status
-            await supabase
-                .from('exam_attempts')
-                .update({ status: 'completed' })
-                .eq('student_id', student.id)
-                .eq('exam_id', activeConfig.id);
-
-            // Clear progress
-            localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);
-            
-            // --- PROMOTION CHECK (Triggered by EXAM type only) ---
-            // Wrapped in independent try-catch so it doesn't block result saving if it fails
-            if (activeConfig.question_type === 'exam') {
-                try {
-                    await checkAndPromoteStudent(student.id, student.class_id, sId, tId);
-                } catch (promoErr) {
-                    console.error("Non-blocking Promotion Error:", promoErr);
-                }
-            }
-
-            // Redirect
-            navigate('/portal/student/submitted', {
-                state: { score: scorePercent, name: student.full_name },
-                replace: true
-            });
-
-        } catch (err) {
-            console.error("Submission Error:", err);
-            alert("Error during submission. Your progress is saved locally. Try submitting again.");
-        } finally {
-            setIsSubmitting(false);
-            // We DON'T reset submittingRef.current here if successful because we want to prevent 
-            // any further processing while navigating away.
-            if (!submittingRef.current) submittingRef.current = false; 
-        }
-    }, [isSubmitting, timeLeft, questions, answers, student, activeConfig, sessionInfo, navigate]);
 
     if (loading) {
         return (
@@ -438,8 +444,9 @@ const ExamScreen = () => {
 
     const currentQ = questions[currentQuestionIdx];
     const formatTime = (seconds) => {
-        const m = Math.floor(seconds / 60);
-        const s = seconds % 60;
+        const totalSeconds = Math.max(0, seconds);
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 

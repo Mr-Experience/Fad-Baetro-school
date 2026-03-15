@@ -30,13 +30,14 @@ const NoExamSchedule = () => {
                 let candidateId = user.id;
 
                 if (profile) {
-                    setUserName(profile.full_name);
-                    const avatar = profile.image_url || profile.profile_image || profile.avatar_url;
+                    const displayName = profile.full_name || user.user_metadata?.full_name || user.email;
+                    setUserName(displayName);
+                    const avatar = profile.image_url || profile.profile_image || profile.profile_picture || profile.avatar_url;
                     setProfileImage(avatar);
                     candidateId = profile.id;
 
                     // Cache for zero flicker
-                    sessionStorage.setItem('fad_cand_name', profile.full_name || '');
+                    sessionStorage.setItem('fad_cand_name', displayName || '');
                     if (avatar) sessionStorage.setItem('fad_cand_avatar', avatar);
                 } else {
                     const fallback = user.user_metadata?.full_name || user.email;
@@ -93,8 +94,7 @@ const NoExamSchedule = () => {
                         }
 
                         setLoading(false);
-                        if (intervalId) clearInterval(intervalId);
-                        navigate('/portal/candidate/no-exam');
+                        // Removed redundant navigate back to same page to prevent loops
                     } catch (e) {
                         console.error("Status check fail:", e);
                         setLoading(false);
@@ -102,7 +102,7 @@ const NoExamSchedule = () => {
                 };
 
                 checkStatus();
-                intervalId = setInterval(checkStatus, 3000);
+                intervalId = setInterval(checkStatus, 15000 + (Math.random() * 5000));
 
             } catch (error) {
                 console.error("Error in getCandidate:", error);

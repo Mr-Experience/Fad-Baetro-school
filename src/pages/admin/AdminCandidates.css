@@ -124,6 +124,36 @@
     transition: all 0.2s;
 }
 
+.ac-action-btn.approve {
+    background-color: #F0FDF4;
+    color: #16A34A;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #DCFCE7;
+}
+
+.ac-action-btn.approve:hover {
+    background-color: #DCFCE7;
+    transform: scale(1.1);
+}
+
+.ac-action-btn.reject {
+    background-color: #FFF1F2;
+    color: #E11D48;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #FFE4E6;
+}
+
+.ac-action-btn.reject:hover {
+    background-color: #FFE4E6;
+    transform: scale(1.1);
+}
+
 .ac-action-btn.deactivate {
     background-color: #FEF2F2;
     color: #EF4444;
