@@ -26,15 +26,15 @@ const AdminForgotPassword = () => {
 
             if (profileErr) throw profileErr;
 
-            if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+            if (!profile || profile.role !== 'admin') {
                 // To prevent email enumeration, we could show a generic message, 
                 // but since the user specifically asked "Only admin can reset", 
                 // we'll show a clear unauthorized error.
-                throw new Error("Unauthorized: Only administrator accounts can reset passwords via this portal.");
+                throw new Error("Unauthorized: Only standard admin accounts can reset passwords via this portal. Super Admins must use the Super Admin portal.");
             }
 
             // 2. Clear for reset
-            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
                 redirectTo: `${window.location.origin}/portal/admin/reset-password`,
             });
 

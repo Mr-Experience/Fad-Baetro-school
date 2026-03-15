@@ -28,6 +28,7 @@ const ExamScreen = () => {
     const [timeLeft, setTimeLeft] = useState(null); // in seconds
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
+    const submittingRef = React.useRef(false); // Persistent safety guard
 
     // 1. Initial Identity & Config Fetch
     useEffect(() => {
@@ -213,17 +214,19 @@ const ExamScreen = () => {
 
     // 2. Timer Hook
     useEffect(() => {
-        if (timeLeft === null || isSubmitting) return;
+        if (timeLeft === null || isSubmitting || submittingRef.current) return;
 
         if (timeLeft <= 0) {
             console.log("Time's up! Auto-submitting...");
+            // Stop logic immediately
+            submittingRef.current = true;
             handleSubmit(true);
             return;
         }
 
         const interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         return () => clearInterval(interval);
-    }, [timeLeft, isSubmitting]);
+    }, [timeLeft, isSubmitting, handleSubmit]);
 
     // 3. Proactive Admin-Sync Check
     useEffect(() => {
@@ -247,7 +250,9 @@ const ExamScreen = () => {
             }
         };
 
-        const interval = setInterval(checkStatus, 5000);
+        // High-Concurrency Optimization: Randomized polling interval (20-30s) prevents all clients 
+        // from hitting the server at the exact same millisecond.
+        const interval = setInterval(checkStatus, 20000 + (Math.random() * 10000));
         return () => clearInterval(interval);
     }, [student, activeConfig, isSubmitting, navigate]);
 
@@ -274,10 +279,15 @@ const ExamScreen = () => {
         }
     };
 
-    const handleSubmit = async (skipConfirm = false) => {
-        if (isSubmitting) return;
+    const handleSubmit = React.useCallback(async (skipConfirm = false) => {
+        if (isSubmitting || submittingRef.current) {
+            console.log("Submit already in progress, skipping.");
+            return;
+        }
+
         if (!skipConfirm && timeLeft > 0 && !window.confirm("Are you sure you want to submit your exam now?")) return;
 
+        submittingRef.current = true;
         setIsSubmitting(true);
 
         try {
@@ -313,7 +323,33 @@ const ExamScreen = () => {
                 console.warn("Meta fetch failed:", metaErr);
             }
 
-            // Save to Results
+            // 1. PREPARE DETAILED ANSWERS (For analytics/specific question tracking)
+            const sId = (sessionInfo.session || '').trim();
+            const tId = (sessionInfo.term || '').trim();
+
+            const detailedAnswers = questions.map(q => {
+                const sAns = (answers[q.id] || '').toString().trim().toUpperCase();
+                const cAns = (q.correct_answer || q.correct_option || '').toString().trim().toUpperCase();
+                return {
+                    student_id: student.id,
+                    question_id: q.id,
+                    selected_option: answers[q.id] || null,
+                    is_correct: sAns && sAns === cAns,
+                    session_id: sId,
+                    term_id: tId
+                };
+            });
+
+            // VERIFY SESSION DATA: Never submit if session/term is empty to prevent orphaned results
+            if (!sId || !tId) {
+                console.error("CRITICAL: Session/Term data missing during submission!");
+                // Try to recover from localStorage if possible
+                const fallbackStr = localStorage.getItem(`exam_prog_${student.id}_${activeConfig.id}`);
+                const fallback = fallbackStr ? JSON.parse(fallbackStr) : null;
+                if (!sId && !tId) throw new Error("Academic session information is missing. Contact admin.");
+            }
+
+            // Save to Results Summary
             const { error: insertError } = await supabase
                 .from('exam_results')
                 .insert({
@@ -327,8 +363,8 @@ const ExamScreen = () => {
                     score_percent: scorePercent,
                     answers_json: answers,
                     submitted_at: new Date().toISOString(),
-                    session_id: sessionInfo.session,
-                    term_id: sessionInfo.term,
+                    session_id: sId, 
+                    term_id: tId,   
                     class_name: className,
                     subject_name: subjectName
                 });
@@ -337,8 +373,15 @@ const ExamScreen = () => {
                 if (insertError.code === '23505') {
                     console.log("Duplicate result detected, probably already submitted.");
                 } else {
+                    console.error("Supabase Insert Error:", insertError);
                     throw insertError;
                 }
+            } else {
+                // Only insert detailed answers if the summary succeeded (to avoid partial data)
+                // Use upsert to prevent unique constraint errors on retries
+                await supabase.from('student_answers').upsert(detailedAnswers, {
+                    onConflict: 'student_id, question_id, session_id, term_id'
+                });
             }
 
             // Update Attempt status
@@ -352,8 +395,13 @@ const ExamScreen = () => {
             localStorage.removeItem(`exam_prog_${student.id}_${activeConfig.id}`);
             
             // --- PROMOTION CHECK (Triggered by EXAM type only) ---
+            // Wrapped in independent try-catch so it doesn't block result saving if it fails
             if (activeConfig.question_type === 'exam') {
-                await checkAndPromoteStudent(student.id, student.class_id, sessionInfo.session, sessionInfo.term);
+                try {
+                    await checkAndPromoteStudent(student.id, student.class_id, sId, tId);
+                } catch (promoErr) {
+                    console.error("Non-blocking Promotion Error:", promoErr);
+                }
             }
 
             // Redirect
@@ -367,8 +415,11 @@ const ExamScreen = () => {
             alert("Error during submission. Your progress is saved locally. Try submitting again.");
         } finally {
             setIsSubmitting(false);
+            // We DON'T reset submittingRef.current here if successful because we want to prevent 
+            // any further processing while navigating away.
+            if (!submittingRef.current) submittingRef.current = false; 
         }
-    };
+    }, [isSubmitting, timeLeft, questions, answers, student, activeConfig, sessionInfo, navigate]);
 
     if (loading) {
         return (

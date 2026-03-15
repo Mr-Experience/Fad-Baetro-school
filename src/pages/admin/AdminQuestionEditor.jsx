@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import AdminHeader from '../../components/AdminHeader';
 import './AdminQuestionEditor.css';
@@ -14,12 +14,18 @@ const AdminQuestionEditor = () => {
     const subjectName = searchParams.get('subjectName') || 'Unknown Subject';
     const questionType = searchParams.get('type') || 'test';
 
-    const [userId, setUserId] = useState('');
+    const { 
+        activeSession: globalSession, 
+        activeTerm: globalTerm, 
+        profileLoading: globalProfileLoading,
+        userId: globalUserId,
+        userName: globalUserName,
+        userInitial: globalUserInitial,
+        avatarUrl: globalAvatarUrl 
+    } = useOutletContext();
 
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeSession, setActiveSession] = useState('');
-    const [activeTerm, setActiveTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -33,12 +39,6 @@ const AdminQuestionEditor = () => {
         selection_type: 'random'
     });
 
-    // Profile state for header
-    const [userName, setUserName] = useState('');
-    const [userInitial, setUserInitial] = useState('A');
-    const [avatarUrl, setAvatarUrl] = useState(null);
-    const [profileLoading, setProfileLoading] = useState(true);
-
     const [form, setForm] = useState({
         question_text: '',
         option_a: '',
@@ -51,55 +51,10 @@ const AdminQuestionEditor = () => {
 
     useEffect(() => {
         const init = async () => {
+            if (!globalSession || !globalTerm) return;
             setLoading(true);
             try {
-                // 1. SILENT AUTH CHECK
-                let { data: { session } } = await supabase.auth.getSession();
-                if (!session) {
-                    await new Promise(r => setTimeout(r, 500)); // Increased to 500ms
-                    const retry = await supabase.auth.getSession();
-                    session = retry.data.session;
-                }
-                if (!session) {
-                    navigate('/portal/admin/login', { state: { from: window.location.pathname + window.location.search } });
-                    return;
-                }
-
-                // Verify Role
-                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-                if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-                    navigate('/portal/admin/login');
-                    return;
-                }
-
-                // 2. Fetch DATA (Session/Term)
-                const { data: settings } = await supabase
-                    .from('system_settings')
-                    .select('current_session, current_term')
-                    .eq('id', 1)
-                    .single();
-
-                if (settings) {
-                    setActiveSession(settings.current_session || '');
-                    setActiveTerm(settings.current_term || '');
-                }
-
-                // Restore Profile Data
-                setUserId(session.user.id);
-                const { data: profileData } = await supabase
-                    .from('profiles')
-                    .select('full_name, avatar_url')
-                    .eq('id', session.user.id)
-                    .single();
-
-                if (profileData) {
-                    setUserName(profileData.full_name || session.user.email?.split('@')[0]);
-                    setUserInitial((profileData.full_name || 'A').charAt(0).toUpperCase());
-                    setAvatarUrl(profileData.avatar_url);
-                }
-                setProfileLoading(false);
-
-                // 3. Fetch QUESTIONS
+                // 1. Fetch QUESTIONS
                 if (classId && subjectId) {
                     const { data } = await supabase
                         .from('questions')
@@ -107,31 +62,29 @@ const AdminQuestionEditor = () => {
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
                         .eq('question_type', questionType)
-                        .eq('session_id', (settings.current_session || '').trim())
-                        .eq('term_id', (settings.current_term || '').trim())
+                        .eq('session_id', globalSession.trim())
+                        .eq('term_id', globalTerm.trim())
                         .order('created_at', { ascending: true });
                     if (data) setQuestions(data);
 
-                    // 4. Fetch EXAM CONFIG
+                    // 2. Fetch EXAM CONFIG
                     const { data: config } = await supabase
                         .from('exam_configs')
                         .select('*')
                         .eq('class_id', classId)
                         .eq('subject_id', subjectId)
                         .eq('question_type', questionType)
-                        .eq('session_id', (settings.current_session || '').trim())
-                        .eq('term_id', (settings.current_term || '').trim())
+                        .eq('session_id', globalSession.trim())
+                        .eq('term_id', globalTerm.trim())
                         .maybeSingle();
 
                     if (config) {
-                        // 5. Fetch ACTIVE RECORD (New System)
                         const { data: aeRecord } = await supabase
                             .from('active_exams')
                             .select('*')
                             .eq('exam_config_id', config.id)
                             .maybeSingle();
 
-                        // Convert UTC from DB to Local ISO for the datetime-local input
                         const timeToUse = aeRecord?.visible_at || config.visible_at;
                         const localVisibleAt = timeToUse
                             ? new Date(new Date(timeToUse).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16)
@@ -154,7 +107,7 @@ const AdminQuestionEditor = () => {
             }
         };
         init();
-    }, [classId, subjectId, questionType, navigate]);
+    }, [classId, subjectId, questionType, globalSession, globalTerm]);
 
     const handleEdit = (q) => {
         setForm({
@@ -198,8 +151,8 @@ const AdminQuestionEditor = () => {
             const payload = {
                 class_id: classId,
                 subject_id: subjectId,
-                session_id: activeSession,
-                term_id: activeTerm,
+                session_id: globalSession.trim(),
+                term_id: globalTerm.trim(),
                 question_type: questionType,
                 question_text: form.question_text,
                 option_a: form.option_a,
@@ -249,8 +202,8 @@ const AdminQuestionEditor = () => {
                 class_id: classId,
                 subject_id: subjectId,
                 question_type: questionType,
-                session_id: activeSession,
-                term_id: activeTerm,
+                session_id: globalSession.trim(),
+                term_id: globalTerm.trim(),
                 is_active: configForm.is_active,
                 visible_at: configForm.visible_at ? new Date(configForm.visible_at).toISOString() : new Date().toISOString(),
                 duration_minutes: parseInt(configForm.duration_minutes),
@@ -290,8 +243,8 @@ const AdminQuestionEditor = () => {
                     exam_config_id: finalCfgData.id,
                     visible_at: payload.visible_at,
                     is_active: true,
-                    session_id: activeSession,
-                    term_id: activeTerm,
+                    session_id: globalSession.trim(),
+                    term_id: globalTerm.trim(),
                     updated_at: new Date().toISOString()
                 };
                 const { error: aeError } = await supabase
@@ -324,14 +277,6 @@ const AdminQuestionEditor = () => {
 
     return (
         <div className="qe-wrapper">
-            <AdminHeader
-                profileLoading={profileLoading}
-                userName={userName}
-                userInitial={userInitial}
-                avatarUrl={avatarUrl}
-                activeSession={activeSession}
-                activeTerm={activeTerm}
-            />
             <div className="qe-container">
                 <div className="qe-content-card">
                     <header className="qe-header">

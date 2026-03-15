@@ -16,20 +16,34 @@ export const checkAndPromoteStudent = async (studentId, currentClassId, sessionI
     if (!isFinalTerm) return { promoted: false, reason: 'Not final term' };
 
     try {
-        // 1. Get current class name
-        const { data: currentClass, error: classErr } = await supabase
-            .from('classes')
-            .select('class_name')
-            .eq('id', currentClassId)
-            .maybeSingle();
+        // 1. OMNI-RESOURCES: Fetch everything needed for the check in parallel
+        const [classRes, subjectsRes, resultsRes] = await Promise.all([
+            supabase.from('classes').select('class_name').eq('id', currentClassId).maybeSingle(),
+            supabase.from('subjects').select('id').eq('class_id', currentClassId),
+            supabase.from('exam_results')
+                .select('subject_id')
+                .eq('student_id', studentId)
+                .eq('class_id', currentClassId)
+                .eq('session_id', sessionId)
+                .eq('term_id', termId)
+                .eq('question_type', 'exam')
+        ]);
 
-        if (classErr || !currentClass) return { promoted: false, reason: 'Current class not found' };
+        if (classRes.error || !classRes.data) return { promoted: false, reason: 'Current class metadata not found' };
+        
+        const currentClass = classRes.data;
+        const classSubjects = subjectsRes.data || [];
+        const examResults = resultsRes.data || [];
+
+        if (classSubjects.length === 0) {
+            return { promoted: false, reason: 'No subjects found for this class in curriculum' };
+        }
 
         // 2. Define Promotion Path
         const promotionMap = {
             'JSS 1': 'JSS 2',
             'JSS 2': 'JSS 3',
-            'JSS 3': 'SSS 1 (Art)', // Default path, can be adjusted by admin later
+            'JSS 3': 'SSS 1 (Art)', 
             'SSS 1 (Art)': 'SSS 2 (Art)',
             'SSS 1 (Sci)': 'SSS 2 (Sci)',
             'SSS 1 (Com)': 'SSS 2 (Com)',
@@ -42,30 +56,7 @@ export const checkAndPromoteStudent = async (studentId, currentClassId, sessionI
         };
 
         const nextClassName = promotionMap[currentClass.class_name];
-        if (!nextClassName) return { promoted: false, reason: 'No promotion path defined for this class' };
-
-        // 3. Check for all subjects completion
-        // Find all subjects assigned to this class
-        const { data: classSubjects, error: subErr } = await supabase
-            .from('subjects')
-            .select('id')
-            .eq('class_id', currentClassId);
-
-        if (subErr || !classSubjects || classSubjects.length === 0) {
-            return { promoted: false, reason: 'No subjects found for this class' };
-        }
-
-        // Find all EXAM results for this student in this term
-        const { data: examResults, error: resErr } = await supabase
-            .from('exam_results')
-            .select('subject_id')
-            .eq('student_id', studentId)
-            .eq('class_id', currentClassId)
-            .eq('session_id', sessionId)
-            .eq('term_id', termId)
-            .eq('question_type', 'exam');
-
-        if (resErr) return { promoted: false, reason: 'Error fetching exam results' };
+        if (!nextClassName) return { promoted: false, reason: `No promotion path defined for ${currentClass.class_name}` };
 
         const completedSubjectIds = new Set(examResults?.map(r => r.subject_id) || []);
         const totalRequired = classSubjects.length;

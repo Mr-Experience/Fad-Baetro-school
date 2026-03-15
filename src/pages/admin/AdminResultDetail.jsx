@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
 import AdminHeader from '../../components/AdminHeader';
 import { Download, Users, CheckCircle, ArrowLeft, Printer, TrendingUp } from 'lucide-react';
@@ -15,82 +15,54 @@ const AdminResultDetail = () => {
     const subjectName = searchParams.get('subjectName') || 'Unknown Subject';
     const questionType = searchParams.get('type') || 'test';
 
+    const {
+        activeSession: globalSession,
+        activeTerm: globalTerm,
+        profileLoading: globalProfileLoading,
+        userName: globalUserName,
+        userRole: globalUserRole,
+        userInitial: globalUserInitial,
+        avatarUrl: globalAvatarUrl
+    } = useOutletContext();
+
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeSession, setActiveSession] = useState('');
-    const [activeTerm, setActiveTerm] = useState('');
 
     // Stats
     const [totalStudents, setTotalStudents] = useState(0);
     const [submissionCount, setSubmissionCount] = useState(0);
     const [avgScore, setAvgScore] = useState(0);
 
-    // Profile state for header
-    const [userName, setUserName] = useState('');
-    const [userInitial, setUserInitial] = useState('A');
-    const [avatarUrl, setAvatarUrl] = useState(null);
-    const [profileLoading, setProfileLoading] = useState(true);
-
     useEffect(() => {
         const init = async () => {
+            if (globalProfileLoading) {
+                setLoading(true);
+                return;
+            }
+
+            if (!globalSession || !globalTerm) {
+                console.warn("Global session or term not available yet.");
+                setLoading(true);
+                return;
+            }
+
             setLoading(true);
             try {
-                // 1. AUTH CHECK
-                let { data: { session } } = await supabase.auth.getSession();
-                if (!session) {
-                    navigate('/portal/admin/login');
-                    return;
-                }
-
-                // Verify Role
-                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-                if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-                    navigate('/portal/admin/login');
-                    return;
-                }
-
-                // Restore Profile Data
-                const { data: profileData } = await supabase
-                    .from('profiles')
-                    .select('full_name, avatar_url')
-                    .eq('id', session.user.id)
-                    .single();
-
-                if (profileData) {
-                    setUserName(profileData.full_name || session.user.email?.split('@')[0]);
-                    setUserInitial((profileData.full_name || 'A').charAt(0).toUpperCase());
-                    setAvatarUrl(profileData.avatar_url);
-                }
-                setProfileLoading(false);
-
-                // 2. Fetch Settings
-                const { data: settings } = await supabase
-                    .from('system_settings')
-                    .select('current_session, current_term')
-                    .eq('id', 1)
-                    .single();
-
-                if (settings) {
-                    const s = (settings.current_session || '').trim();
-                    const t = (settings.current_term || '').trim();
-                    setActiveSession(s);
-                    setActiveTerm(t);
-                }
-
                 // 3. Fetch stats and results
-                if (classId && subjectId) {
-                    const sKey = (settings?.current_session || '').trim();
-                    const tKey = (settings?.current_term || '').trim();
+                if (classId && subjectId && globalSession && globalTerm) {
+                    const sKey = globalSession.trim();
+                    const tKey = globalTerm.trim();
 
                     // Total students in class
                     const { count } = await supabase
                         .from('profiles')
                         .select('*', { count: 'exact', head: true })
+                        .eq('role', 'student')
                         .eq('class_id', classId);
                     setTotalStudents(count || 0);
 
                     // Submissions
-                    const { data: resData, error: resError } = await supabase
+                    let query = supabase
                         .from('exam_results')
                         .select(`
                             id, 
@@ -99,23 +71,36 @@ const AdminResultDetail = () => {
                             correct_answers, 
                             total_questions, 
                             submitted_at,
-                            profiles!inner(full_name, email, avatar_url)
+                            session_id,
+                            term_id,
+                            profiles(full_name, email, avatar_url)
                         `)
                         .eq('class_id', classId)
-                        .eq('subject_id', subjectId)
-                        .eq('question_type', questionType)
-                        .eq('session_id', sKey)
-                        .eq('term_id', tKey)
-                        .order('score_percent', { ascending: false });
+                        .eq('question_type', questionType);
+
+                    if (subjectId === 'unknown') {
+                        query = query.is('subject_id', null);
+                    } else {
+                        query = query.eq('subject_id', subjectId);
+                    }
+
+                    const { data: resData, error: resError } = await query.order('score_percent', { ascending: false });
 
                     if (resError) throw resError;
 
                     if (resData) {
-                        setResults(resData);
-                        setSubmissionCount(resData.length);
+                        // ROBUST FILTERING: Handle potentially mismatched whitespace from DB
+                        const filtered = resData.filter(r => {
+                            const dbSession = (r.session_id || '').trim();
+                            const dbTerm = (r.term_id || '').trim();
+                            return dbSession === sKey && dbTerm === tKey;
+                        });
 
-                        if (resData.length > 0) {
-                            const avgValue = Math.round(resData.reduce((acc, curr) => acc + Number(curr.score_percent || 0), 0) / resData.length);
+                        setResults(filtered);
+                        setSubmissionCount(filtered.length);
+
+                        if (filtered.length > 0) {
+                            const avgValue = Math.round(filtered.reduce((acc, curr) => acc + Number(curr.score_percent || 0), 0) / filtered.length);
                             setAvgScore(avgValue);
                         } else {
                             setAvgScore(0);
@@ -129,7 +114,7 @@ const AdminResultDetail = () => {
             }
         };
         init();
-    }, [classId, subjectId, questionType, navigate]);
+    }, [classId, subjectId, questionType, globalSession, globalTerm, navigate]);
 
     const handlePrint = () => window.print();
 
@@ -160,14 +145,6 @@ const AdminResultDetail = () => {
 
     return (
         <div className="rd-wrapper">
-            <AdminHeader
-                profileLoading={profileLoading}
-                userName={userName}
-                userInitial={userInitial}
-                avatarUrl={avatarUrl}
-                activeSession={activeSession}
-                activeTerm={activeTerm}
-            />
 
             <div className="rd-container">
                 <div className="rd-content-card">
@@ -177,7 +154,7 @@ const AdminResultDetail = () => {
                                 <ArrowLeft size={14} /> Back to Results
                             </button>
                             <h1 className="rd-title">{questionType.toUpperCase()} Results - {subjectName}</h1>
-                            <p className="rd-subtitle">{className} | {activeSession} | {activeTerm}</p>
+                            <p className="rd-subtitle">{className} | {globalSession} | {globalTerm}</p>
                         </div>
 
                         <div className="rd-header-actions">
@@ -194,21 +171,21 @@ const AdminResultDetail = () => {
                         <div className="rd-stat-box">
                             <div className="rd-stat-icon-wrap"><Users size={22} /></div>
                             <div className="rd-stat-info">
-                                <span className="rd-stat-val">{submissionCount} / {totalStudents}</span>
-                                <span className="rd-stat-lab">Total Submissions</span>
+                                <span className="rd-stat-val">{loading ? '...' : submissionCount} / {loading ? '...' : totalStudents}</span>
+                                <span className="rd-stat-lab">Class Submissions</span>
                             </div>
                         </div>
                         <div className="rd-stat-box">
                             <div className="rd-stat-icon-wrap" style={{ color: '#059669', background: '#ECFDF5' }}><CheckCircle size={22} /></div>
                             <div className="rd-stat-info">
-                                <span className="rd-stat-val">{submissionCount}</span>
+                                <span className="rd-stat-val">{loading ? '...' : submissionCount}</span>
                                 <span className="rd-stat-lab">Marked Results</span>
                             </div>
                         </div>
                         <div className="rd-stat-box">
                             <div className="rd-stat-icon-wrap" style={{ color: '#2563EB', background: '#EFF6FF' }}><TrendingUp size={22} /></div>
                             <div className="rd-stat-info">
-                                <span className="rd-stat-val">{avgScore}%</span>
+                                <span className="rd-stat-val">{loading ? '...' : `${avgScore}%`}</span>
                                 <span className="rd-stat-lab">Class Average Score</span>
                             </div>
                         </div>

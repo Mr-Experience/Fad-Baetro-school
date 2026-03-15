@@ -15,31 +15,29 @@ const AdminQuestions = () => {
         setQuestionSummaryCache 
     } = useOutletContext();
 
-    const [subjects, setSubjects] = useState([]);
     const [selectedClassId, setSelectedClassId] = useState('');
     const [selectedSubjectId, setSelectedSubjectId] = useState('');
     const [loading, setLoading] = useState(false);
 
     // Initial class selection
     useEffect(() => {
-        if (!selectedClassId && classes && classes.length > 0) {
+        if (!selectedClassId && classes?.length > 0) {
             setSelectedClassId(classes[0].id);
         }
     }, [classes, selectedClassId]);
 
-    // Fetch Subjects (using cache from Layout)
-    useEffect(() => {
+    // Subjects derived instantly from cache
+    const subjects = React.useMemo(() => {
         if (selectedClassId && subjectsCache) {
-            setSubjects(subjectsCache[selectedClassId] || []);
-        } else {
-            setSubjects([]);
+            return subjectsCache[selectedClassId] || [];
         }
+        return [];
     }, [selectedClassId, subjectsCache]);
 
     // Fetch Question Summary (Synchronized & Stable)
     useEffect(() => {
         const fetchSummary = async () => {
-            if (!selectedClassId || subjects.length === 0) return;
+            if (!selectedClassId) return;
             
             // Check if we already have this in the global summary cache (Omni-Fill)
             const isSilent = !!questionSummaryCache?.[selectedClassId];
@@ -49,22 +47,25 @@ const AdminQuestions = () => {
                 const sessionKey = (activeSession || '').trim();
                 const termKey = (activeTerm || '').trim();
 
-                const [qData, cData] = await Promise.all([
+                const [qRes, cRes] = await Promise.all([
                     supabase.from('questions')
-                        .select('subject_id, question_type')
-                        .eq('class_id', selectedClassId)
-                        .eq('session_id', sessionKey)
-                        .eq('term_id', termKey),
+                        .select('subject_id, question_type, session_id, term_id, subjects(subject_name)')
+                        .eq('class_id', selectedClassId),
                     supabase.from('exam_configs')
-                        .select('subject_id, question_type, is_active')
+                        .select('subject_id, question_type, is_active, session_id, term_id')
                         .eq('class_id', selectedClassId)
-                        .eq('session_id', sessionKey)
-                        .eq('term_id', termKey)
                 ]);
 
-                const summary = subjects.map(sub => {
-                    const subQs = qData.data?.filter(q => q.subject_id === sub.id) || [];
-                    const subCfgs = cData.data?.filter(c => c.subject_id === sub.id) || [];
+                if (qRes.error) throw qRes.error;
+                if (cRes.error) throw cRes.error;
+
+                // ROBUST FILTERING: Client-side filtering for whitespace resilience
+                const qData = qRes.data?.filter(q => (q.session_id || '').trim() === sessionKey && (q.term_id || '').trim() === termKey) || [];
+                const cData = cRes.data?.filter(c => (c.session_id || '').trim() === sessionKey && (c.term_id || '').trim() === termKey) || [];
+
+                let summary = subjects.map(sub => {
+                    const subQs = qData.filter(q => q.subject_id === sub.id);
+                    const subCfgs = cData.filter(c => c.subject_id === sub.id);
 
                     return {
                         id: sub.id,
@@ -83,6 +84,34 @@ const AdminQuestions = () => {
                         }
                     };
                 });
+
+                // ORPHANED QUESTIONS: Handle questions that don't match any subject in the curriculum
+                const knownSubjectIds = new Set(subjects.map(s => s.id));
+                const orphanedQs = qData.filter(q => !knownSubjectIds.has(q.subject_id));
+                
+                if (orphanedQs.length > 0) {
+                    const orphanedGrouped = {};
+                    orphanedQs.forEach(q => {
+                        const sId = q.subject_id || 'unknown';
+                        const sName = q.subjects?.subject_name || 'Legacy Category';
+                        if (!orphanedGrouped[sId]) {
+                            orphanedGrouped[sId] = { 
+                                id: sId, 
+                                name: sName,
+                                test: { count: 0, isLive: false },
+                                exam: { count: 0, isLive: false },
+                                candidate: { count: 0, isLive: false }
+                            };
+                        }
+                        const type = q.question_type || 'test';
+                        if (orphanedGrouped[sId][type]) orphanedGrouped[sId][type].count++;
+                        
+                        // Check if live for this orphan
+                        const cfg = cData.find(c => c.subject_id === q.subject_id && c.question_type === type);
+                        if (cfg && cfg.is_active) orphanedGrouped[sId][type].isLive = true;
+                    });
+                    summary = [...summary, ...Object.values(orphanedGrouped)];
+                }
                 
                 // Update global sync cache
                 setQuestionSummaryCache(prev => ({ ...prev, [selectedClassId]: summary }));
@@ -93,7 +122,7 @@ const AdminQuestions = () => {
             }
         };
         fetchSummary();
-    }, [selectedClassId, selectedSubjectId, subjects, activeSession, activeTerm, setQuestionSummaryCache]);
+    }, [selectedClassId, subjects, activeSession, activeTerm, setQuestionSummaryCache]);
 
     const handleOpenEditor = (subject, type) => {
         const className = classes.find(c => c.id === selectedClassId)?.class_name || 'Class';
@@ -101,11 +130,12 @@ const AdminQuestions = () => {
         navigate(url);
     };
 
-    const currentSummary = questionSummaryCache?.[selectedClassId] || [];
-    // If a specific subject is selected, filter the displayed summary
-    const displayedSummary = selectedSubjectId 
-        ? currentSummary.filter(s => s.id === selectedSubjectId)
-        : currentSummary;
+    // Results derived instantly from cache
+    const displayedSummary = React.useMemo(() => {
+        const currentSummary = questionSummaryCache?.[selectedClassId] || [];
+        if (!selectedSubjectId) return currentSummary;
+        return currentSummary.filter(s => s.id === selectedSubjectId);
+    }, [selectedClassId, selectedSubjectId, questionSummaryCache]);
 
     return (
         <div className="aq-main-wrap">
@@ -153,14 +183,18 @@ const AdminQuestions = () => {
                 </header>
 
                 <main className="aq-main-content">
-                    {loading && displayedSummary.length === 0 ? (
-                        <div className="aq-empty-placeholder">
-                            <div className="aq-spinner-mini"></div>
-                            <p>Loading questions...</p>
-                        </div>
-                    ) : !selectedClassId ? (
+                    {!selectedClassId ? (
                         <div className="aq-empty-placeholder">
                             <p>Please select a class to view records</p>
+                        </div>
+                    ) : (loading && displayedSummary.length === 0) ? (
+                        <div className="aq-empty-placeholder">
+                            <div className="aq-spinner-mini"></div>
+                            <p>Connecting to registry...</p>
+                        </div>
+                    ) : displayedSummary.length === 0 ? (
+                        <div className="aq-empty-placeholder">
+                            <p>{loading ? "Syncing curriculum..." : "No subjects found for this class."}</p>
                         </div>
                     ) : (
                         <div className="aq-questions-list">

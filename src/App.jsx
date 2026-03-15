@@ -77,16 +77,15 @@ function App() {
 
                 {/* Protected Admin Routes */}
                 <Route element={<ProtectedRoute requiredRole="admin" />}>
-                    <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
-                    <Route path="/portal/admin/results/detail" element={<AdminResultDetail />} />
-
                     <Route element={<AdminLayout />}>
                         <Route path="/portal/admin" element={<AdminDashboard />} />
                         <Route path="/portal/admin/students" element={<AdminStudents />} />
                         <Route path="/portal/admin/subjects" element={<AdminSubjects />} />
                         <Route path="/portal/admin/candidates" element={<AdminCandidates />} />
                         <Route path="/portal/admin/questions" element={<AdminQuestions />} />
+                        <Route path="/portal/admin/questions/editor" element={<AdminQuestionEditor />} />
                         <Route path="/portal/admin/results" element={<AdminResults />} />
+                        <Route path="/portal/admin/results/detail" element={<AdminResultDetail />} />
                         <Route path="/portal/admin/events" element={<AdminEvents />} />
                         <Route path="/portal/admin/info" element={<AdminInfo />} />
                         <Route path="/portal/admin/profile" element={<AdminProfile />} />

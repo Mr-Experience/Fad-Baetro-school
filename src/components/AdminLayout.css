@@ -138,3 +138,34 @@
         padding-bottom: 74px; /* Space for mobile nav */
     }
 }
+
+/* Stealth Sync Bar */
+.ad-sync-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #9D245A, #E87A00);
+    z-index: 9999;
+    transition: width 0.4s cubic-bezier(0.1, 0.7, 0.1, 1);
+    box-shadow: 0 0 10px rgba(157, 36, 90, 0.4);
+}
+
+/* Page transitions to reduce flicker */
+.ad-main {
+    animation: adFadeIn 0.35s ease-out;
+}
+
+@keyframes adFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Zen Mode (Full Width) */
+.ad-main.full-width {
+    padding-bottom: 0 !important;
+}
+
+.ad-container.zen-mode {
+    display: block; /* Ensure it takes full width without sidebar flex */
+}

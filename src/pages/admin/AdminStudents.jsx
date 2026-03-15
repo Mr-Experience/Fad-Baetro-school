@@ -32,12 +32,16 @@ const AdminStudents = () => {
         }
     };
 
+    const getClassName = (classId) => {
+        return classes.find(c => c.id === classId)?.class_name || 'N/A';
+    };
+
     const filteredStudents = students.filter(s => {
         const matchesClass = filterClass === 'all' || s.class_id === filterClass;
         const matchesSearch = !searchTerm || 
             s.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             s.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.classes?.class_name?.toLowerCase().includes(searchTerm.toLowerCase());
+            getClassName(s.class_id).toLowerCase().includes(searchTerm.toLowerCase());
         return matchesClass && matchesSearch;
     });
 
@@ -82,14 +86,20 @@ const AdminStudents = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {loading ? (
-                                <tr><td colSpan="6" className="as-empty-state">Loading Registry...</td></tr>
+                            {/* VISIBILITY GUARD: Maintain STABLE height and presence during sync */}
+                            {loading && students.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="as-empty-state">
+                                        <div className="aq-spinner-mini"></div>
+                                        <p>Contacting student registry...</p>
+                                    </td>
+                                </tr>
                             ) : filteredStudents.length > 0 ? (
                                 filteredStudents.map(student => (
                                     <tr key={student.id}>
                                         <td className="as-student-name">{student.full_name}</td>
                                         <td className="as-student-email">{student.email}</td>
-                                        <td><span className="as-badge">{student.classes?.class_name || 'N/A'}</span></td>
+                                        <td><span className="as-badge">{getClassName(student.class_id)}</span></td>
                                         <td>{student.phone_number || '-'}</td>
                                         <td>{new Date(student.created_at).toLocaleDateString()}</td>
                                         <td>
@@ -105,7 +115,7 @@ const AdminStudents = () => {
                                 <tr>
                                     <td colSpan="6" className="as-empty-state">
                                         <div className="as-empty-icon">👥</div>
-                                        <p>No students found for this search/filter.</p>
+                                        <p>{loading ? "Refreshing student list..." : "No students found for this search/filter."}</p>
                                     </td>
                                 </tr>
                             )}

@@ -25,9 +25,12 @@ const AdminLayout = () => {
     const [eventsCache, setEventsCache] = useState(null);
     const [candidatesCache, setCandidatesCache] = useState(null);
     const [infoCache, setInfoCache] = useState(null);
-    const [questionSummaryCache, setQuestionSummaryCache] = useState(null); // { [classId]: summaryData }
-    const [resultsSummaryCache, setResultsSummaryCache] = useState(null); // { [classId]: summaryData }
- // { [classId]: summaryData }
+    const [resultsSummaryCache, setResultsSummaryCache] = useState(null); 
+    const [questionSummaryCache, setQuestionSummaryCache] = useState(null);
+ 
+    // Sync status (Stability improvement)
+    const [syncPercentage, setSyncPercentage] = useState(0);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // Classes cache
     const [classes, setClasses] = useState([]);
@@ -38,78 +41,69 @@ const AdminLayout = () => {
         navigate('/portal/admin/login');
     };
 
-    const fetchInitialData = async () => {
+    const fetchInitialData = React.useCallback(async () => {
+        setIsSyncing(true);
+        setSyncPercentage(10); // Start
+        
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
             setUserId(user.id);
+            setSyncPercentage(25);
             
-            // --- OMNI-FETCH (All Tabs Data Up Front) ---
-            // Safer fetching: One failing request won't block the whole portal
-            const [
-                profileRes, 
-                settingsRes, 
-                classesRes,
-                studentsRes,
-                candidatesRes,
-                subjectsRes,
-                postsRes,
-                heroRes,
-                mediaRes
-            ] = await Promise.all([
-                supabase.from('profiles').select('full_name, avatar_url, role').eq('id', user.id).maybeSingle(),
-                supabase.from('system_settings').select('current_session, current_term').eq('id', 1).maybeSingle(),
-                supabase.from('classes').select('*').order('class_name'),
-                supabase.from('profiles').select('*, classes(class_name)').eq('role', 'student').order('full_name'),
-                supabase.from('profiles').select('*, classes(class_name)').eq('role', 'candidate').order('created_at', { ascending: false }),
-                supabase.from('subjects').select('*, classes(class_name)').order('subject_name'),
-                supabase.from('system_posts').select('*').order('created_at', { ascending: false }),
-                supabase.from('hero_images').select('*').order('display_order', { ascending: true }),
-                supabase.from('media_items').select('*').order('created_at', { ascending: false })
-            ]);
+            try {
+                // --- HYPER-FETCH (Parallelizing everything for extreme speed) ---
+                const [profileRes, settingsRes, classesRes, studentsRes, candidatesRes, subjectsRes] = await Promise.all([
+                    supabase.from('profiles').select('full_name, avatar_url, role').eq('id', user.id).maybeSingle(),
+                    supabase.from('system_settings').select('current_session, current_term').eq('id', 1).maybeSingle(),
+                    supabase.from('classes').select('*').order('class_name'),
+                    supabase.from('profiles').select('*').eq('role', 'student').order('full_name'),
+                    supabase.from('profiles').select('*').eq('role', 'candidate').order('created_at', { ascending: false }),
+                    supabase.from('subjects').select('*').order('subject_name')
+                ]);
 
-            // 1. Profile & Session
-            if (profileRes.data) {
-                setUserName(profileRes.data.full_name);
-                setUserRole(profileRes.data.role);
-                setUserInitial(profileRes.data.full_name?.charAt(0) || 'A');
-                setAvatarUrl(profileRes.data.avatar_url);
+                // 1. Session & Identity
+                if (profileRes.data) {
+                    setUserName(prev => prev !== profileRes.data.full_name ? profileRes.data.full_name : prev);
+                    setUserRole(prev => prev !== profileRes.data.role ? profileRes.data.role : prev);
+                    setUserInitial(profileRes.data.full_name?.charAt(0) || 'A');
+                    setAvatarUrl(prev => prev !== profileRes.data.avatar_url ? profileRes.data.avatar_url : prev);
+                }
+                if (settingsRes.data) {
+                    setActiveSession(prev => prev !== settingsRes.data.current_session ? settingsRes.data.current_session : prev);
+                    setActiveTerm(prev => prev !== settingsRes.data.current_term ? settingsRes.data.current_term : prev);
+                }
+                setSyncPercentage(45);
+
+                // 2. Core Data
+                if (classesRes.data) setClasses(prev => JSON.stringify(prev) !== JSON.stringify(classesRes.data) ? classesRes.data : prev);
+                if (studentsRes.data) setStudentsCache(prev => JSON.stringify(prev) !== JSON.stringify(studentsRes.data) ? studentsRes.data : prev);
+                if (candidatesRes.data) setCandidatesCache(prev => JSON.stringify(prev) !== JSON.stringify(candidatesRes.data) ? candidatesRes.data : prev);
+                setSyncPercentage(77);
+
+                // 3. Subjects & Pre-warm
+                if (subjectsRes.data) {
+                    const grouped = {};
+                    subjectsRes.data.forEach(s => {
+                        if (!grouped[s.class_id]) grouped[s.class_id] = [];
+                        grouped[s.class_id].push(s);
+                    });
+                    setSubjectsCache(prev => JSON.stringify(prev) !== JSON.stringify(grouped) ? grouped : prev);
+                }
+                setInfoCache(prev => prev?.hero?.length ? prev : { hero: [], media: [], posts: [] });
+                setSyncPercentage(100);
+            } catch (err) {
+                console.warn("Omni-sync partial failure:", err);
+            } finally {
+                setClassesLoading(false);
+                setProfileLoading(false);
+                setTimeout(() => {
+                    setIsSyncing(false);
+                    setSyncPercentage(0);
+                }, 800);
             }
 
-            if (settingsRes.data) {
-                setActiveSession(settingsRes.data.current_session);
-                setActiveTerm(settingsRes.data.current_term);
-            }
-
-            // 2. Cache Data (Omni-Fill)
-            if (classesRes.data) setClasses(classesRes.data);
-            if (studentsRes.data) setStudentsCache(studentsRes.data);
-            if (candidatesRes.data) setCandidatesCache(candidatesRes.data);
-            if (subjectsRes.data) {
-                const grouped = {};
-                subjectsRes.data.forEach(s => {
-                    if (!grouped[s.class_id]) grouped[s.class_id] = [];
-                    grouped[s.class_id].push(s);
-                });
-                setSubjectsCache(grouped);
-            }
-            
-            // Events are now handled via system_posts logic
-            if (postsRes.data) {
-                setEventsCache(postsRes.data.filter(p => p.post_type === 'event' || p.is_event));
-            }
-            
-            // New Content Prefetch
-            setInfoCache({
-                hero: heroRes.data || [],
-                media: mediaRes.data || [],
-                posts: postsRes.data || [] // Added posts to infoCache structure
-            });
-
-            setClassesLoading(false);
-            setProfileLoading(false);
-
-            // 3. Realtime Subscription for System Settings (Instant Sync across all tabs)
+            // Realtime Sync Subscription
             const settingsSubscription = supabase
                 .channel('admin-settings-sync')
                 .on('postgres_changes', { 
@@ -130,7 +124,7 @@ const AdminLayout = () => {
         } else {
             navigate('/portal/admin/login');
         }
-    };
+    }, [navigate]);
 
     useEffect(() => {
         fetchInitialData();
@@ -231,52 +225,58 @@ const AdminLayout = () => {
         candidatesCache, infoCache, questionSummaryCache, resultsSummaryCache, fetchInitialData
     ]);
 
+    const isZenMode = location.pathname.includes('/editor') || location.pathname.includes('/detail');
+
     return (
-        <div className="ad-container">
+        <div className={`ad-container ${isZenMode ? 'zen-mode' : ''}`}>
             {/* Sidebar remains mounted across admin route changes (Desktop) */}
-            <aside className="ad-sidebar">
-                <nav className="ad-nav">
-                    {navItems.map(item => (
+            {!isZenMode && (
+                <aside className="ad-sidebar">
+                    <nav className="ad-nav">
+                        {navItems.map(item => (
+                            <div
+                                key={item.path}
+                                className={`ad-nav-item ${location.pathname === item.path ? 'active' : ''}`}
+                                onClick={() => handleNavClick(item.path)}
+                            >
+                                <div className="ad-nav-icon">{renderIcon(item.icon)}</div>
+                                <span>{item.label}</span>
+                            </div>
+                        ))}
+                    </nav>
+                    <div className="ad-nav-bottom">
+                        <div className="ad-nav-item logout" onClick={handleLogout}>
+                            <div className="ad-nav-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                    <polyline points="16 17 21 12 16 7" />
+                                    <line x1="21" y1="12" x2="9" y2="12" />
+                                </svg>
+                            </div>
+                            <span>Logout</span>
+                        </div>
+                    </div>
+                </aside>
+            )}
+
+            {/* Mobile Bottom Navigation */}
+            {!isZenMode && (
+                <nav className="ad-mobile-nav">
+                    {navItems.filter(item => ['Dashboard', 'Students', 'Results', 'Profile'].includes(item.label)).map(item => (
                         <div
                             key={item.path}
-                            className={`ad-nav-item ${location.pathname === item.path ? 'active' : ''}`}
+                            className={`ad-mn-item ${location.pathname === item.path ? 'active' : ''}`}
                             onClick={() => handleNavClick(item.path)}
                         >
-                            <div className="ad-nav-icon">{renderIcon(item.icon)}</div>
+                            <div className="ad-mn-icon">{renderIcon(item.icon)}</div>
                             <span>{item.label}</span>
                         </div>
                     ))}
                 </nav>
-                <div className="ad-nav-bottom">
-                    <div className="ad-nav-item logout" onClick={handleLogout}>
-                        <div className="ad-nav-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                <polyline points="16 17 21 12 16 7" />
-                                <line x1="21" y1="12" x2="9" y2="12" />
-                            </svg>
-                        </div>
-                        <span>Logout</span>
-                    </div>
-                </div>
-            </aside>
-
-            {/* Mobile Bottom Navigation */}
-            <nav className="ad-mobile-nav">
-                {navItems.filter(item => ['Dashboard', 'Students', 'Results', 'Profile'].includes(item.label)).map(item => (
-                    <div
-                        key={item.path}
-                        className={`ad-mn-item ${location.pathname === item.path ? 'active' : ''}`}
-                        onClick={() => handleNavClick(item.path)}
-                    >
-                        <div className="ad-mn-icon">{renderIcon(item.icon)}</div>
-                        <span>{item.label}</span>
-                    </div>
-                ))}
-            </nav>
+            )}
 
             {/* Main Area */}
-            <main className="ad-main">
+            <main className={`ad-main ${isZenMode ? 'full-width' : ''}`}>
                 {/* Header remains mounted across admin route changes */}
                 <AdminHeader
                     profileLoading={profileLoading}

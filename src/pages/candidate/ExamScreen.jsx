@@ -27,6 +27,7 @@ const ExamScreen = () => {
     const [timeLeft, setTimeLeft] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
+    const submittingRef = React.useRef(false); // Safety guard
 
     useEffect(() => {
         const initExam = async () => {
@@ -194,17 +195,18 @@ const ExamScreen = () => {
 
     // Timer Hook
     useEffect(() => {
-        if (timeLeft === null || isSubmitting) return;
+        if (timeLeft === null || isSubmitting || submittingRef.current) return;
 
         if (timeLeft <= 0) {
             console.log("Time's up! Auto-submitting...");
+            submittingRef.current = true;
             handleSubmit(true);
             return;
         }
 
         const interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         return () => clearInterval(interval);
-    }, [timeLeft, isSubmitting]);
+    }, [timeLeft, isSubmitting, handleSubmit]);
 
     // Admin-Sync Check (Candidate)
     useEffect(() => {
@@ -253,10 +255,14 @@ const ExamScreen = () => {
         }
     };
 
-    const handleSubmit = async (skipConfirm = false) => {
-        if (isSubmitting) return;
+    const handleSubmit = React.useCallback(async (skipConfirm = false) => {
+        if (isSubmitting || submittingRef.current) {
+            console.log("Submit in progress, skipping.");
+            return;
+        }
         if (!skipConfirm && timeLeft > 0 && !window.confirm("Submit your exam now?")) return;
 
+        submittingRef.current = true;
         setIsSubmitting(true);
         try {
             let correctCount = 0;
@@ -286,6 +292,29 @@ const ExamScreen = () => {
                 console.warn("Meta fetch error:", metaErr);
             }
 
+            // 1. PREPARE DETAILED ANSWERS
+            const sId = (sessionInfo.session || '').trim();
+            const tId = (sessionInfo.term || '').trim();
+
+            const detailedAnswers = questions.map(q => {
+                const sAns = (answers[q.id] || '').toString().trim().toUpperCase();
+                const cAns = (q.correct_answer || q.correct_option || '').toString().trim().toUpperCase();
+                return {
+                    student_id: candidate.id,
+                    question_id: q.id,
+                    selected_option: answers[q.id] || null,
+                    is_correct: sAns && sAns === cAns,
+                    session_id: sId,
+                    term_id: tId
+                };
+            });
+
+            // VERIFY SESSION DATA: Essential for results visibility
+            if (!sId || !tId) {
+                console.error("Session/Term data missing for candidate submission!");
+                if (!sId && !tId) throw new Error("Academic session information missing.");
+            }
+
             // Save with full metadata
             const { error: insertError } = await supabase
                 .from('exam_results')
@@ -300,8 +329,8 @@ const ExamScreen = () => {
                     score_percent: scorePercent,
                     answers_json: answers,
                     submitted_at: new Date().toISOString(),
-                    session_id: sessionInfo.session,
-                    term_id: sessionInfo.term,
+                    session_id: sId,
+                    term_id: tId,
                     class_name: className,
                     subject_name: subjectName
                 });
@@ -310,8 +339,14 @@ const ExamScreen = () => {
                 if (insertError.code === '23505') {
                     console.log("Duplicate result detected.");
                 } else {
+                    console.error("Insert Error:", insertError);
                     throw insertError;
                 }
+            } else {
+                // Populate detailed answers table
+                await supabase.from('student_answers').upsert(detailedAnswers, {
+                    onConflict: 'student_id, question_id, session_id, term_id'
+                });
             }
 
             // Update local attempt status
@@ -334,8 +369,9 @@ const ExamScreen = () => {
             alert("Error during submission. Progress saved locally.");
         } finally {
             setIsSubmitting(false);
+            if (!submittingRef.current) submittingRef.current = false;
         }
-    };
+    }, [isSubmitting, timeLeft, questions, answers, candidate, activeConfig, sessionInfo, navigate]);
 
     if (loading) {
         return (

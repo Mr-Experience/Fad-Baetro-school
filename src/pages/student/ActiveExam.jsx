@@ -57,16 +57,17 @@ const ActiveExam = () => {
                     // 2. Setup Active Exam Check
                     const fetchActive = async (isInitial = false) => {
                         try {
-                            const { data: sData } = await supabase
-                                .from('system_settings')
-                                .select('current_session, current_term')
-                                .maybeSingle();
+                            const [settingsRes, resultsRes] = await Promise.all([
+                                supabase.from('system_settings').select('current_session, current_term').eq('id', 1).maybeSingle(),
+                                supabase.from('exam_results').select('exam_id, subject_id, question_type').eq('student_id', student.id)
+                            ]);
 
-                            const curSession = (sData?.current_session || '').trim();
-                            const curTerm = (sData?.current_term || '').trim();
-                            if (sData) setSessionInfo({ session: curSession, term: curTerm });
+                            const curSession = (settingsRes.data?.current_session || '').trim();
+                            const curTerm = (settingsRes.data?.current_term || '').trim();
+                            
+                            if (settingsRes.data) setSessionInfo({ session: curSession, term: curTerm });
 
-                            const { data: activeExams, error } = await supabase
+                            const { data: activeExams, error: aeError } = await supabase
                                 .from('active_exams')
                                 .select('*, exam_configs!inner(*, subjects(subject_name))')
                                 .eq('exam_configs.class_id', student.class_id)
@@ -75,22 +76,14 @@ const ActiveExam = () => {
                                 .eq('term_id', curTerm)
                                 .order('visible_at', { ascending: true });
 
-                            if (!error && activeExams && activeExams.length > 0) {
-                                const { data: results } = await supabase
-                                    .from('exam_results')
-                                    .select('exam_id, subject_id, question_type')
-                                    .eq('student_id', student.id)
-                                    .eq('session_id', curSession)
-                                    .eq('term_id', curTerm);
-
+                            if (!aeError && activeExams && activeExams.length > 0) {
+                                const results = resultsRes.data || [];
                                 const now = Date.now();
+                                
                                 const filteredExams = activeExams.filter(ae => {
                                     const cfg = ae.exam_configs;
                                     const examStartTime = ae.visible_at ? new Date(ae.visible_at).getTime() : 0;
                                     const examExpiryTime = examStartTime + (cfg.duration_minutes || 60) * 60 * 1000;
-                                    
-                                    // If expired, silently deactivate in background if possible 
-                                    // (Optional: but client side filtering is enough for now)
                                     return !ae.visible_at || now < examExpiryTime;
                                 });
 
@@ -101,8 +94,8 @@ const ActiveExam = () => {
                                     return;
                                 }
 
-                                const takenExamIds = new Set(results?.map(r => r.exam_id) || []);
-                                const takenKeys = new Set(results?.map(r => `${r.subject_id}_${r.question_type}`) || []);
+                                const takenExamIds = new Set(results.map(r => r.exam_id));
+                                const takenKeys = new Set(results.map(r => `${r.subject_id}_${r.question_type}`));
 
                                 const availableAE = filteredExams.find(ae => {
                                     const cfg = ae.exam_configs;
@@ -119,12 +112,11 @@ const ActiveExam = () => {
                                 if (availableAE) {
                                     const combinedConfig = {
                                         ...availableAE.exam_configs,
-                                        visible_at: availableAE.visible_at, // Use the scheduled visibility
+                                        visible_at: availableAE.visible_at,
                                         is_active_ae: availableAE.is_active,
                                         active_exam_id: availableAE.id
                                     };
                                     
-                                    // Stability Tip: Only update if the exam actually changed
                                     setActiveExam(prev => (prev?.id === combinedConfig.id ? prev : combinedConfig));
 
                                     if (!preloadedQuestions || preloadedExamId !== availableAE.id) {
@@ -146,7 +138,8 @@ const ActiveExam = () => {
                                                     const count = availableAE.exam_configs.question_count || processed.length;
                                                     setPreloadedQuestions(processed.slice(0, count === 0 ? processed.length : count));
                                                 }
-                                            }).catch(err => {
+                                            })
+.catch(err => {
                                                 console.error("Question Preload Error:", err);
                                                 setPreloadedQuestions([]); // Prevent stuck loading
                                             });
@@ -172,7 +165,8 @@ const ActiveExam = () => {
                     };
 
                     fetchActive(true);
-                    intervalId = setInterval(() => fetchActive(false), 3000); // 3s is plenty for background checks
+                    // Optimized Polling: 15s interval with 5s random jitter to prevent "Thundering Herd" load on database
+                    intervalId = setInterval(() => fetchActive(false), 15000 + (Math.random() * 5000));
 
                 } else {
                     const fallbackName = user.user_metadata?.full_name || user.email;

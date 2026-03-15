@@ -74,6 +74,10 @@ const AdminCandidates = () => {
         }
     };
 
+    const getClassName = (classId) => {
+        return classes.find(c => c.id === classId)?.class_name || 'N/A';
+    };
+
     const filteredCandidates = candidates.filter(c => {
         const matchesStatus = filterStatus === 'all' || c.status === filterStatus;
         return matchesStatus;
@@ -119,7 +123,7 @@ const AdminCandidates = () => {
                                     <tr key={c.id}>
                                         <td className="ac-student-name">{c.full_name}</td>
                                         <td className="ac-student-email">{c.email}</td>
-                                        <td><span className="ac-badge-class">{c.classes?.class_name || 'N/A'}</span></td>
+                                        <td><span className="ac-badge-class">{getClassName(c.class_id)}</span></td>
                                         <td>{c.phone_number || '-'}</td>
                                         <td>
                                             <span className={`ac-status-badge ${c.status}`}>

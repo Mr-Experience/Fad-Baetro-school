@@ -41,14 +41,19 @@ const AdminResults = () => {
                 const sessionKey = (activeSession || '').trim();
                 const termKey = (activeTerm || '').trim();
 
-                // Fetch all result counts for this class/session/term
-                const { data: resultsData, error } = await supabase.from('exam_results')
-                    .select('id, subject_id, question_type, subject_name')
-                    .eq('class_id', selectedClassId)
-                    .eq('session_id', sessionKey)
-                    .eq('term_id', termKey);
+                // Fetch all result counts for this class
+                const { data: rawData, error } = await supabase.from('exam_results')
+                    .select('id, subject_id, question_type, subject_name, session_id, term_id')
+                    .eq('class_id', selectedClassId);
 
                 if (error) throw error;
+
+                // ROBUST FILTERING: Client-side filtering to handle whitespace inconsistencies
+                const resultsData = rawData?.filter(r => {
+                    const rowSession = (r.session_id || '').trim();
+                    const rowTerm = (r.term_id || '').trim();
+                    return rowSession === sessionKey && rowTerm === termKey;
+                }) || [];
 
                 // subjectsCache is { classId: [subjects] }
                 const currentSubjects = subjectsCache?.[selectedClassId] || [];
@@ -107,7 +112,7 @@ const AdminResults = () => {
             }
         };
 
-        if (activeSession && activeTerm) {
+        if (activeSession !== null && activeTerm !== null) {
             loadPageData();
         }
     }, [selectedClassId, subjectsCache, activeSession, activeTerm, setResultsSummaryCache]);
@@ -117,14 +122,16 @@ const AdminResults = () => {
         navigate(`/portal/admin/results/detail?classId=${selectedClassId}&subjectId=${subject.id}&className=${encodeURIComponent(className)}&subjectName=${encodeURIComponent(subject.name)}&type=${type}`);
     };
 
-    // 3. Logic: Determine what to display
-    const currentSummary = resultsSummaryCache?.[selectedClassId] || [];
-    const displayedSummary = selectedSubjectId 
-        ? currentSummary.filter(s => s.id === selectedSubjectId)
-        : currentSummary;
+    // 3. Logic: Determine what to display (INSTANT SELECTORS)
+    const displayedSummary = React.useMemo(() => {
+        const currentSummary = resultsSummaryCache?.[selectedClassId] || [];
+        if (!selectedSubjectId) return currentSummary;
+        return currentSummary.filter(s => s.id === selectedSubjectId);
+    }, [selectedClassId, selectedSubjectId, resultsSummaryCache]);
 
-    // 4. Subjects for the specific class dropdown
-    const classSubjects = subjectsCache?.[selectedClassId] || [];
+    const classSubjects = React.useMemo(() => {
+        return subjectsCache?.[selectedClassId] || [];
+    }, [selectedClassId, subjectsCache]);
 
     return (
         <div className="ar-main-wrap">
@@ -175,23 +182,19 @@ const AdminResults = () => {
                 </header>
 
                 <main className="ar-main-content">
-                    {/* VISIBILITY GUARD: Case 1 - No Class Selected */}
+                    {/* VISIBILITY GUARD: Only show loading if we have absolutely NO data (first load) */}
                     {!selectedClassId ? (
                         <div className="ar-empty-placeholder">
-                            <p>Please select a class to view academic records</p>
+                            <p>Please select a class to view records</p>
                         </div>
-                    ) : 
-                    /* VISIBILITY GUARD: Case 2 - Loading first time (no cache) */
-                    loading && currentSummary.length === 0 ? (
-                        <div className="ar-empty-state">
-                            <div className="aq-spinner-mini"></div>
-                            <p className="ar-empty-text">Connecting to database...</p>
-                        </div>
-                    ) : 
-                    /* VISIBILITY GUARD: Case 3 - No subjects found for class */
-                    classSubjects.length === 0 ? (
+                    ) : (loading && displayedSummary.length === 0) ? (
                         <div className="ar-empty-placeholder">
-                            <p>No subjects found for this class in the curriculum.</p>
+                            <div className="aq-spinner-mini"></div>
+                            <p>Syncing academic records...</p>
+                        </div>
+                    ) : displayedSummary.length === 0 ? (
+                        <div className="ar-empty-placeholder">
+                            <p>{loading ? "Fetching records..." : selectedSubjectId ? "No results found for this subject." : "No academic records found for this class in the current session."}</p>
                         </div>
                     ) : (
                         <div className="ar-results-list">

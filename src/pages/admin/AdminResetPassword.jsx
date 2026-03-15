@@ -12,15 +12,39 @@ const AdminResetPassword = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    // Check if we have a session (Supabase handles this automatically via the link)
+    const [checking, setChecking] = useState(true);
+
+    // Check for session with a listener (Supabase handles URL hash automatically)
     useEffect(() => {
-        const checkSession = async () => {
+        const check = async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                setError("Your reset session has expired or is invalid. Please request a new link.");
+            if (session) {
+                setChecking(false);
+                return;
             }
+
+            // If no session, wait a bit for hash parsing
+            setTimeout(async () => {
+                const { data: { session: delayedSession } } = await supabase.auth.getSession();
+                if (!delayedSession) {
+                    if (!window.location.hash.includes('access_token=') && !window.location.hash.includes('type=recovery')) {
+                        setError("No active reset session. Please request a new link from the forgot password page.");
+                    }
+                }
+                setChecking(false);
+            }, 1000);
         };
-        checkSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                setError('');
+                setChecking(false);
+            }
+        });
+
+        check();
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const handlePasswordReset = async (e) => {
@@ -51,8 +75,8 @@ const AdminResetPassword = () => {
                 .maybeSingle();
 
             if (profileErr) throw profileErr;
-            if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-                throw new Error("Unauthorized: Password reset is restricted to administrator accounts only.");
+            if (!profile || profile.role !== 'admin') {
+                throw new Error("Unauthorized: Only standard admin accounts can reset passwords here. Super Admins must use the Super Admin portal.");
             }
 
             // 2. Perform the update
@@ -79,7 +103,7 @@ const AdminResetPassword = () => {
 
     return (
         <>
-            <LoadingOverlay isVisible={status === 'loading'} />
+            <LoadingOverlay isVisible={status === 'loading' || checking} />
             <div className="portal-login-container">
                 <header className="portal-header-bar">
                     <img

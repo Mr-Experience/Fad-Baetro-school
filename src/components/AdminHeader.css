@@ -138,6 +138,54 @@
     }
 }
 
+.ad-sync-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #F8FAFC;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    color: #64748B;
+    font-weight: 600;
+    border: 1px solid #E2E8F0;
+}
+
+.ad-sync-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #CBD5E1;
+}
+
+.ad-sync-dot.synced {
+    background-color: #10B981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    animation: pulseSync 2s infinite;
+}
+
+.ad-sync-dot.syncing {
+    background-color: #F59E0B;
+    animation: rotateSync 1s infinite linear;
+}
+
+@keyframes pulseSync {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes rotateSync {
+    from { opacity: 1; }
+    to { opacity: 0.3; }
+}
+
+@media (max-width: 600px) {
+    .ad-sync-pill {
+        display: none;
+    }
+}
+
 .ad-logout-btn {
     background: transparent;
     border: none;

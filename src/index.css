@@ -259,3 +259,24 @@ ul {
     height: 32px;
     border-radius: 50% !important;
 }
+
+/* Flicker Reduction & Background Sync */
+.stale {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+.aq-spinner-mini {
+    width: 20px;
+    height: 20px;
+    border: 3px solid #F1F5F9;
+    border-top: 3px solid var(--primary-600);
+    border-radius: 50%;
+    animation: aq-spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+}
+
+@keyframes aq-spin {
+    to { transform: rotate(360deg); }
+}
