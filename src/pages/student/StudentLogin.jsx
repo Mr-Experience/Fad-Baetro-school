@@ -69,6 +69,13 @@ const StudentLogin = () => {
             const activeTerm = (settings?.current_term || '').trim();
 
             if (student.class_id) {
+                // Check for JSS 3 "Break"
+                const { data: classCheck } = await supabase.from('classes').select('class_name').eq('id', student.class_id).maybeSingle();
+                if (classCheck?.class_name === 'JSS 3') {
+                    navigate('/portal/student/department-selection');
+                    return;
+                }
+
                 const { data: activeExams } = await supabase
                     .from('active_exams')
                     .select('*, exam_configs!inner(*)')

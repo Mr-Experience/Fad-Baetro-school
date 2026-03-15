@@ -47,8 +47,13 @@ const NoExamSchedule = () => {
 
                     console.log("✅ Student profile synced from database:", { name: displayName, hasImage: !!avatar });
 
-                    // --- AUTO REDIRECT Logic ---
-                    // If an exam is active for this class, kick them to ActiveExam portal immediately
+                    // --- JSS 3 DEPARTMENT SELECTION BREAK ---
+                    const { data: classInfo } = await supabase.from('classes').select('class_name').eq('id', student.class_id).maybeSingle();
+                    if (classInfo?.class_name === 'JSS 3') {
+                        navigate('/portal/student/department-selection');
+                        return;
+                    }
+
                     if (!student.class_id) {
                         setLoading(false);
                         return;
