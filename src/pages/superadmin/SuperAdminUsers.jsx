@@ -261,11 +261,8 @@ const SuperAdminUsers = () => {
     };
 
     const handleOpenPromoModal = async () => {
-        const jss3Id = classes.find(c => c.class_name === 'JSS 3')?.id;
-        const jss3Students = allUsers.student.filter(s => s.class_id === jss3Id);
-        
-        if (jss3Students.length === 0) {
-            alert("No students currently found in JSS 3 to promote.");
+        if (allUsers.student.length === 0) {
+            alert("No students found in the system to promote.");
             return;
         }
 
@@ -274,85 +271,137 @@ const SuperAdminUsers = () => {
         setPromoStep('analyze');
 
         try {
-            // 1. Calculate Previous Session (e.g. 2025/2026 -> 2024/2025)
+            // 1. Calculate Previous Session
             const parts = activeSession.split('/');
             const year1 = parseInt(parts[0]);
             const year2 = parseInt(parts[1]);
             const prevSession = (!isNaN(year1) && !isNaN(year2)) 
                 ? `${year1 - 1}/${year2 - 1}` 
-                : activeSession; // Fallback to current if format is strange
+                : activeSession;
             
             const prevTerm = 'Third Term';
 
-            // 2. Fetch JSS 3 Subjects
-            const { data: jss3Subjects } = await supabase.from('subjects').select('id').eq('class_id', jss3Id);
-            const totalSubjects = jss3Subjects?.length || 0;
+            // 2. Fetch ALL Subjects grouped by class
+            const { data: allSubjects } = await supabase.from('subjects').select('id, class_id');
+            const subjectsByClass = {};
+            allSubjects?.forEach(s => {
+                if (!subjectsByClass[s.class_id]) subjectsByClass[s.class_id] = 0;
+                subjectsByClass[s.class_id]++;
+            });
 
             // 3. Fetch all results for JSS 3 students in PREVIOUS session and PREVIOUS term
             const { data: results } = await supabase
                 .from('exam_results')
-                .select('student_id, subject_id')
-                .eq('class_id', jss3Id)
+                .select('student_id, subject_id, class_id')
                 .eq('session_id', prevSession)
                 .eq('term_id', prevTerm);
 
-            // 4. Map readiness
+            // 4. Map readiness for ALL students
             const readinessMap = {};
-            jss3Students.forEach(student => {
+            allUsers.student.forEach(student => {
+                const totalReq = subjectsByClass[student.class_id] || 0;
                 const studentResults = results?.filter(r => r.student_id === student.id) || [];
                 const distinctSubjectsTaken = new Set(studentResults.map(r => r.subject_id)).size;
                 
                 readinessMap[student.id] = {
                     count: distinctSubjectsTaken,
-                    total: totalSubjects,
-                    ready: totalSubjects > 0 && distinctSubjectsTaken >= totalSubjects,
+                    total: totalReq,
+                    ready: totalReq > 0 && distinctSubjectsTaken >= totalReq,
                     session: prevSession
                 };
             });
 
             setStudentReadiness(readinessMap);
-            // Default select only those who are ready
-            setSelectedPromoStudents(jss3Students.filter(s => readinessMap[s.id]?.ready).map(s => s.id));
-            setTargetPromoClassId('');
+            // Auto-select only those who are ready (excluding JSS 3 which requires choice)
+            const jss3Id = classes.find(c => c.class_name === 'JSS 3')?.id;
+            setSelectedPromoStudents(allUsers.student.filter(s => readinessMap[s.id]?.ready && s.class_id !== jss3Id).map(s => s.id));
             setPromoStep('list');
         } catch (err) {
-            console.error("Readiness check fail:", err);
-            alert("Could not verify student exam completion. Please try again.");
+            console.error("Global Readiness check fail:", err);
+            alert("Verification failed. Please ensure previous term results are available.");
             setIsPromoModalOpen(false);
         } finally {
             setPromoLoading(false);
         }
     };
 
+    const getNextClassId = (currentClassName) => {
+        // Broad Promotion Mapping
+        const mappings = {
+            'JSS 1': 'JSS 2',
+            'JSS 2': 'JSS 3',
+            // JSS 3 is manual
+            'SSS 1 ART': 'SSS 2 ART',
+            'SSS 1 COM': 'SSS 2 COM',
+            'SSS 1 SCI': 'SSS 2 SCI',
+            'SSS 2 ART': 'SSS 3 ART',
+            'SSS 2 COM': 'SSS 3 COM',
+            'SSS 2 SCI': 'SSS 3 SCI'
+        };
+
+        const targetName = mappings[currentClassName];
+        if (!targetName) return null;
+        return classes.find(c => c.class_name === targetName)?.id;
+    };
+
     const handleExecutePromotion = async (e) => {
         e.preventDefault();
-        if (!targetPromoClassId) {
-            alert("Please select a target SSS 1 department.");
+        
+        // Filter out JSS 3 students as they use a specific manual flow or are skipped in bulk
+        const jss3Id = classes.find(c => c.class_name === 'JSS 3')?.id;
+        const sss3Classes = classes.filter(c => c.class_name.startsWith('SSS 3')).map(c => c.id);
+        
+        const toPromote = selectedPromoStudents.filter(id => {
+            const student = allUsers.student.find(s => s.id === id);
+            return student && student.class_id !== jss3Id && !sss3Classes.includes(student.class_id);
+        });
+
+        const jss3ToPromote = selectedPromoStudents.filter(id => {
+            const student = allUsers.student.find(s => s.id === id);
+            return student && student.class_id === jss3Id;
+        });
+
+        const sss3ToPassout = selectedPromoStudents.filter(id => {
+            const student = allUsers.student.find(s => s.id === id);
+            return student && sss3Classes.includes(student.class_id);
+        });
+
+        if (jss3ToPromote.length > 0 && !targetPromoClassId) {
+            alert("Please select a target department for the JSS 3 students.");
             return;
         }
 
         if (selectedPromoStudents.length === 0) {
-            alert("Please select at least one student to promote.");
+            alert("Please select students to promote.");
             return;
         }
 
-        const targetClass = classes.find(c => c.id === targetPromoClassId);
-        if (!window.confirm(`Are you sure you want to promote ${selectedPromoStudents.length} student(s) to ${targetClass?.class_name}?`)) return;
-
         setPromoLoading(true);
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ class_id: targetPromoClassId })
-                .in('id', selectedPromoStudents);
+            // 1. Bulk Auto Promotion (JSS 1, 2, SSS 1, 2)
+            for (const id of toPromote) {
+                const student = allUsers.student.find(s => s.id === id);
+                const nextId = getNextClassId(classes.find(c => c.id === student.class_id)?.class_name);
+                if (nextId) {
+                    await supabase.from('profiles').update({ class_id: nextId }).eq('id', id);
+                }
+            }
 
-            if (error) throw error;
+            // 2. Manual JSS 3 Promotion
+            if (jss3ToPromote.length > 0) {
+                await supabase.from('profiles').update({ class_id: targetPromoClassId }).in('id', jss3ToPromote);
+            }
 
-            alert(`Successfully promoted ${selectedPromoStudents.length} students to ${targetClass?.class_name}.`);
+            // 3. SSS 3 Passout (Deactivate)
+            if (sss3ToPassout.length > 0) {
+                await supabase.from('profiles').update({ status: 'deactivated', class_id: null }).in('id', sss3ToPassout);
+            }
+
+            alert("School automation completed successfully!");
             setIsPromoModalOpen(false);
             await fetchAllData(true);
         } catch (err) {
-            alert("Promotion failed: " + err.message);
+            alert("Promotion error: " + err.message);
         } finally {
             setPromoLoading(false);
         }
@@ -398,19 +447,19 @@ const SuperAdminUsers = () => {
                     </header>
 
                     <main className="qe-questions-list">
-                        {selectedRole === 'student' && !loading && activeTerm === 'First Term' && allUsers.student.some(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3') && (
+                        {selectedRole === 'student' && !loading && activeTerm === 'First Term' && allUsers.student.length > 0 && (
                             <div className="sau-promo-bar">
-                                <div className="sau-avatar-circle" style={{ background: '#F59E0B', width: '36px', height: '36px' }}>
+                                <div className="sau-avatar-circle" style={{ background: '#059669', width: '36px', height: '36px' }}>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
                                     </svg>
                                 </div>
                                 <div className="sau-promo-info">
-                                    <h4 className="sau-promo-title">New Academic Session: JSS 3 Promotion Required</h4>
-                                    <p className="sau-promo-subtitle">Verify that students completed all subjects in Third Term before moving them.</p>
+                                    <h4 className="sau-promo-title" style={{ color: '#064E3B' }}>School-Wide Promotion Active</h4>
+                                    <p className="sau-promo-subtitle" style={{ color: '#065F46' }}>Move all students across classes to their next levels for the new academic session.</p>
                                 </div>
-                                <button className="sau-promo-btn" onClick={handleOpenPromoModal}>
-                                    Verify & Promote
+                                <button className="sau-promo-btn" style={{ background: '#059669' }} onClick={handleOpenPromoModal}>
+                                    Open Promotion Manager
                                 </button>
                             </div>
                         )}
@@ -597,75 +646,87 @@ const SuperAdminUsers = () => {
             {/* Promotion Modal */}
             {isPromoModalOpen && (
                 <div className="qe-modal-overlay">
-                    <div className="qe-modal" style={{ maxWidth: '500px' }}>
+                    <div className="qe-modal" style={{ maxWidth: '600px' }}>
                         <div className="qe-modal-header">
-                            <h2 className="qe-modal-title">BATCH PROMOTION: JSS 3 → SSS 1</h2>
-                            <p style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Move students to their assigned departments.</p>
+                            <h2 className="qe-modal-title">SCHOOL-WIDE PROMOTION MANAGER</h2>
+                            <p style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Verify subject completion from Previous Session's Third Term.</p>
                         </div>
                         
                         <form className="qe-form" onSubmit={handleExecutePromotion}>
-                            <div className="promo-student-list" style={{ position: 'relative', minHeight: '100px' }}>
+                            <div className="promo-student-list" style={{ position: 'relative', minHeight: '150px' }}>
                                 {promoStep === 'analyze' ? (
                                     <div className="qe-empty">
                                         <div className="qe-spinner"></div>
-                                        <p>Analyzing exam completions...</p>
+                                        <p>Analyzing whole school readiness...</p>
                                     </div>
                                 ) : (
-                                    allUsers.student
-                                        .filter(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3')
-                                        .map(student => {
-                                            const stat = studentReadiness[student.id] || { ready: false, count: 0, total: 0 };
-                                            return (
-                                                <div key={student.id} className="promo-student-item" style={{ opacity: stat.ready ? 1 : 0.7 }}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        className="promo-checkbox"
-                                                        checked={selectedPromoStudents.includes(student.id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) setSelectedPromoStudents([...selectedPromoStudents, student.id]);
-                                                            else setSelectedPromoStudents(selectedPromoStudents.filter(id => id !== student.id));
-                                                        }}
-                                                    />
-                                                    <div style={{ flex: 1 }}>
-                                                        <div className="promo-student-name">{student.full_name}</div>
-                                                        <div className="promo-student-email">{student.email}</div>
-                                                    </div>
-                                                    <div style={{ textAlign: 'right' }}>
-                                                        <span style={{ 
-                                                            fontSize: '11px', 
-                                                            padding: '2px 8px', 
-                                                            borderRadius: '10px',
-                                                            background: stat.ready ? '#DCFCE7' : '#F1F5F9',
-                                                            color: stat.ready ? '#166534' : '#64748B',
-                                                            fontWeight: '700'
-                                                        }}>
-                                                            {stat.count} / {stat.total} EXAMS
-                                                        </span>
-                                                        <div style={{ fontSize: '10px', color: stat.ready ? '#166534' : '#94A3B8', marginTop: '2px' }}>
-                                                            {stat.ready ? '✓ READY' : 'PENDING'}
-                                                        </div>
-                                                    </div>
+                                    classes.map(cls => {
+                                        const classStudents = allUsers.student.filter(s => s.class_id === cls.id);
+                                        if (classStudents.length === 0) return null;
+                                        
+                                        return (
+                                            <div key={cls.id}>
+                                                <div style={{ background: '#F8FAFC', padding: '8px 16px', fontWeight: '800', fontSize: '12px', color: '#475569', borderBottom: '1px solid #E2E8F0' }}>
+                                                    FROM {cls.class_name} → {cls.class_name === 'JSS 3' ? 'SELECT' : (cls.class_name.startsWith('SSS 3') ? 'PASSOUT' : 'NEXT')}
                                                 </div>
-                                            );
-                                        })
+                                                {classStudents.map(student => {
+                                                    const stat = studentReadiness[student.id] || { ready: false, count: 0, total: 0 };
+                                                    return (
+                                                        <div key={student.id} className="promo-student-item" style={{ opacity: stat.ready ? 1 : 0.7 }}>
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="promo-checkbox"
+                                                                checked={selectedPromoStudents.includes(student.id)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) setSelectedPromoStudents([...selectedPromoStudents, student.id]);
+                                                                    else setSelectedPromoStudents(selectedPromoStudents.filter(id => id !== student.id));
+                                                                }}
+                                                            />
+                                                            <div style={{ flex: 1 }}>
+                                                                <div className="promo-student-name">{student.full_name}</div>
+                                                                <div className="promo-student-email">{student.email}</div>
+                                                            </div>
+                                                            <div style={{ textAlign: 'right' }}>
+                                                                <span style={{ 
+                                                                    fontSize: '11px', 
+                                                                    padding: '2px 8px', 
+                                                                    borderRadius: '10px',
+                                                                    background: stat.ready ? '#DCFCE7' : '#F1F5F9',
+                                                                    color: stat.ready ? '#166534' : '#64748B',
+                                                                    fontWeight: '700'
+                                                                }}>
+                                                                    {stat.count} / {stat.total} EXAMS
+                                                                </span>
+                                                                <div style={{ fontSize: '10px', color: stat.ready ? '#166534' : '#94A3B8', marginTop: '2px' }}>
+                                                                    {stat.ready ? '✓ READY' : 'PENDING'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })
                                 )}
                             </div>
 
                             <div className="promo-target-section">
-                                <label className="promo-target-label">SELECT TARGET SSS 1 DEPARTMENT*</label>
+                                <label className="promo-target-label">JSS 3 TO SSS 1 DEPARTMENT (Only if JSS 3 selected)</label>
                                 <select 
                                     className="qe-input"
-                                    required
                                     value={targetPromoClassId}
                                     onChange={e => setTargetPromoClassId(e.target.value)}
                                 >
-                                    <option value="">Select Destination...</option>
+                                    <option value="">Select Destination for JSS 3...</option>
                                     {classes
                                         .filter(c => c.class_name.startsWith('SSS 1'))
                                         .map(c => (
                                             <option key={c.id} value={c.id}>{c.class_name}</option>
                                         ))}
                                 </select>
+                                <p style={{ fontSize: '11px', color: '#94A3B8', marginTop: '8px' }}>
+                                    Note: SSS 3 students will be marked as <strong>Deactivated</strong> upon promotion. All other classes move to the next logical level.
+                                </p>
                             </div>
 
                             <div className="qe-modal-footer">
@@ -673,7 +734,7 @@ const SuperAdminUsers = () => {
                                     Cancel
                                 </button>
                                 <button type="submit" className="qe-btn-save" disabled={promoLoading || selectedPromoStudents.length === 0}>
-                                    {promoLoading ? 'Promoting...' : `Promote ${selectedPromoStudents.length} Student(s)`}
+                                    {promoLoading ? 'Processing School Promotion...' : `Execute Promotion (${selectedPromoStudents.length})`}
                                 </button>
                             </div>
                         </form>

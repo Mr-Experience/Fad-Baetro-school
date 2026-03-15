@@ -427,17 +427,54 @@ const ExamScreen = () => {
     }, [student, activeConfig, isSubmitting, navigate]);
 
 
-    if (loading) {
+    // Unified Shell
+    const renderHeader = () => (
+        <header className="portal-header-bar nes-header">
+            <div className="nes-header-left">
+                <img src={logo} alt="Logo" className="portal-logo-img" />
+                <div>
+                    <h1 className="portal-school-name" style={{ margin: 0 }}>Fad Maestro Academy</h1>
+                    {activeConfig && (
+                        <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>
+                            {activeConfig?.subjects?.subject_name} • {activeConfig?.question_type?.toUpperCase()}
+                        </span>
+                    )}
+                </div>
+            </div>
+
+            <div className="nes-header-right">
+                {activeConfig && timeLeft !== null && (
+                    <div className="es-timer-box" style={{ marginRight: '15px', background: timeLeft < 60 ? '#fee2e2' : '#f3f4f6', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                        <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', lineHeight: 1 }}>TIME LEFT</span>
+                        <span style={{ fontSize: '18px', fontWeight: '800', color: timeLeft < 60 ? '#ef4444' : '#1f2937' }}>{formatTime(timeLeft)}</span>
+                    </div>
+                )}
+                <span className="nes-user-name" style={{ marginRight: '13px' }}>{studentName}</span>
+                <div className="nes-avatar" style={{ marginRight: '10px' }}>
+                    {profileImage ? (
+                        <img src={profileImage} alt="Profile" className="nes-profile-img" />
+                    ) : (
+                        <span style={{ color: '#4B5563', fontWeight: 'bold', fontSize: '16px' }}>
+                            {studentName ? studentName.charAt(0).toUpperCase() : 'S'}
+                        </span>
+                    )}
+                </div>
+                {activeConfig && (
+                    <button className="es-submit-btn" onClick={() => handleSubmit()} disabled={isSubmitting}>
+                        {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+                    </button>
+                )}
+            </div>
+        </header>
+    );
+
+    if (loading && !activeConfig) {
         return (
-            <div className="portal-login-container" style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                <img src={logo} alt="School Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', animation: 'pulse-load 1.5s ease-in-out infinite' }} />
-                <style>{`
-                    @keyframes pulse-load {
-                        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0.4); }
-                        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(157, 36, 90, 0); }
-                        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0); }
-                    }
-                `}</style>
+            <div className="portal-login-container">
+                {renderHeader()}
+                <main className="portal-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div className="qe-spinner" style={{ width: '40px', height: '40px', borderTopColor: '#9D245A' }}></div>
+                </main>
             </div>
         );
     }
@@ -452,35 +489,7 @@ const ExamScreen = () => {
 
     return (
         <div className="portal-login-container">
-            <header className="portal-header-bar nes-header">
-                <div className="nes-header-left">
-                    <img src={logo} alt="Logo" className="portal-logo-img" />
-                    <div>
-                        <h1 className="portal-school-name" style={{ margin: 0 }}>Fad Maestro Academy</h1>
-                        <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 'bold' }}>{activeConfig?.subjects?.subject_name} • {activeConfig?.question_type?.toUpperCase()}</span>
-                    </div>
-                </div>
-
-                <div className="nes-header-right">
-                    <div className="es-timer-box" style={{ marginRight: '15px', background: timeLeft < 60 ? '#fee2e2' : '#f3f4f6', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
-                        <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', lineHeight: 1 }}>TIME LEFT</span>
-                        <span style={{ fontSize: '18px', fontWeight: '800', color: timeLeft < 60 ? '#ef4444' : '#1f2937' }}>{formatTime(timeLeft)}</span>
-                    </div>
-                    <span className="nes-user-name" style={{ marginRight: '13px' }}>{studentName}</span>
-                    <div className="nes-avatar" style={{ marginRight: '10px' }}>
-                        {profileImage ? (
-                            <img src={profileImage} alt="Profile" className="nes-profile-img" />
-                        ) : (
-                            <span style={{ color: '#4B5563', fontWeight: 'bold', fontSize: '16px' }}>
-                                {student?.full_name ? student.full_name.charAt(0).toUpperCase() : 'S'}
-                            </span>
-                        )}
-                    </div>
-                    <button className="es-submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
-                        {isSubmitting ? 'Submitting...' : 'Submit Exam'}
-                    </button>
-                </div>
-            </header>
+            {renderHeader()}
 
             <main className="es-main">
                 <div className="es-question-card">

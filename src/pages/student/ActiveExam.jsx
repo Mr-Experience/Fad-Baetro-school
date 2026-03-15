@@ -186,17 +186,35 @@ const ActiveExam = () => {
         };
     }, [navigate]);
 
-    if (loading) {
+    // Unified Persistent Shell Render
+    const renderHeader = () => (
+        <header className="portal-header-bar nes-header">
+            <div className="nes-header-left">
+                <img src={logo} alt="Logo" className="portal-logo-img" />
+                <h1 className="portal-school-name">Fad Maestro Academy</h1>
+            </div>
+            <div className="nes-header-right">
+                <span className="nes-user-name">{studentName}</span>
+                <div className="nes-avatar">
+                    {profileImage ? (
+                        <img src={profileImage} alt="Profile" className="nes-profile-img" />
+                    ) : (
+                        <span style={{ color: '#4B5563', fontWeight: 'bold', fontSize: '16px' }}>
+                            {studentName ? studentName.charAt(0).toUpperCase() : 'S'}
+                        </span>
+                    )}
+                </div>
+            </div>
+        </header>
+    );
+
+    if (loading && !activeExam) {
         return (
-            <div className="portal-login-container" style={{ justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                <img src={logo} alt="School Logo" style={{ width: '100px', height: '100px', borderRadius: '50%', animation: 'pulse-load 1.5s ease-in-out infinite' }} />
-                <style>{`
-                    @keyframes pulse-load {
-                        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0.4); }
-                        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(157, 36, 90, 0); }
-                        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(157, 36, 90, 0); }
-                    }
-                `}</style>
+            <div className="portal-login-container">
+                {renderHeader()}
+                <main className="portal-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div className="qe-spinner" style={{ width: '40px', height: '40px', borderTopColor: '#9D245A' }}></div>
+                </main>
             </div>
         );
     }
@@ -204,24 +222,7 @@ const ActiveExam = () => {
     return (
         <div className="portal-login-container">
             {/* Header */}
-            <header className="portal-header-bar nes-header">
-                <div className="nes-header-left">
-                    <img src={logo} alt="Logo" className="portal-logo-img" />
-                    <h1 className="portal-school-name">Fad Maestro Academy</h1>
-                </div>
-                <div className="nes-header-right">
-                    <span className="nes-user-name">{studentName}</span>
-                    <div className="nes-avatar">
-                        {profileImage ? (
-                            <img src={profileImage} alt="Profile" className="nes-profile-img" />
-                        ) : (
-                            <span style={{ color: '#4B5563', fontWeight: 'bold', fontSize: '16px' }}>
-                                {studentName ? studentName.charAt(0).toUpperCase() : 'S'}
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </header>
+            {renderHeader()}
 
             {/* Main */}
             <main className="portal-content">
@@ -293,11 +294,16 @@ const ActiveExam = () => {
                                 state: { examConfig: activeExam, preloadedQuestions, sessionInfo }
                             });
                         }}
-                        disabled={!activeExam || !preloadedQuestions}
+                        disabled={!activeExam || !preloadedQuestions || preloadedQuestions.length === 0}
                     >
-                        {preloadedQuestions ? (
-                            preloadedQuestions.length > 0 ? 'Start now' : 'No Questions Found'
-                        ) : 'Checking paper status...'}
+                        {!preloadedQuestions ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                                <div className="qe-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderTopColor: '#fff' }}></div>
+                                Check Paper status...
+                            </div>
+                        ) : (
+                            preloadedQuestions.length > 0 ? 'Start Exam Now' : 'No Questions Found'
+                        )}
                     </button>
                 </div>
             </main>
