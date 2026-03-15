@@ -53,12 +53,13 @@ const AdminResultDetail = () => {
                     const sKey = globalSession.trim();
                     const tKey = globalTerm.trim();
 
-                    // 1. Fetch CURRENT residents of this class (those physically in JSS 2 right now)
+                    // 1. Fetch CURRENT residents of this class with the CORRECT role
+                    const targetRole = questionType === 'candidate' ? 'candidate' : 'student';
                     const { data: currentInClass } = await supabase
                         .from('profiles')
                         .select('id')
                         .eq('class_id', classId)
-                        .in('role', ['student', 'candidate']);
+                        .eq('role', targetRole);
                     const currentIds = new Set(currentInClass?.map(s => s.id) || []);
 
                     // 2. Fetch Submissions (Historical & Current)
