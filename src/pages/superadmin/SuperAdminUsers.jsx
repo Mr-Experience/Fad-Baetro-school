@@ -37,6 +37,8 @@ const SuperAdminUsers = () => {
     const [selectedPromoStudents, setSelectedPromoStudents] = useState([]);
     const [targetPromoClassId, setTargetPromoClassId] = useState('');
     const [promoLoading, setPromoLoading] = useState(false);
+    const [studentReadiness, setStudentReadiness] = useState({}); // { id: { ready: bool, count: num, total: num } }
+    const [promoStep, setPromoStep] = useState('list'); // 'list' or 'analyze'
 
     // Form state
     const [formData, setFormData] = useState({
@@ -258,7 +260,7 @@ const SuperAdminUsers = () => {
         }
     };
 
-    const handleOpenPromoModal = () => {
+    const handleOpenPromoModal = async () => {
         const jss3Id = classes.find(c => c.class_name === 'JSS 3')?.id;
         const jss3Students = allUsers.student.filter(s => s.class_id === jss3Id);
         
@@ -267,9 +269,48 @@ const SuperAdminUsers = () => {
             return;
         }
 
-        setSelectedPromoStudents(jss3Students.map(s => s.id));
-        setTargetPromoClassId('');
         setIsPromoModalOpen(true);
+        setPromoLoading(true);
+        setPromoStep('analyze');
+
+        try {
+            // 1. Fetch JSS 3 Subjects
+            const { data: jss3Subjects } = await supabase.from('subjects').select('id').eq('class_id', jss3Id);
+            const totalSubjects = jss3Subjects?.length || 0;
+
+            // 2. Fetch all results for JSS 3 students in THIS session and term
+            const { data: results } = await supabase
+                .from('exam_results')
+                .select('student_id, subject_id')
+                .eq('class_id', jss3Id)
+                .eq('session_id', activeSession)
+                .eq('term_id', activeTerm);
+
+            // 3. Map readiness
+            const readinessMap = {};
+            jss3Students.forEach(student => {
+                const studentResults = results?.filter(r => r.student_id === student.id) || [];
+                const distinctSubjectsTaken = new Set(studentResults.map(r => r.subject_id)).size;
+                
+                readinessMap[student.id] = {
+                    count: distinctSubjectsTaken,
+                    total: totalSubjects,
+                    ready: totalSubjects > 0 && distinctSubjectsTaken >= totalSubjects
+                };
+            });
+
+            setStudentReadiness(readinessMap);
+            // Default select only those who are ready
+            setSelectedPromoStudents(jss3Students.filter(s => readinessMap[s.id]?.ready).map(s => s.id));
+            setTargetPromoClassId('');
+            setPromoStep('list');
+        } catch (err) {
+            console.error("Readiness check fail:", err);
+            alert("Could not verify student exam completion. Please try again.");
+            setIsPromoModalOpen(false);
+        } finally {
+            setPromoLoading(false);
+        }
     };
 
     const handleExecutePromotion = async (e) => {
@@ -346,7 +387,7 @@ const SuperAdminUsers = () => {
                     </header>
 
                     <main className="qe-questions-list">
-                        {selectedRole === 'student' && !loading && allUsers.student.some(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3') && (
+                        {selectedRole === 'student' && !loading && activeTerm === 'Third Term' && allUsers.student.some(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3') && (
                             <div className="sau-promo-bar">
                                 <div className="sau-avatar-circle" style={{ background: '#F59E0B', width: '36px', height: '36px' }}>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -354,11 +395,11 @@ const SuperAdminUsers = () => {
                                     </svg>
                                 </div>
                                 <div className="sau-promo-info">
-                                    <h4 className="sau-promo-title">JSS 3 Graduation Detected</h4>
-                                    <p className="sau-promo-subtitle">Students are ready for SSS 1 Promotion. Move them to their departments now.</p>
+                                    <h4 className="sau-promo-title">Third Term Session: JSS 3 Graduation</h4>
+                                    <p className="sau-promo-subtitle">Final exams in progress. Promote students once they complete all subjects.</p>
                                 </div>
                                 <button className="sau-promo-btn" onClick={handleOpenPromoModal}>
-                                    Promote Students
+                                    Check Readiness & Promote
                                 </button>
                             </div>
                         )}
@@ -552,26 +593,51 @@ const SuperAdminUsers = () => {
                         </div>
                         
                         <form className="qe-form" onSubmit={handleExecutePromotion}>
-                            <div className="promo-student-list">
-                                {allUsers.student
-                                    .filter(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3')
-                                    .map(student => (
-                                        <div key={student.id} className="promo-student-item">
-                                            <input 
-                                                type="checkbox" 
-                                                className="promo-checkbox"
-                                                checked={selectedPromoStudents.includes(student.id)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) setSelectedPromoStudents([...selectedPromoStudents, student.id]);
-                                                    else setSelectedPromoStudents(selectedPromoStudents.filter(id => id !== student.id));
-                                                }}
-                                            />
-                                            <div>
-                                                <div className="promo-student-name">{student.full_name}</div>
-                                                <div className="promo-student-email">{student.email}</div>
-                                            </div>
-                                        </div>
-                                    ))}
+                            <div className="promo-student-list" style={{ position: 'relative', minHeight: '100px' }}>
+                                {promoStep === 'analyze' ? (
+                                    <div className="qe-empty">
+                                        <div className="qe-spinner"></div>
+                                        <p>Analyzing exam completions...</p>
+                                    </div>
+                                ) : (
+                                    allUsers.student
+                                        .filter(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3')
+                                        .map(student => {
+                                            const stat = studentReadiness[student.id] || { ready: false, count: 0, total: 0 };
+                                            return (
+                                                <div key={student.id} className="promo-student-item" style={{ opacity: stat.ready ? 1 : 0.7 }}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        className="promo-checkbox"
+                                                        checked={selectedPromoStudents.includes(student.id)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) setSelectedPromoStudents([...selectedPromoStudents, student.id]);
+                                                            else setSelectedPromoStudents(selectedPromoStudents.filter(id => id !== student.id));
+                                                        }}
+                                                    />
+                                                    <div style={{ flex: 1 }}>
+                                                        <div className="promo-student-name">{student.full_name}</div>
+                                                        <div className="promo-student-email">{student.email}</div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <span style={{ 
+                                                            fontSize: '11px', 
+                                                            padding: '2px 8px', 
+                                                            borderRadius: '10px',
+                                                            background: stat.ready ? '#DCFCE7' : '#F1F5F9',
+                                                            color: stat.ready ? '#166534' : '#64748B',
+                                                            fontWeight: '700'
+                                                        }}>
+                                                            {stat.count} / {stat.total} EXAMS
+                                                        </span>
+                                                        <div style={{ fontSize: '10px', color: stat.ready ? '#166534' : '#94A3B8', marginTop: '2px' }}>
+                                                            {stat.ready ? '✓ READY' : 'PENDING'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                )}
                             </div>
 
                             <div className="promo-target-section">
