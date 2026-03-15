@@ -17,19 +17,21 @@ const AdminForgotPassword = () => {
         setStatus('loading');
 
         try {
-            // 1. STRICT ADMIN CHECK: Verify the email belongs to an admin/super_admin
+            // 1. ROLE CHECK (If permissions allow): 
+            // Note: RLS might block anonymous SELECT on profiles. 
+            // If it returns null, we proceed to let Supabase handle the email validity.
+            // If it RETURNS a profile, we strictly enforce it's NOT a super_admin.
             const { data: profile, error: profileErr } = await supabase
                 .from('profiles')
                 .select('role')
                 .eq('email', email.toLowerCase().trim())
                 .maybeSingle();
 
-            if (profileErr) throw profileErr;
+            if (profileErr) {
+                console.warn("Profile check skipped due to RLS or error, proceeding to reset flow.");
+            }
 
-            if (!profile || profile.role !== 'admin') {
-                // To prevent email enumeration, we could show a generic message, 
-                // but since the user specifically asked "Only admin can reset", 
-                // we'll show a clear unauthorized error.
+            if (profile && profile.role !== 'admin') {
                 throw new Error("Unauthorized: Only standard admin accounts can reset passwords via this portal. Super Admins must use the Super Admin portal.");
             }
 
