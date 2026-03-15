@@ -53,16 +53,15 @@ const AdminResultDetail = () => {
                     const sKey = globalSession.trim();
                     const tKey = globalTerm.trim();
 
-                    // Total eligible users in class (Student + Candidate)
-                    const { count: pCount } = await supabase
+                    // 1. Fetch CURRENT residents of this class (those physically in JSS 2 right now)
+                    const { data: currentInClass } = await supabase
                         .from('profiles')
-                        .select('*', { count: 'exact', head: true })
-                        .in('role', ['student', 'candidate'])
-                        .eq('class_id', classId);
-                    
-                    setTotalStudents(pCount || 0);
+                        .select('id')
+                        .eq('class_id', classId)
+                        .in('role', ['student', 'candidate']);
+                    const currentIds = new Set(currentInClass?.map(s => s.id) || []);
 
-                    // Submissions
+                    // 2. Fetch Submissions (Historical & Current)
                     let query = supabase
                         .from('exam_results')
                         .select(`
@@ -90,7 +89,7 @@ const AdminResultDetail = () => {
                     if (resError) throw resError;
 
                     if (resData) {
-                        // ROBUST FILTERING: Handle potentially mismatched whitespace or casing
+                        // ROBUST FILTERING: Case-insensitive & Trimmed matching
                         const filtered = resData.filter(r => {
                             const dbSession = (r.session_id || '').trim().toLowerCase();
                             const dbTerm = (r.term_id || '').trim().toLowerCase();
@@ -101,6 +100,12 @@ const AdminResultDetail = () => {
 
                         setResults(filtered);
                         setSubmissionCount(filtered.length);
+
+                        // denominator logic (Historical Context Aware)
+                        // The total is the union of everyone who took it and everyone who is currently there
+                        const studentIdsWithResults = filtered.map(r => r.student_id);
+                        const totalUnion = new Set([...currentIds, ...studentIdsWithResults]);
+                        setTotalStudents(totalUnion.size);
 
                         if (filtered.length > 0) {
                             const avgValue = Math.round(filtered.reduce((acc, curr) => acc + Number(curr.score_percent || 0), 0) / filtered.length);
