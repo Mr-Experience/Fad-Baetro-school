@@ -98,3 +98,32 @@ CREATE POLICY "Super admin manage classes" ON public.classes FOR ALL TO authenti
 -- [Settings Policies]
 CREATE POLICY "Public view settings" ON public.system_settings FOR SELECT TO public USING (true);
 CREATE POLICY "Super admin manage settings" ON public.system_settings FOR ALL TO authenticated USING (public.check_is_super_admin());
+
+-- 7. ADMIN DELETION RPC
+-- This allows admins to fully remove a user from both auth and profiles (via cascade)
+CREATE OR REPLACE FUNCTION public.delete_user(target_user_id UUID)
+RETURNS void AS $$
+DECLARE
+  calling_user_role TEXT;
+BEGIN
+  -- 1. Get the role of the person calling the function
+  SELECT role INTO calling_user_role FROM public.profiles WHERE id = auth.uid();
+  
+  -- 2. Only allow Admin or Super Admin to delete
+  IF calling_user_role NOT IN ('admin', 'super_admin') THEN
+    RAISE EXCEPTION 'Unauthorized: Only administrators can delete users.';
+  END IF;
+
+  -- 3. Prevent Admin from deleting Super Admin
+  IF calling_user_role = 'admin' THEN
+    IF EXISTS (SELECT 1 FROM public.profiles WHERE id = target_user_id AND role = 'super_admin') THEN
+       RAISE EXCEPTION 'Unauthorized: Standard admins cannot delete super admins.';
+    END IF;
+  END IF;
+
+  -- 4. Perform deletion from auth.users (cascades to public.profiles)
+  DELETE FROM auth.users WHERE id = target_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.delete_user(UUID) TO authenticated;

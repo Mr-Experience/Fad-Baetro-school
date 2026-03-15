@@ -81,7 +81,7 @@ const AdminCandidates = () => {
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this candidate? This action is permanent.")) return;
         try {
-            const { error } = await supabase.from('profiles').delete().eq('id', id);
+            const { error } = await supabase.rpc('delete_user', { target_user_id: id });
             if (error) throw error;
             // Optimistic update
             setCandidates(prev => prev.filter(c => c.id !== id));

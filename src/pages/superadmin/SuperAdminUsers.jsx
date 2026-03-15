@@ -234,7 +234,7 @@ const SuperAdminUsers = () => {
         if (!window.confirm(confirmMsg)) return;
 
         try {
-            const { error } = await supabase.from('profiles').delete().eq('id', id);
+            const { error } = await supabase.rpc('delete_user', { target_user_id: id });
             if (error) throw error;
             
             if (isSelf) {
