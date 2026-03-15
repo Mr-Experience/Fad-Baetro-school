@@ -32,6 +32,12 @@ const SuperAdminUsers = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
 
+    // Promotion specific state
+    const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+    const [selectedPromoStudents, setSelectedPromoStudents] = useState([]);
+    const [targetPromoClassId, setTargetPromoClassId] = useState('');
+    const [promoLoading, setPromoLoading] = useState(false);
+
     // Form state
     const [formData, setFormData] = useState({
         full_name: '',
@@ -252,6 +258,54 @@ const SuperAdminUsers = () => {
         }
     };
 
+    const handleOpenPromoModal = () => {
+        const jss3Id = classes.find(c => c.class_name === 'JSS 3')?.id;
+        const jss3Students = allUsers.student.filter(s => s.class_id === jss3Id);
+        
+        if (jss3Students.length === 0) {
+            alert("No students currently found in JSS 3 to promote.");
+            return;
+        }
+
+        setSelectedPromoStudents(jss3Students.map(s => s.id));
+        setTargetPromoClassId('');
+        setIsPromoModalOpen(true);
+    };
+
+    const handleExecutePromotion = async (e) => {
+        e.preventDefault();
+        if (!targetPromoClassId) {
+            alert("Please select a target SSS 1 department.");
+            return;
+        }
+
+        if (selectedPromoStudents.length === 0) {
+            alert("Please select at least one student to promote.");
+            return;
+        }
+
+        const targetClass = classes.find(c => c.id === targetPromoClassId);
+        if (!window.confirm(`Are you sure you want to promote ${selectedPromoStudents.length} student(s) to ${targetClass?.class_name}?`)) return;
+
+        setPromoLoading(true);
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ class_id: targetPromoClassId })
+                .in('id', selectedPromoStudents);
+
+            if (error) throw error;
+
+            alert(`Successfully promoted ${selectedPromoStudents.length} students to ${targetClass?.class_name}.`);
+            setIsPromoModalOpen(false);
+            await fetchAllData(true);
+        } catch (err) {
+            alert("Promotion failed: " + err.message);
+        } finally {
+            setPromoLoading(false);
+        }
+    };
+
     return (
         <div className="qe-wrapper">
             
@@ -292,6 +346,22 @@ const SuperAdminUsers = () => {
                     </header>
 
                     <main className="qe-questions-list">
+                        {selectedRole === 'student' && !loading && allUsers.student.some(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3') && (
+                            <div className="sau-promo-bar">
+                                <div className="sau-avatar-circle" style={{ background: '#F59E0B', width: '36px', height: '36px' }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg>
+                                </div>
+                                <div className="sau-promo-info">
+                                    <h4 className="sau-promo-title">JSS 3 Graduation Detected</h4>
+                                    <p className="sau-promo-subtitle">Students are ready for SSS 1 Promotion. Move them to their departments now.</p>
+                                </div>
+                                <button className="sau-promo-btn" onClick={handleOpenPromoModal}>
+                                    Promote Students
+                                </button>
+                            </div>
+                        )}
                         {fetchError && (
                             <div className="sc-alert sc-alert-error" style={{ margin: '0 32px 20px', textAlign: 'center' }}>
                                 ⚠️ {fetchError}
@@ -465,6 +535,68 @@ const SuperAdminUsers = () => {
                                 </button>
                                 <button type="submit" className="qe-btn-save" disabled={saving}>
                                     {saving ? 'Creating...' : 'Register User'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Promotion Modal */}
+            {isPromoModalOpen && (
+                <div className="qe-modal-overlay">
+                    <div className="qe-modal" style={{ maxWidth: '500px' }}>
+                        <div className="qe-modal-header">
+                            <h2 className="qe-modal-title">BATCH PROMOTION: JSS 3 → SSS 1</h2>
+                            <p style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Move students to their assigned departments.</p>
+                        </div>
+                        
+                        <form className="qe-form" onSubmit={handleExecutePromotion}>
+                            <div className="promo-student-list">
+                                {allUsers.student
+                                    .filter(s => classes.find(c => c.id === s.class_id)?.class_name === 'JSS 3')
+                                    .map(student => (
+                                        <div key={student.id} className="promo-student-item">
+                                            <input 
+                                                type="checkbox" 
+                                                className="promo-checkbox"
+                                                checked={selectedPromoStudents.includes(student.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setSelectedPromoStudents([...selectedPromoStudents, student.id]);
+                                                    else setSelectedPromoStudents(selectedPromoStudents.filter(id => id !== student.id));
+                                                }}
+                                            />
+                                            <div>
+                                                <div className="promo-student-name">{student.full_name}</div>
+                                                <div className="promo-student-email">{student.email}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                            </div>
+
+                            <div className="promo-target-section">
+                                <label className="promo-target-label">SELECT TARGET SSS 1 DEPARTMENT*</label>
+                                <select 
+                                    className="qe-input"
+                                    required
+                                    value={targetPromoClassId}
+                                    onChange={e => setTargetPromoClassId(e.target.value)}
+                                >
+                                    <option value="">Select Destination...</option>
+                                    {classes
+                                        .filter(c => c.class_name.startsWith('SSS 1'))
+                                        .map(c => (
+                                            <option key={c.id} value={c.id}>{c.class_name}</option>
+                                        ))}
+                                </select>
+                            </div>
+
+                            <div className="qe-modal-footer">
+                                <button type="button" className="qe-btn-cancel" onClick={() => setIsPromoModalOpen(false)}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="qe-btn-save" disabled={promoLoading || selectedPromoStudents.length === 0}>
+                                    {promoLoading ? 'Promoting...' : `Promote ${selectedPromoStudents.length} Student(s)`}
                                 </button>
                             </div>
                         </form>
