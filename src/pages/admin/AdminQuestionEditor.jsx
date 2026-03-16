@@ -237,8 +237,27 @@ const AdminQuestionEditor = () => {
                 }
             }
 
-            // 2. Manage ACTIVE_EXAMS Record
+            // 2. Manage ACTIVE_EXAMS Record (Enforce "One active exam per class" rule)
             if (configForm.is_active) {
+                // Rule: Per class, only one active exam can exist at a time.
+                // a. Fetch IDs of all configs for this class
+                const { data: siblingConfigs } = await supabase
+                    .from('exam_configs')
+                    .select('id')
+                    .eq('class_id', classId)
+                    .eq('session_id', globalSession.trim())
+                    .eq('term_id', globalTerm.trim());
+
+                if (siblingConfigs && siblingConfigs.length > 0) {
+                    const siblingIds = siblingConfigs.map(c => c.id);
+                    // b. Delete from active_exams any that belong to this class
+                    await supabase
+                        .from('active_exams')
+                        .delete()
+                        .in('exam_config_id', siblingIds);
+                }
+
+                // c. Now set this specific config as active
                 const aePayload = {
                     exam_config_id: finalCfgData.id,
                     visible_at: payload.visible_at,
