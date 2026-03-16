@@ -74,6 +74,41 @@
     background-color: #7B1848;
 }
 
+/* Subject selection item */
+.ae-subject-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.ae-subject-item:hover {
+    border-color: #9D245A;
+    background: #FFF5F9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(157, 36, 90, 0.1);
+}
+
+.ae-subject-item:hover svg {
+    color: #9D245A;
+}
+
+.ae-subject-item svg {
+    color: #9CA3AF;
+    transition: color 0.2s;
+}
+
+.ae-back-btn:hover {
+    color: #9D245A !important;
+}
+
 /* Responsiveness */
 @media (max-width: 640px) {
     .ae-card {
