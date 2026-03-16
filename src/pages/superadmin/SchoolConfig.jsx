@@ -4,7 +4,6 @@ import { UserPlus, Trash2, X } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import './SchoolConfig.css';
 import LoadingOverlay from '../../components/LoadingOverlay';
-import { runBatchPromotion } from '../../utils/promotionService';
 
 const SchoolConfig = () => {
     const navigate = useNavigate();
@@ -152,18 +151,6 @@ const SchoolConfig = () => {
 
             if (saveError) throw saveError;
 
-            // 1. Check if Session changed (New Academic Year)
-            const isNewSession = activeSession && sessionCopy !== activeSession;
-            let promotionStats = '';
-
-            if (isNewSession) {
-                setToast('Initiating Batch Promotion...');
-                const result = await runBatchPromotion(activeSession, activeTerm);
-                if (result.success) {
-                    promotionStats = ` (${result.count} students promoted)`;
-                }
-            }
-
             // Update active state immediately for UI consistency
             setActiveSession(sessionCopy);
             setActiveTerm(termCopy);
@@ -175,7 +162,7 @@ const SchoolConfig = () => {
                 current_term: termCopy
             }));
             
-            setToast(`Settings saved successfully!${promotionStats}`);
+            setToast(`Settings saved successfully!`);
             setTimeout(() => setToast(''), 3500);
         } catch (err) {
             console.error("Save Error:", err);

@@ -40,7 +40,6 @@ import NoExamSchedule from './pages/student/NoExamSchedule';
 import ActiveExam from './pages/student/ActiveExam';
 import ExamScreen from './pages/student/ExamScreen';
 import ExamSubmitted from './pages/student/ExamSubmitted';
-import DepartmentSelection from './pages/student/DepartmentSelection';
 
 
 
@@ -113,10 +112,8 @@ function App() {
                 {/* Protected Student Routes */}
                 <Route element={<ProtectedRoute requiredRole="student" />}>
                     <Route path="/portal/student/no-exam" element={<NoExamSchedule />} />
-                    <Route path="/portal/student/active-exam" element={<ActiveExam />} />
                     <Route path="/portal/student/exam" element={<ExamScreen />} />
                     <Route path="/portal/student/submitted" element={<ExamSubmitted />} />
-                    <Route path="/portal/student/department-selection" element={<DepartmentSelection />} />
                 </Route>
 
 
