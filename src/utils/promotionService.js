@@ -78,7 +78,7 @@ export const runBatchPromotion = async (oldSession, oldTerm) => {
         const promotionMap = {
             'JSS 1': 'JSS 2',
             'JSS 2': 'JSS 3',
-            'JSS 3': 'SSS 1 SCI',
+            // 'JSS 3' mapping removed - must be handled via DepartmentSelection
             'SSS 1 ART': 'SSS 2 ART',
             'SSS 1 COM': 'SSS 2 COM',
             'SSS 1 SCI': 'SSS 2 SCI',
@@ -101,7 +101,15 @@ export const runBatchPromotion = async (oldSession, oldTerm) => {
             if (eligibility.eligible) {
                 // Determine destination
                 const { data: currentClass } = await supabase.from('classes').select('class_name').eq('id', student.class_id).single();
-                const nextName = promotionMap[currentClass.class_name.toUpperCase()];
+                const className = currentClass?.class_name?.toUpperCase() || '';
+                
+                // Explicitly skip JSS 3 - they must use the manual department selection screen
+                if (className === 'JSS 3') {
+                    console.log(`Skipping student ${student.full_name} - JSS 3 requires manual department selection.`);
+                    continue;
+                }
+
+                const nextName = promotionMap[className];
                 
                 if (nextName === 'PASSEDOUT') {
                     await supabase.from('profiles').update({ role: 'passedout', class_id: null }).eq('id', student.id);

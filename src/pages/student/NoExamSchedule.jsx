@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
+import { checkPromotionEligibility } from '../../utils/promotionService';
 import '../auth/PortalLogin.css';
 import './NoExamSchedule.css';
 import logo from '../../assets/logo.jpg';
@@ -103,6 +104,25 @@ const NoExamSchedule = () => {
                                 }
                             } else {
                                 setIsExpired(false);
+                                
+                                // NEW: If JSS 3 student has no active exams and it's 3rd term,
+                                // check if they are eligible for department selection
+                                if (curTerm.toLowerCase().includes('third')) {
+                                    const { data: profWithClass } = await supabase
+                                        .from('profiles')
+                                        .select('classes(class_name)')
+                                        .eq('id', student.id)
+                                        .maybeSingle();
+                                        
+                                    if (profWithClass?.classes?.class_name === 'JSS 3') {
+                                        const eligibility = await checkPromotionEligibility(student.id, student.class_id, curSession, curTerm);
+                                        if (eligibility.eligible) {
+                                            if (intervalId) clearInterval(intervalId);
+                                            navigate('/portal/student/department-selection');
+                                            return;
+                                        }
+                                    }
+                                }
                             }
                             setLoading(false);
                         } catch (e) {
