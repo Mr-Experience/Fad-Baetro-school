@@ -102,10 +102,24 @@ const AdminResultDetail = () => {
                         setResults(filtered);
                         setSubmissionCount(filtered.length);
 
-                        // denominator logic (Historical Context Aware)
-                        // The total is the union of everyone who took it and everyone who is currently there
-                        const studentIdsWithResults = filtered.map(r => r.student_id);
-                        const totalUnion = new Set([...currentIds, ...studentIdsWithResults]);
+                        // --- SMART DENOMINATOR LOGIC ---
+                        // We need to exclude students who are in this class now but were promoted from another class this session.
+                        // 1. Get IDs of students who already have results in DIFFERENT classes this session
+                        const { data: resultsInOtherClasses } = await supabase
+                            .from('exam_results')
+                            .select('student_id')
+                            .eq('session_id', sKey)
+                            .neq('class_id', classId);
+                        
+                        const newlyPromotedIds = new Set(resultsInOtherClasses?.map(r => r.student_id) || []);
+
+                        // 2. Only count residents who AREN'T newly promoted from another class
+                        const legitimateResidents = (currentInClass || []).filter(s => !newlyPromotedIds.has(s.id));
+
+                        // 3. Union: People who took this specific exam + residents who haven't been promoted-in from elsewhere
+                        const studentIdsWhoTookIt = filtered.map(r => r.student_id);
+                        const totalUnion = new Set([...legitimateResidents.map(s => s.id), ...studentIdsWhoTookIt]);
+                        
                         setTotalStudents(totalUnion.size);
 
                         if (filtered.length > 0) {
