@@ -9,19 +9,19 @@ import { supabase } from '../supabaseClient';
  * @param {string} sessionId - The current academic session (e.g., '2024/2025')
  * @param {string} termId - The current term (e.g., 'Third Term')
  */
-export const checkAndPromoteStudent = async (studentId, currentClassId, sessionId, termId) => {
-    // Only aid promotion if it's the Third Term (Final Term for most schools)
-    // and if the current term is specifically 'Third Term'
+/**
+ * Checks if a student is ELIGIBLE for promotion (finished all exams in 3rd term)
+ * This is used for UI feedback after the last exam.
+ */
+export const checkPromotionEligibility = async (studentId, currentClassId, sessionId, termId) => {
     const isFinalTerm = termId?.toLowerCase().includes('third');
-    if (!isFinalTerm) return { promoted: false, reason: 'Not final term' };
+    if (!isFinalTerm) return { eligible: false, reason: 'Not final term' };
 
     try {
-        // 1. OMNI-RESOURCES: Fetch everything needed for the check in parallel
         const sKey = (sessionId || '').trim();
         const tKey = (termId || '').trim();
 
-        const [classRes, subjectsRes, resultsRes] = await Promise.all([
-            supabase.from('classes').select('class_name').eq('id', currentClassId).maybeSingle(),
+        const [subjectsRes, resultsRes] = await Promise.all([
             supabase.from('subjects').select('id').eq('class_id', currentClassId),
             supabase.from('exam_results')
                 .select('subject_id')
@@ -32,21 +32,53 @@ export const checkAndPromoteStudent = async (studentId, currentClassId, sessionI
                 .eq('question_type', 'exam')
         ]);
 
-        if (classRes.error || !classRes.data) return { promoted: false, reason: 'Current class metadata not found' };
-        
-        const currentClass = classRes.data;
         const classSubjects = subjectsRes.data || [];
         const examResults = resultsRes.data || [];
 
-        if (classSubjects.length === 0) {
-            return { promoted: false, reason: 'No subjects found for this class in curriculum' };
-        }
+        if (classSubjects.length === 0) return { eligible: false };
 
-        // 2. Define Promotion Path (Synced with database_setup.sql names)
+        const completedSubjectIds = new Set(examResults?.map(r => r.subject_id) || []);
+        const totalRequired = classSubjects.length;
+        const completedCount = classSubjects.filter(s => completedSubjectIds.has(s.id)).length;
+
+        const isEligible = completedCount >= totalRequired;
+        
+        return { 
+            eligible: isEligible, 
+            completed: completedCount, 
+            total: totalRequired 
+        };
+    } catch (err) {
+        console.error("Eligibility Check Error:", err);
+        return { eligible: false };
+    }
+};
+
+/**
+ * MASS PROMOTION: Moves all eligible students to their next classes.
+ * Triggered by Super Admin when starting a NEW Session.
+ */
+export const runBatchPromotion = async (oldSession, oldTerm) => {
+    try {
+        console.log(`Starting Batch Promotion for ${oldSession} ${oldTerm}...`);
+        
+        // 1. Get ALL students who haven't graduated
+        const { data: students, error: studentErr } = await supabase
+            .from('profiles')
+            .select('id, class_id, full_name')
+            .eq('role', 'student')
+            .not('class_id', 'is', null);
+
+        if (studentErr) throw studentErr;
+
+        let promotedCount = 0;
+        const promotionResults = [];
+
+        // 2. Map current classes to next classes
         const promotionMap = {
             'JSS 1': 'JSS 2',
             'JSS 2': 'JSS 3',
-            'JSS 3': 'SSS 1 SCI', // Default transition, can be adjusted by admin later if needed
+            'JSS 3': 'SSS 1 SCI',
             'SSS 1 ART': 'SSS 2 ART',
             'SSS 1 COM': 'SSS 2 COM',
             'SSS 1 SCI': 'SSS 2 SCI',
@@ -58,58 +90,32 @@ export const checkAndPromoteStudent = async (studentId, currentClassId, sessionI
             'SSS 3 SCI': 'PASSEDOUT',
         };
 
-        const nextClassName = promotionMap[currentClass.class_name.toUpperCase()];
-        if (!nextClassName) return { promoted: false, reason: `No promotion path defined for ${currentClass.class_name}` };
+        // Cache for class IDs to avoid redundant lookups
+        const classCache = {};
+        const { data: allClasses } = await supabase.from('classes').select('id, class_name');
+        allClasses?.forEach(c => classCache[c.class_name.toUpperCase()] = c.id);
 
-        const completedSubjectIds = new Set(examResults?.map(r => r.subject_id) || []);
-        const totalRequired = classSubjects.length;
-        const completedCount = classSubjects.filter(s => completedSubjectIds.has(s.id)).length;
-
-        console.log(`Promotion Check for student ${studentId}: ${completedCount}/${totalRequired} subjects completed.`);
-
-        const allSubjectsCompleted = completedCount >= totalRequired;
-
-        if (!allSubjectsCompleted) {
-            return { promoted: false, reason: `Subjects remaining: ${totalRequired - completedCount}` };
-        }
-
-        // 4. Execute Promotion
-        if (nextClassName === 'PASSEDOUT') {
-            const { error: promoErr } = await supabase
-                .from('profiles')
-                .update({
-                    role: 'passedout',
-                    class_id: null // Clear class ID for graduates
-                })
-                .eq('id', studentId);
-
-            if (promoErr) throw promoErr;
-            return { promoted: true, nextClass: 'PASSEDOUT' };
-        } else {
-            // Find the ID of the next class
-            const { data: nextClass, error: nClassErr } = await supabase
-                .from('classes')
-                .select('id')
-                .eq('class_name', nextClassName)
-                .maybeSingle();
-
-            if (nClassErr || !nextClass) {
-                return { promoted: false, reason: `Next class (${nextClassName}) not found in database` };
+        for (const student of students) {
+            const eligibility = await checkPromotionEligibility(student.id, student.class_id, oldSession, oldTerm);
+            
+            if (eligibility.eligible) {
+                // Determine destination
+                const { data: currentClass } = await supabase.from('classes').select('class_name').eq('id', student.class_id).single();
+                const nextName = promotionMap[currentClass.class_name.toUpperCase()];
+                
+                if (nextName === 'PASSEDOUT') {
+                    await supabase.from('profiles').update({ role: 'passedout', class_id: null }).eq('id', student.id);
+                    promotedCount++;
+                } else if (nextName && classCache[nextName]) {
+                    await supabase.from('profiles').update({ class_id: classCache[nextName] }).eq('id', student.id);
+                    promotedCount++;
+                }
             }
-
-            const { error: promoErr } = await supabase
-                .from('profiles')
-                .update({
-                    class_id: nextClass.id
-                })
-                .eq('id', studentId);
-
-            if (promoErr) throw promoErr;
-            return { promoted: true, nextClass: nextClassName };
         }
 
+        return { success: true, count: promotedCount };
     } catch (err) {
-        console.error("Promotion Error:", err);
-        return { promoted: false, error: err.message };
+        console.error("Batch Promotion Failed:", err);
+        return { success: false, error: err.message };
     }
 };

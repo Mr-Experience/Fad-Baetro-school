@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabaseClient';
-import { checkAndPromoteStudent } from '../../utils/promotionService';
+import { checkPromotionEligibility } from '../../utils/promotionService';
 import '../auth/PortalLogin.css';
 import './NoExamSchedule.css';
 import './ExamScreen.css';
@@ -182,9 +182,13 @@ const ExamScreen = () => {
             
             if (activeConfig.question_type === 'exam') {
                 try {
-                    await checkAndPromoteStudent(currentStudent.id, currentStudent.class_id, sId, tId);
+                    // Just check eligibility for logging/metrics; actual promotion moves to Super Admin Mass Config
+                    const eligibility = await checkPromotionEligibility(currentStudent.id, currentStudent.class_id, sId, tId);
+                    if (eligibility.eligible) {
+                        console.log("Student is eligible for promotion. Waiting for Super Admin session change.");
+                    }
                 } catch (promoErr) {
-                    console.error("Non-blocking Promotion Error:", promoErr);
+                    console.warn("Non-blocking Promotion Check Error:", promoErr);
                 }
             }
 
