@@ -65,7 +65,7 @@ export const runBatchPromotion = async (oldSession, oldTerm) => {
         // 1. Get ALL students who haven't graduated
         const { data: students, error: studentErr } = await supabase
             .from('profiles')
-            .select('id, class_id, full_name')
+            .select('id, class_id, full_name, target_class_id')
             .eq('role', 'student')
             .not('class_id', 'is', null);
 
@@ -103,20 +103,31 @@ export const runBatchPromotion = async (oldSession, oldTerm) => {
                 const { data: currentClass } = await supabase.from('classes').select('class_name').eq('id', student.class_id).single();
                 const className = currentClass?.class_name?.toUpperCase() || '';
                 
-                // Explicitly skip JSS 3 - they must use the manual department selection screen
-                if (className === 'JSS 3') {
-                    console.log(`Skipping student ${student.full_name} - JSS 3 requires manual department selection.`);
-                    continue;
+                let nextClassId = null;
+
+                // Priority 1: Use pre-selected target_class_id (e.g. from JSS 3 manual choice)
+                if (student.target_class_id) {
+                    nextClassId = student.target_class_id;
+                } else if (className !== 'JSS 3') {
+                    // Priority 2: Use automatic promotion map
+                    const nextName = promotionMap[className];
+                    if (nextName === 'PASSEDOUT') {
+                        await supabase.from('profiles').update({ role: 'passedout', class_id: null, target_class_id: null }).eq('id', student.id);
+                        promotedCount++;
+                        continue;
+                    } else if (nextName && classCache[nextName]) {
+                        nextClassId = classCache[nextName];
+                    }
                 }
 
-                const nextName = promotionMap[className];
-                
-                if (nextName === 'PASSEDOUT') {
-                    await supabase.from('profiles').update({ role: 'passedout', class_id: null }).eq('id', student.id);
+                if (nextClassId) {
+                    await supabase.from('profiles').update({ 
+                        class_id: nextClassId,
+                        target_class_id: null // Clear for next year
+                    }).eq('id', student.id);
                     promotedCount++;
-                } else if (nextName && classCache[nextName]) {
-                    await supabase.from('profiles').update({ class_id: classCache[nextName] }).eq('id', student.id);
-                    promotedCount++;
+                } else {
+                    console.log(`Skipping student ${student.full_name} - No target class found.`);
                 }
             }
         }

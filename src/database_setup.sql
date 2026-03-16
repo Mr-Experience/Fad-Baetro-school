@@ -54,6 +54,7 @@ CREATE TABLE public.profiles (
     role TEXT NOT NULL, 
     phone_number TEXT,
     class_id UUID REFERENCES public.classes(id) ON DELETE SET NULL,
+    target_class_id UUID REFERENCES public.classes(id) ON DELETE SET NULL,
     status TEXT DEFAULT 'pending', -- Used for Candidates (pending, approved, deactivated)
     avatar_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),

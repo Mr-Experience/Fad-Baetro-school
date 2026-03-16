@@ -53,12 +53,12 @@ const DepartmentSelection = () => {
 
             const { error } = await supabase
                 .from('profiles')
-                .update({ class_id: targetClass.id })
+                .update({ target_class_id: targetClass.id })
                 .eq('id', student.id);
 
             if (error) throw error;
 
-            alert(`Congratulations! You have been successfully promoted to ${targetClassName}.`);
+            alert(`Choice saved! You will be officially promoted to ${targetClassName} once the Super Admin starts the new academic session.`);
             navigate('/portal/student/no-exam');
         } catch (err) {
             alert("Selection failed: " + err.message);
