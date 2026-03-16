@@ -184,30 +184,30 @@ const AdminStudents = () => {
                             <h2 className="as-modal-title">Edit Student Details</h2>
                             <p className="as-modal-subtitle">Modify profile information for {selectedStudent?.full_name}</p>
                         </div>
-                        <form onSubmit={handleSaveEdit}>
-                            <div className="as-form-group">
-                                <label className="as-label">Full Name</label>
-                                <input 
-                                    type="text" 
-                                    className="as-input" 
-                                    required
-                                    value={editFormData.full_name}
-                                    onChange={e => setEditFormData({...editFormData, full_name: e.target.value})}
-                                />
-                            </div>
-                            <div className="as-form-row">
-                                <div className="as-form-group">
-                                    <label className="as-label">Phone Number</label>
+                        <form className="as-modal-form" onSubmit={handleSaveEdit}>
+                            <div className="as-modal-grid">
+                                <div className="as-form-group full-width">
+                                    <label className="as-label">Full Name*</label>
                                     <input 
                                         type="text" 
                                         className="as-input" 
-                                        placeholder="Optional"
+                                        required
+                                        value={editFormData.full_name}
+                                        onChange={e => setEditFormData({...editFormData, full_name: e.target.value})}
+                                    />
+                                </div>
+                                <div className="as-form-group">
+                                    <label className="as-label">Phone Number (Optional)</label>
+                                    <input 
+                                        type="text" 
+                                        className="as-input" 
+                                        placeholder="080..."
                                         value={editFormData.phone_number}
                                         onChange={e => setEditFormData({...editFormData, phone_number: e.target.value})}
                                     />
                                 </div>
                                 <div className="as-form-group">
-                                    <label className="as-label">Assigned Class</label>
+                                    <label className="as-label">Assigned Class*</label>
                                     <select 
                                         className="as-input"
                                         required
@@ -221,7 +221,7 @@ const AdminStudents = () => {
                                     </select>
                                 </div>
                             </div>
-                            <div className="as-modal-actions">
+                            <div className="as-modal-footer">
                                 <button type="button" className="as-btn-cancel" onClick={() => setIsEditModalOpen(false)}>
                                     Cancel
                                 </button>
